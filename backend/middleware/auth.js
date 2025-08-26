@@ -20,11 +20,5 @@ export const protect = async (req, res, next) => {
   }
 };
 
-// helper for sockets:
-export const verifyToken = async (token) => {
-  if (!token) throw new Error("Token required");
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
-  const user = await User.findById(decoded.id).select("-password");
-  if (!user) throw new Error("User not found");
-  return user;
-};
+
+

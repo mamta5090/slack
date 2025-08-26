@@ -3,12 +3,15 @@ import { CiClock2 } from "react-icons/ci";
 import { FaArrowRight } from "react-icons/fa";
 import { FaArrowLeft } from "react-icons/fa";
 import { CiSearch } from "react-icons/ci";
+import { useNavigate } from "react-router-dom";
 const Topbar = () => {
+
+  const navigate=useNavigate()
   return (
     <div className="w-full h-12 bg-gray-800 text-white flex items-center justify-between  shadow-md">
 <div className="flex items-center justify-end w-[36%]   gap-[20px]">
- <FaArrowLeft />
-      <FaArrowRight />
+ <FaArrowLeft onClick={()=>navigate(-1)}/>
+      <FaArrowRight onClick={()=>navigate(+1)}/>
       <CiClock2 />
 </div>
      

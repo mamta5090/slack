@@ -19,19 +19,19 @@ const Sidebar = () => {
 </div>
 
 
- <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl">
+ <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl cursor-pointer">
   <LuMessagesSquare /> 
    <span className="text-xs">DMs</span> 
 </div>
- <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl">
+ <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl cursor-pointer">
   <IoMdNotifications />
    <span className="text-xs">Activity</span>
 </div>
- <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl">
+ <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl cursor-pointer">
   <CiSaveDown2 />
    <span className="text-xs">Later</span>
 </div>
- <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl">
+ <div className="flex flex-col hover:bg-gray-500 text-white h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl cursor-pointer">
   <IoIosMore />
    <span className="text-xs">DMs</span>
 </div>
@@ -39,10 +39,10 @@ const Sidebar = () => {
 
 
 <div className='bg-gray-800 w-[8%] min-h-screen flex flex-col gap-[15px] relative py-[10px] items-center top-[10px]'>
-     <div className="flex text-white bg-gray-700  h-[40px] w-[40px] justify-center items-center text-2xl rounded-full">
+     <div className="flex text-white bg-gray-700  h-[40px] w-[40px] justify-center items-center text-2xl rounded-full cursor-pointer">
   +
 </div>
-<div className="flex text-white bg-gray-700  h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl">
+<div className="flex text-white bg-gray-700  h-[40px] w-[40px] justify-center items-center text-2xl rounded-xl cursor-pointer">
   <CgProfile />
 </div>
 

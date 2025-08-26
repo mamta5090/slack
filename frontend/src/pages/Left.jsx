@@ -3,24 +3,27 @@ import React, { useEffect, useState } from "react";
 import { CiSettings } from "react-icons/ci";
 import { FaRegEdit } from "react-icons/fa";
 import { TbTriangleInvertedFilled } from "react-icons/tb";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import {setUsers} from '../redux/userSlice'
+import { useDispatch, useSelector } from "react-redux";
 
 const Left = () => {
-  const [users, setUsers] = useState([]);
-
-  const fetchUsers = async () => {
+  const navigate=useNavigate()
+  //const [users, setUsers] = useState([]);
+ const dispatch = useDispatch();
+ const {users}=useSelector((state)=>state.user)
+ 
+ const fetchUsers = async () => {
     try {
-      // ✅ If you’re using JWT Auth
       const token = localStorage.getItem("token");
-
       const result = await axios.get("http://localhost:5000/api/user/get", {
-        withCredentials: true, // for cookie-based auth
+        withCredentials: true, 
         headers: token
           ? { Authorization: `Bearer ${token}` }
-          : {}, // attach token only if available
+          : {},
       });
 
-      setUsers(result.data);
+      dispatch(setUsers(result.data));
     } catch (error) {
       console.error("❌ Error fetching users:", error);
     }
@@ -32,22 +35,22 @@ const Left = () => {
 
   return (
     <div className="w-[30%] h-[calc(100vh-48px)] bg-gray-700">
-      {/* Header */}
+     
       <div className="font-bold text-lg text-white p-[10px] flex justify-between items-center">
         <div>Koalaliving</div>
         <div className="flex gap-[15px] text-xl">
-          <CiSettings />
-          <FaRegEdit />
+          <CiSettings className="cursor-pointer"/>
+          <FaRegEdit className="cursor-pointer"/>
         </div>
       </div>
 
-      {/* Section Title */}
+   
       <div className="text-white flex gap-[10px] p-[10px] items-center">
         <TbTriangleInvertedFilled />
         <p>Direct Message</p>
       </div>
 
-      {/* Users List */}
+    
       <div className="p-2">
         {users.length > 0 ? (
           users.map((user) => (

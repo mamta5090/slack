@@ -4,7 +4,7 @@ import protectRoute from "../middleware/protectRoute.js";
 
 const router = express.Router();
 
-router.post("/send/:id", protectRoute, sendMessage);
-router.get("/getmessage/:id", protectRoute, getMessagesByConversation);
+router.post("/send/:id",  sendMessage);
+router.get("/getmessage/:id", getMessagesByConversation);
 
 export default router;

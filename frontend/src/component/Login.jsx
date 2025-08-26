@@ -22,7 +22,7 @@ const handleSubmit=async(e)=>{
             {email,password}
         )
         dispatch(setUser(result.data))
-        console.log(result.data)
+        console.log(result.data,"token")
         navigate("/home")
     } catch (error) {
         console.log(error)
