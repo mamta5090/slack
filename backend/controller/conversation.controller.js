@@ -1,3 +1,4 @@
+// controller/conversation.controller.js
 import Conversation from "../models/conversation.model.js";
 
 export const createOrGetConversation = async (req, res) => {
@@ -9,18 +10,19 @@ export const createOrGetConversation = async (req, res) => {
     }
 
     let convo = await Conversation.findOne({
-      members: { $all: [senderId, receiverId] },
+      participants: { $all: [senderId, receiverId] },
     });
 
     if (!convo) {
       convo = await Conversation.create({
-        members: [senderId, receiverId],
+        participants: [senderId, receiverId],
         lastMessageAt: new Date(),
       });
     }
 
     res.status(201).json(convo);
   } catch (err) {
+    console.error("createOrGetConversation error:", err);
     res.status(500).json({ message: err.message || "Failed to create/get conversation" });
   }
 };
@@ -30,23 +32,25 @@ export const getUserConversations = async (req, res) => {
     const { userId } = req.params;
 
     const conversations = await Conversation.find({
-      members: { $in: [userId] },
+      participants: { $in: [userId] },
     })
       .sort({ updatedAt: -1 })
-      .populate("members", "name email");
+      .populate("participants", "name email");
 
     res.json(conversations);
   } catch (err) {
+    console.error("getUserConversations error:", err);
     res.status(500).json({ message: err.message || "Failed to fetch conversations" });
   }
 };
 
 export const getConversationById = async (req, res) => {
   try {
-    const convo = await Conversation.findById(req.params.id).populate("members", "name email");
+    const convo = await Conversation.findById(req.params.id).populate("participants", "name email");
     if (!convo) return res.status(404).json({ message: "Conversation not found" });
     res.json(convo);
   } catch (err) {
+    console.error("getConversationById error:", err);
     res.status(500).json({ message: err.message || "Failed to fetch conversation" });
   }
 };

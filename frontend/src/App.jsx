@@ -1,39 +1,75 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";   
-import { useSelector } from "react-redux";
+// App.jsx
+import React, { useEffect, useRef } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import Registration from "./component/Registration";
 import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
+// import io from "socket.io-client";
+// import { setOnlineUser } from "./redux/SocketSlice";
+
+// const serverUrl = "http://localhost:5000"; // backend with socket.io
 
 const App = () => {
+  const user = useSelector((state) => state.user.user);
+  // const dispatch = useDispatch();
+  // const socketRef = useRef(null);
 
-  const { user } = useSelector((state) => state.user);
+  // useEffect(() => {
+  //   if (user) {
+  //     // connect socket if not already connected
+  //     if (!socketRef.current) {
+  //       socketRef.current = io(serverUrl, {
+  //         auth: { userId: user._id },
+  //         transports: ["websocket"], // force websocket first
+  //         withCredentials: true,
+  //       });
+  //     }
+
+  //     // listen for online users
+  //     socketRef.current.on("getOnlineUser", (users) => {
+  //       dispatch(setOnlineUser(users || []));
+  //     });
+
+  //     // cleanup when user logs out
+  //     return () => {
+  //       if (socketRef.current) {
+  //         socketRef.current.off("getOnlineUser");
+  //         socketRef.current.disconnect();
+  //         socketRef.current = null;
+  //       }
+  //       dispatch(setOnlineUser([]));
+  //     };
+  //   } else {
+  //     // if no user, ensure socket is closed
+  //     if (socketRef.current) {
+  //       socketRef.current.disconnect();
+  //       socketRef.current = null;
+  //     }
+  //     dispatch(setOnlineUser([]));
+  //   }
+  // }, [user, dispatch]);
 
   return (
     <Routes>
-     
       <Route
         path="/"
         element={user ? <Home /> : <Navigate to="/login" replace />}
       />
-
-     
       <Route
         path="/login"
         element={!user ? <Login /> : <Navigate to="/" replace />}
       />
-
-     
       <Route
         path="/register"
         element={!user ? <Registration /> : <Navigate to="/" replace />}
       />
-
-  
       <Route
         path="/user/:id"
-        element={user ? <Right /> : <Navigate to="/login" replace />}
+        element={
+          user ? <Home/> : <Navigate to="/login" replace />
+        }
       />
     </Routes>
   );
