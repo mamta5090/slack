@@ -26,10 +26,11 @@ const Registration = () => {
         email,
         password,
       });
-
-      dispatch(setUser(result.data));
-      console.log(result.data)
-      navigate("/login"); 
+const { token, user } = result.data;
+localStorage.setItem("token", token);
+axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+dispatch(setUser(user));
+navigate("/");
     } catch (err) {
       const msg = err.response?.data?.message || "Registration failed";
       setError(msg);

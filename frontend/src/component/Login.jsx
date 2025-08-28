@@ -14,20 +14,27 @@ const Login = () => {
   const dispatch=useDispatch();
   const user =useSelector((state)=>state.user.user)
 
-const handleSubmit=async(e)=>{
-    e.preventDefault();
-    console.log({ email, password });
-    try {
-        const result=await axios.post("http://localhost:5000/api/user/login",
-            {email,password}
-        )
-        dispatch(setUser(result.data))
-        console.log(result.data,"token")
-        navigate("/home")
-    } catch (error) {
-        console.log(error)
-    }
-}  
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  console.log({ email, password });
+  try {
+    const res = await axios.post("http://localhost:5000/api/user/login", {
+      email,
+      password,
+    });
+    const { token, user } = res.data;
+    if (!token || !user) throw new Error("Invalid login response")
+    localStorage.setItem("token", token);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    dispatch(setUser(user));
+    console.log({ token, user }, "token");
+    navigate("/");
+  } catch (error) {
+    console.error(error);
+  }
+};
+ 
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white px-4">

@@ -11,7 +11,7 @@ const Home = () => {
      <div className=' flex flex-row'>
          <Sidebar/>
       <Left/>
-      <Right/>
+      {/* <Right/> */}
      </div>
     </div>
   )
