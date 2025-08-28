@@ -1,4 +1,4 @@
-// controller/message.controller.js
+
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getSocketId,io } from "../socket.js";
@@ -34,10 +34,6 @@ const receiverSocketId = getSocketId(receiverId);
 if (receiverSocketId) {
   io.to(receiverSocketId).emit("newMessage", newMessage);
 }
-// compute roomId based on sender & receiver and emit
-const roomId = [String(senderId).trim(), String(receiverId).trim()].sort().join("_");
-const payload = { ...newMessage.toObject(), roomId };
-io.to(roomId).emit("newMessage", payload);
 
 
     return res.status(200).json(newMessage);

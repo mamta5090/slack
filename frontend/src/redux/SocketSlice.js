@@ -1,11 +1,10 @@
-// redux/SocketSlice.js
 import { createSlice } from "@reduxjs/toolkit";
 
 const socketSlice = createSlice({
   name: "socket",
   initialState: {
-    socket: null,      // <- store actual socket here (name matches selectors)
-    onlineUsers: [],   // serializable data
+    socket: null,
+    onlineUsers: [],
   },
   reducers: {
     setSocket: (state, action) => {

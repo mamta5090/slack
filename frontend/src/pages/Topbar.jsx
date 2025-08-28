@@ -6,18 +6,18 @@ import { useSelector } from "react-redux";
 
 const Topbar = () => {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.user.user); // get logged-in user from Redux
+  const user = useSelector((state) => state.user.user); 
 
   return (
-    <div className="w-full h-12 bg-gray-800 text-white flex items-center justify-between shadow-md px-4">
-      {/* Left section: navigation + clock */}
+    <div className="w-full h-12 fixed bg-gray-800 text-white flex items-center justify-between shadow-md px-4">
+    
       <div className="flex items-center gap-5 w-[36%]">
         <FaArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
         <FaArrowRight onClick={() => navigate(1)} className="cursor-pointer" />
         <CiClock2 />
       </div>
 
-      {/* Center: Search */}
+    
       <div className="flex items-center bg-gray-700 rounded-md px-3 py-1">
         <input
           type="text"
@@ -27,7 +27,7 @@ const Topbar = () => {
         <CiSearch className="text-xl ml-2" />
       </div>
 
-      {/* Right: notifications + logged-in user */}
+    
       <div className="flex items-center space-x-4">
         <span className="cursor-pointer">🔔</span>
         {user ? (

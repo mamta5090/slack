@@ -1,13 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  messages: [],   // 👈 should be array, not null
+  messages: [],  
 };
 
 const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
+    setSingleUser: (state, action) => {
+      state.singleUser = action.payload;
+    },
     setMessages: (state, action) => {
       state.messages = action.payload;
     },
@@ -16,9 +19,11 @@ const messageSlice = createSlice({
     },
     clearMessages: (state) => {
       state.messages = [];
-    }
+    },
   },
 });
 
-export const { setMessages, addMessage, clearMessages } = messageSlice.actions;
+export const { setMessages, addMessage, clearMessages, setSingleUser } =
+  messageSlice.actions;
+
 export default messageSlice.reducer;

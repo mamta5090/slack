@@ -52,7 +52,7 @@ const Chat = ({ senderId, receiverId }) => {
           className="flex-1 border p-2 rounded-md"
           placeholder="Type a message..."
         />
-        <button
+        <button 
           onClick={sendMessage}
           className="bg-blue-500 text-white px-4 rounded-md"
         >
