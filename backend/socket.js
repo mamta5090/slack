@@ -19,16 +19,21 @@ const userSocketMap = {};
 export const getSocketId = (userId) => userSocketMap[userId];
 
 io.on("connection", (socket) => {
-  
-  let userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
-  if (typeof userId === "string") userId = userId.trim();
 
-  if (userId && userId !== "undefined" && userId !== "null") {
-    userSocketMap[userId] = socket.id;
+  const userId=socket.handshake.query.userId
+  if(userId!=undefined){
+    userSocketMap[userId]=socket.id
   }
+  
+  // let userId = socket.handshake.auth?.userId || socket.handshake.query?.userId;
+  // if (typeof userId === "string") userId = userId.trim();
+
+  // if (userId && userId !== "undefined" && userId !== "null") {
+  //   userSocketMap[userId] = socket.id;
+  // }
 
   
-  io.emit("getOnlineUser", Object.keys(userSocketMap));
+  io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   
   socket.on("sendMessage", (payload) => {
@@ -39,13 +44,18 @@ io.on("connection", (socket) => {
   
   });
 
-  socket.on("disconnect", () => {
+socket.on('disconnect',()=>{
+  delete userSocketMap[userId]
+  io.emit('getOnlineUsers',Object.keys(userSocketMap))
+})
+
+  // socket.on("disconnect", () => {
   
-    if (userId && userSocketMap[userId]) {
-      delete userSocketMap[userId];
-    }
-    io.emit("getOnlineUser", Object.keys(userSocketMap));
-  });
+  //   if (userId && userSocketMap[userId]) {
+  //     delete userSocketMap[userId];
+  //   }
+  //   io.emit("getOnlineUser", Object.keys(userSocketMap));
+  // });
 });
 
 export { app, io, server };
