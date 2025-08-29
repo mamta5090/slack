@@ -9,7 +9,7 @@ const Topbar = () => {
   const user = useSelector((state) => state.user.user); 
 
   return (
-    <div className="w-full h-12 fixed bg-gray-800 text-white flex items-center justify-between shadow-md px-4">
+    <div className="w-full h-10 fixed bg-[#3f0e40] text-white flex items-center justify-between shadow-md px-4">
     
       <div className="flex items-center gap-5 w-[36%]">
         <FaArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />

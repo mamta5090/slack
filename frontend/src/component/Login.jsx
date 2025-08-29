@@ -103,7 +103,7 @@ const handleSubmit = async (e) => {
       <p className="mt-10 text-gray-600"
        >Don't have account?</p>
       <p
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/register")}
         className="text-blue-600 cursor-pointer"
       >
         Rigester
