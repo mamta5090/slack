@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import io from "socket.io-client";
-import { setSocket, setOnlineUser, clearSocket } from "./redux/SocketSlice";
+import { setSocket, setOnlineUsers, clearSocket } from "./redux/SocketSlice";
 
 import Registration from "./component/Registration";
 import Login from "./component/Login";
@@ -13,36 +13,63 @@ const SERVER_URL = "http://localhost:5000";
 
 const App = () => {
   const user = useSelector((state) => state.user.user);
+  const socket = useSelector((state) => state.socket.socket); // ✅ fix: from socketSlice
   const dispatch = useDispatch();
-  const socketRef = useRef(null);
+  //const socketRef = useRef(null);
 
   useEffect(() => {
-    if (user && !socketRef.current) {
-
-      socketRef.current = io(SERVER_URL, {
-        auth: { userId: user._id },
-        transports: ["websocket"],
-        withCredentials: true,
+    if (user) {
+      const socketIo = io(SERVER_URL, {
+        query: {
+          userId: user._id,
+        },
       });
 
-      dispatch(setSocket(socketRef.current));
+      dispatch(setSocket(socketIo));
 
-      socketRef.current.on("getOnlineUser", (users) => {
-        dispatch(setOnlineUser(users || []));
+      // ✅ move online users listener inside connection
+      socketIo.on("getOnlineUsers", (users) => {
+        dispatch(setOnlineUsers(users));
       });
-    }
 
-    
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.off("getOnlineUser");
-        socketRef.current.disconnect();
-        socketRef.current = null;
+      return () => {
+        socketIo.close(); // ✅ close the socket we just created
+        dispatch(clearSocket()); // also clear from redux
+      };
+    } else {
+      if (socket) {
+        socket.close();
+        dispatch(clearSocket());
       }
-      dispatch(clearSocket());
-      dispatch(setOnlineUser([]));
-    };
+    }
   }, [user, dispatch]);
+
+  // useEffect(() => {
+  //   if (user && !socketRef.current) {
+  //
+  //     socketRef.current = io(SERVER_URL, {
+  //       auth: { userId: user._id },
+  //       transports: ["websocket"],
+  //       withCredentials: true,
+  //     });
+  //
+  //     dispatch(setSocket(socketRef.current));
+  //
+  //     socketRef.current.on("getOnlineUser", (users) => {
+  //       dispatch(setOnlineUser(users || []));
+  //     });
+  //   }
+  //
+  //   return () => {
+  //     if (socketRef.current) {
+  //       socketRef.current.off("getOnlineUser");
+  //       socketRef.current.disconnect();
+  //       socketRef.current = null;
+  //     }
+  //     dispatch(clearSocket());
+  //     dispatch(setOnlineUser([]));
+  //   };
+  // }, [user, dispatch]);
 
   return (
     <Routes>

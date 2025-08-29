@@ -11,7 +11,7 @@ const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // ✅ ignore non-serializable values (socket)
+      serializableCheck: false,
     }),
 });
 
