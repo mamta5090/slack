@@ -1,4 +1,3 @@
-// App.jsx
 import React, { useEffect, useRef } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,7 +18,7 @@ const App = () => {
 
   useEffect(() => {
     if (user && !socketRef.current) {
-      // ✅ Connect socket only once per user
+
       socketRef.current = io(SERVER_URL, {
         auth: { userId: user._id },
         transports: ["websocket"],
@@ -33,7 +32,7 @@ const App = () => {
       });
     }
 
-    // ✅ Cleanup socket when user logs out or component unmounts
+    
     return () => {
       if (socketRef.current) {
         socketRef.current.off("getOnlineUser");
