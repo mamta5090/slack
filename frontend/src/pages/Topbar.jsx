@@ -9,7 +9,7 @@ const Topbar = () => {
   const user = useSelector((state) => state.user.user); 
 
   return (
-    <div className="w-full h-10 fixed bg-[#3f0e40] text-white flex items-center justify-between shadow-md px-4">
+    <div className="w-full h-10 fixed bg-[#3f0e40] text-white flex items-center justify-between shadow-md px-4 py-[25px]">
     
       <div className="flex items-center gap-5 w-[36%]">
         <FaArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
@@ -18,7 +18,7 @@ const Topbar = () => {
       </div>
 
     
-      <div className="flex items-center bg-gray-700 rounded-md px-3 py-1">
+      <div className="flex items-center bg-gray-700 rounded-md px-3 py-[5px]">
         <input
           type="text"
           placeholder="Search Koalaliving..."
