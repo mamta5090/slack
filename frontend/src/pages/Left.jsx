@@ -190,5 +190,4 @@ const Left = () => {
     </div>
   );
 };
-
 export default Left;
