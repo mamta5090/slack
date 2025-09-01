@@ -131,7 +131,7 @@ const Right = () => {
 
   return (
     // A comment explaining the change: The main container takes the full height of the space provided by MainLayout.
-    <div className="w-full h-full flex flex-col bg-white">
+    <div className=" w-[100vh-332px] pt-[109px] h-full flex flex-col bg-white">
       {/* Header (flex-shrink-0 prevents it from shrinking) */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
         <div className="flex items-center gap-3">

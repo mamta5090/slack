@@ -27,7 +27,7 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="bg-[#3f0e40] fixed w-[72px] h-[95vh] flex flex-col justify-between items-center py-4 shadow-lg">
+    <div className="bg-[#3f0e40] fixed w-[72px] h-[95vh] flex flex-col justify-between items-center py-4 shadow-lg top-10">
       {/* --- Avatar / Logo Top --- */}
       <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-xl cursor-pointer">
         K

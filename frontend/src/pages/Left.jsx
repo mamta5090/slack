@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate, useParams } from "react-router-dom"; // A comment explaining the change: Imported useParams to detect the active chat.
+import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { CiSettings, CiSearch } from "react-icons/ci";
 import { FaRegEdit } from "react-icons/fa";
@@ -11,7 +11,7 @@ import { setAllUsers } from "../redux/userSlice";
 const Left = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { id: activeChatId } = useParams(); // A comment explaining the change: Gets the current active chat ID from the URL.
+  const { id: activeChatId } = useParams();
   const me = useSelector((s) => s.user.user);
   const { allUsers } = useSelector((s) => s.user);
   const conversations = useSelector(selectAllConversations);
@@ -60,7 +60,6 @@ const Left = () => {
     return { unreadList: unread, directList: direct };
   }, [conversations]);
 
-  // A comment explaining the change: This function now creates a conversation if it doesn't exist before navigating.
   const openChat = async (otherId) => {
     try {
       const token = localStorage.getItem("token");
@@ -83,30 +82,32 @@ const Left = () => {
 
     const isOnline = onlineUsers.includes(user._id);
     const hasUnread = isConversation && item.unreadCount > 0;
-    // A comment explaining the change: Determines if this item is the currently active chat.
     const isActive = user._id === activeChatId;
 
     return (
       <div
         key={user._id}
         onClick={() => openChat(user._id)}
-        // A comment explaining the change: Applies a different background color if the chat is active.
-        className={`flex items-center justify-between hover:bg-purple-800 text-white rounded-md p-2 cursor-pointer ${
+        className={`flex items-center justify-between hover:bg-white hover:text-black text-white rounded-md p-2 cursor-pointer ${
           isActive ? "bg-purple-800" : ""
         }`}
       >
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className={`w-[40px] h-[40px] flex items-center justify-center rounded-full text-lg font-bold ${isConversation ? 'bg-purple-600' : 'bg-blue-600'}`}>
+            <div
+              className={`w-[32px] h-[32px] flex items-center justify-center rounded-full text-sm font-bold ${
+                isConversation ? "bg-purple-600" : "bg-blue-600"
+              }`}
+            >
               {user.name?.charAt(0)?.toUpperCase()}
             </div>
             <div
-              className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-gray-700 ${
+              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-700 ${
                 isOnline ? "bg-green-500" : "bg-gray-500"
               }`}
             ></div>
           </div>
-          <p className="font-semibold">{user.name}</p>
+          <p className="font-medium text-sm">{user.name}</p>
         </div>
         {hasUnread && (
           <span className="min-w-[20px] h-[20px] px-2 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
@@ -118,73 +119,88 @@ const Left = () => {
   };
 
   return (
-    // A comment explaining the change: Adjusted width to better fit the new theme.
-    <div className="w-[300px] h-full bg-purple-900 text-gray-200 overflow-y-auto no-scrollbar scroll-smooth pr-2">
-      <div className="font-bold text-lg text-white p-[10px] flex justify-between items-center">
+    <div className="w-[260px] ml-[72px] mt-[42px] h-screen bg-[#3f0e40] text-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
         <div>Koalaliving</div>
-        <div className="flex gap-[15px] text-xl">
+        <div className="flex gap-3 text-xl">
           <CiSettings className="cursor-pointer" />
           <FaRegEdit className="cursor-pointer" />
         </div>
       </div>
 
-      <div className="p-2">
+      {/* Search */}
+      <div className="p-3">
         <div className="relative">
           <input
             type="text"
-            placeholder="Search or start a new chat..."
+            placeholder="Search"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-purple-800 text-white rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full bg-purple-800 text-white rounded-md py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
           />
-          <CiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
+          <CiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg" />
         </div>
       </div>
 
-      <div className="text-white flex gap-[10px] p-[10px] items-center">
-        <TbTriangleInvertedFilled />
-        <p>Direct Messages</p>
-      </div>
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        {/* Channels */}
+        <div className="text-sm px-4 py-2 text-gray-300">Channels</div>
+        <div className="flex flex-col space-y-1 px-2">
+          <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># cyrus</div>
+          <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># general</div>
+          <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># hr-activities</div>
+          <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># random</div>
+          <div className="text-purple-300 px-3 py-1 cursor-pointer">+ Add channels</div>
+        </div>
 
-      <div className="px-2">
-        {searchTerm ? (
-          <div>
-            <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
-              Search Results
-            </div>
-            {searchResults.length > 0 ? (
-              searchResults.map((user) => renderUserItem(user, false))
-            ) : (
-              <p className="text-gray-400 text-sm px-2">No users found</p>
-            )}
-          </div>
-        ) : (
-          <>
-            {unreadList.length > 0 && (
-              <div className="mb-4">
-                <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
-                  Unread <span>• {unreadList.length}</span>
-                </div>
-                {unreadList.map((convo) => renderUserItem(convo, true))}
-              </div>
-            )}
-
-            <div>
+        {/* Direct Messages */}
+        <div className="flex items-center gap-2 text-sm px-4 py-3 text-gray-300">
+          <TbTriangleInvertedFilled />
+          <span>Direct Messages</span>
+        </div>
+        <div className="px-2">
+          {searchTerm ? (
+            <>
               <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
-                Direct Messages
+                Search Results
               </div>
+              {searchResults.length > 0 ? (
+                searchResults.map((user) => renderUserItem(user, false))
+              ) : (
+                <p className="text-gray-400 text-sm px-2">No users found</p>
+              )}
+            </>
+          ) : (
+            <>
+              {unreadList.length > 0 && (
+                <div className="mb-2">
+                  <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-1">
+                    Unread • {unreadList.length}
+                  </div>
+                  {unreadList.map((convo) => renderUserItem(convo, true))}
+                </div>
+              )}
               {directList.length > 0 ? (
                 directList.map((convo) => renderUserItem(convo, true))
-              ) : conversations.length > 0 ? (
-                <p className="text-gray-400 text-sm px-2">No other conversations</p>
               ) : (
                 allUsers
                   .filter((u) => String(u._id) !== String(me?._id))
                   .map((user) => renderUserItem(user, false))
               )}
-            </div>
-          </>
-        )}
+              <div className="text-purple-300 px-3 py-2 cursor-pointer">
+                + Invite people
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-3 border-t border-purple-900 text-gray-300 text-sm">
+        <div className="cursor-pointer">Apps</div>
+        <div className="cursor-pointer">Slackbot</div>
+        <div className="cursor-pointer">Add apps</div>
       </div>
     </div>
   );
