@@ -6,13 +6,10 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setSingleUser } from "../redux/userSlice";
 import { setMessages, addMessage } from "../redux/messageSlice";
-// A comment explaining the change: Importing fetchConversations to force a UI refresh after marking a thread as read.
 import { fetchConversations } from "../redux/conversationSlice";
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
-import Left from "./Left";
-import Sidebar from "./Sidebar";
-import Topbar from "./Topbar";
+import Home from "../component/Home";
 
 const Right = () => {
   const socket = useSelector((state) => state.socket.socket);
@@ -43,8 +40,6 @@ const Right = () => {
         {},
         { headers: authHeaders() }
       );
-      // A comment explaining the change: After successfully marking as read on the backend,
-      // we immediately re-fetch the conversation list to update the UI (e.g., remove the "Unread" badge).
       dispatch(fetchConversations());
     } catch {
       // ignore errors
@@ -94,44 +89,33 @@ const Right = () => {
   };
 
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      await fetchUser();
-      await fetchMessages();
-      await markThreadAsRead();
-    })();
+    if (id) {
+      (async () => {
+        await fetchUser();
+        await fetchMessages();
+        await markThreadAsRead();
+      })();
+    } else {
+      dispatch(setSingleUser(null));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
     if (!socket || !user?._id || !id) return;
 
-    // --- START OF MODIFIED CODE ---
-    // A comment explaining the change: The listener now expects a 'payload' object, not just a 'msg' object.
     const handleNewMessage = (payload) => {
-      const msg = payload.newMessage; // Extract the message from the payload.
-      if (!msg) return; // Safety check
+      const msg = payload.newMessage;
+      if (!msg) return;
 
       const senderId =
         typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
-      const receiverId =
-        typeof msg.receiver === "object" ? msg.receiver?._id : msg.receiver;
 
-      const openedUserId = String(id);
-      const me = String(user._id);
-
-      const isForThisChat =
-        (String(senderId) === openedUserId && String(receiverId) === me) ||
-        (String(receiverId) === openedUserId && String(senderId) === me);
-
-      // This logic correctly adds the message to the screen if it's for the open chat and not from the user themselves.
-      if (isForThisChat && String(senderId) !== me) {
+      if (String(senderId) === id && String(senderId) !== user._id) {
         dispatch(addMessage(msg));
-        // This function now correctly clears the "unread" status from the UI.
         markThreadAsRead();
       }
     };
-    // --- END OF MODIFIED CODE ---
 
     socket.on("newMessage", handleNewMessage);
     return () => socket.off("newMessage", handleNewMessage);
@@ -142,92 +126,74 @@ const Right = () => {
   }, [messages]);
 
   if (!singleUser) {
-    return (
-      <div className="w-full min-h-screen flex flex-col">
-        <div className="fixed top-0 left-0 w-full z-50">
-          <Topbar />
-        </div>
-        <div className="flex flex-1 pt-12">
-          <Sidebar />
-          <Left />
-          <div className="w-[62%] h-[calc(100vh-48px)] flex items-center justify-center">
-            <p className="text-gray-500 p-4 text-lg">Select a user to start chatting</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <Home />;
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col">
-      <div className="fixed top-0 left-0 w-full z-50">
-        <Topbar />
+    // A comment explaining the change: The main container takes the full height of the space provided by MainLayout.
+    <div className="w-full h-full flex flex-col bg-white">
+      {/* Header (flex-shrink-0 prevents it from shrinking) */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
+        <div className="flex items-center gap-3">
+          <div className="w-[40px] h-[40px] flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold text-white">
+            {singleUser.name?.charAt(0)?.toUpperCase()}
+          </div>
+          <p className="font-semibold">{singleUser.name}</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 border border-gray-400 rounded-xl px-2 py-1 cursor-pointer">
+            <CiHeadphones />
+            <IoIosArrowDown />
+          </div>
+          <IoMdMore className="cursor-pointer" />
+        </div>
       </div>
 
-      <div className="flex flex-1 pt-12">
-        <Sidebar />
-        <Left />
+      {/* Messages List */}
+      {/* A comment explaining the change: 'flex-1' makes this container take up all available vertical space,
+          and 'overflow-y-auto' ensures that only this container scrolls. */}
+      <div className="flex-1 p-4 overflow-y-auto space-y-2">
+        {messages?.map((msg, idx) => {
+          const senderId =
+            typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
+          const isMine = String(senderId) === String(user._id);
 
-        <div className="w-[62%] h-[calc(100vh-48px)] flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-300">
-            <div className="flex items-center gap-3">
-              <div className="w-[40px] h-[40px] flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold">
-                {singleUser.name?.charAt(0)?.toUpperCase()}
-              </div>
-              <p className="font-semibold">{singleUser.name}</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1 border border-gray-400 rounded-xl px-2 py-1 cursor-pointer">
-                <CiHeadphones />
-                <IoIosArrowDown />
-              </div>
-              <IoMdMore className="cursor-pointer" />
-            </div>
-          </div>
-
-          <div className="flex-1 p-4 overflow-y-auto space-y-2">
-            {messages?.map((msg, idx) => {
-              const senderId =
-                typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
-              const isMine = String(senderId) === String(user._id);
-
-              return isMine ? (
-                <SenderMessage
-                  key={msg._id || idx}
-                  message={msg.message}
-                  createdAt={msg.createdAt}
-                />
-              ) : (
-                <ReceiverMessage
-                  key={msg._id || idx}
-                  message={msg.message}
-                  createdAt={msg.createdAt}
-                />
-              );
-            })}
-            <div ref={listEndRef} />
-          </div>
-
-          <div className="p-4 border-t border-gray-300 flex gap-2">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={newMsg}
-              onChange={(e) => setNewMsg(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !loading) handleSendMessage(e);
-              }}
-              className="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none"
+          return isMine ? (
+            <SenderMessage
+              key={msg._id || idx}
+              message={msg.message}
+              createdAt={msg.createdAt}
             />
-            <button
-              onClick={handleSendMessage}
-              disabled={loading || !newMsg.trim()}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
-            >
-              {loading ? "Sending..." : "Send"}
-            </button>
-          </div>
-        </div>
+          ) : (
+            <ReceiverMessage
+              key={msg._id || idx}
+              message={msg.message}
+              createdAt={msg.createdAt}
+            />
+          );
+        })}
+        <div ref={listEndRef} />
+      </div>
+
+      {/* Input (flex-shrink-0 prevents it from shrinking) */}
+      <div className="flex-shrink-0 p-4 border-t border-gray-300 flex gap-2">
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={newMsg}
+          onChange={(e) => setNewMsg(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !loading) handleSendMessage(e);
+          }}
+          className="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none"
+        />
+        <button
+          onClick={handleSendMessage}
+          disabled={loading || !newMsg.trim()}
+          className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
+        >
+          {loading ? "Sending..." : "Send"}
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom"; // A comment explaining the change: Imported useParams to detect the active chat.
 import { useSelector, useDispatch } from "react-redux";
 import { CiSettings, CiSearch } from "react-icons/ci";
 import { FaRegEdit } from "react-icons/fa";
@@ -11,6 +11,7 @@ import { setAllUsers } from "../redux/userSlice";
 const Left = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { id: activeChatId } = useParams(); // A comment explaining the change: Gets the current active chat ID from the URL.
   const me = useSelector((s) => s.user.user);
   const { allUsers } = useSelector((s) => s.user);
   const conversations = useSelector(selectAllConversations);
@@ -18,7 +19,6 @@ const Left = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch initial data
   useEffect(() => {
     dispatch(fetchConversations());
     if (allUsers.length === 0) {
@@ -37,7 +37,6 @@ const Left = () => {
     }
   }, [dispatch, allUsers.length]);
 
-  // A comment explaining the change: Memoized value for global user search results.
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
     const lowercasedFilter = searchTerm.toLowerCase();
@@ -46,7 +45,6 @@ const Left = () => {
       .filter((u) => u.name.toLowerCase().includes(lowercasedFilter));
   }, [searchTerm, allUsers, me?._id]);
 
-  // A comment explaining the change: Memoized values to create two separate, sorted lists for the UI.
   const { unreadList, directList } = useMemo(() => {
     const unread = [];
     const direct = [];
@@ -62,35 +60,40 @@ const Left = () => {
     return { unreadList: unread, directList: direct };
   }, [conversations]);
 
+  // A comment explaining the change: This function now creates a conversation if it doesn't exist before navigating.
   const openChat = async (otherId) => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        `http://localhost:5000/api/conversation/read/${otherId}`,
-        {},
+        "http://localhost:5000/api/conversation/",
+        { senderId: me._id, receiverId: otherId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       dispatch(fetchConversations());
     } catch (err) {
-      console.error("Failed to mark as read:", err);
+      console.error("Failed to create or get conversation:", err);
     }
-    setSearchTerm(""); // Clear search on selection
+    setSearchTerm("");
     navigate(`/user/${otherId}`);
   };
 
-  // A comment explaining the change: A reusable component to render each user/conversation item.
   const renderUserItem = (item, isConversation) => {
     const user = isConversation ? item.other : item;
     if (!user) return null;
 
     const isOnline = onlineUsers.includes(user._id);
     const hasUnread = isConversation && item.unreadCount > 0;
+    // A comment explaining the change: Determines if this item is the currently active chat.
+    const isActive = user._id === activeChatId;
 
     return (
       <div
         key={user._id}
         onClick={() => openChat(user._id)}
-        className="flex items-center justify-between hover:bg-gray-600 text-white rounded-md p-2 cursor-pointer"
+        // A comment explaining the change: Applies a different background color if the chat is active.
+        className={`flex items-center justify-between hover:bg-purple-800 text-white rounded-md p-2 cursor-pointer ${
+          isActive ? "bg-purple-800" : ""
+        }`}
       >
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -115,7 +118,8 @@ const Left = () => {
   };
 
   return (
-    <div className="w-[30%] h-[calc(100vh-48px)] bg-gray-700 overflow-y-auto no-scrollbar scroll-smooth pr-2">
+    // A comment explaining the change: Adjusted width to better fit the new theme.
+    <div className="w-[300px] h-full bg-purple-900 text-gray-200 overflow-y-auto no-scrollbar scroll-smooth pr-2">
       <div className="font-bold text-lg text-white p-[10px] flex justify-between items-center">
         <div>Koalaliving</div>
         <div className="flex gap-[15px] text-xl">
@@ -131,7 +135,7 @@ const Left = () => {
             placeholder="Search or start a new chat..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-gray-800 text-white rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full bg-purple-800 text-white rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-600"
           />
           <CiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xl" />
         </div>
@@ -144,7 +148,6 @@ const Left = () => {
 
       <div className="px-2">
         {searchTerm ? (
-          // A comment explaining the change: Show global search results when typing.
           <div>
             <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
               Search Results
@@ -152,13 +155,11 @@ const Left = () => {
             {searchResults.length > 0 ? (
               searchResults.map((user) => renderUserItem(user, false))
             ) : (
-              <p className="text-gray-500 text-sm px-2">No users found</p>
+              <p className="text-gray-400 text-sm px-2">No users found</p>
             )}
           </div>
         ) : (
-          // A comment explaining the change: Show the default two-list view when not searching.
           <>
-            {/* UNREAD Section */}
             {unreadList.length > 0 && (
               <div className="mb-4">
                 <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
@@ -168,7 +169,6 @@ const Left = () => {
               </div>
             )}
 
-            {/* DIRECT MESSAGES Section */}
             <div>
               <div className="text-gray-300 text-xs uppercase tracking-wide px-2 mb-2">
                 Direct Messages
@@ -176,9 +176,8 @@ const Left = () => {
               {directList.length > 0 ? (
                 directList.map((convo) => renderUserItem(convo, true))
               ) : conversations.length > 0 ? (
-                <p className="text-gray-500 text-sm px-2">No other conversations</p>
+                <p className="text-gray-400 text-sm px-2">No other conversations</p>
               ) : (
-                // Suggestions for brand-new users
                 allUsers
                   .filter((u) => String(u._id) !== String(me?._id))
                   .map((user) => renderUserItem(user, false))
@@ -190,4 +189,5 @@ const Left = () => {
     </div>
   );
 };
+
 export default Left;

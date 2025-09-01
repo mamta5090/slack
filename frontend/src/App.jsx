@@ -14,6 +14,8 @@ import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
 
+import MainLayout from "./component/MainLayout"; // A comment explaining the change: Importing the new layout component.
+
 const SERVER_URL = "http://localhost:5000";
 
 const App = () => {
@@ -59,15 +61,11 @@ const App = () => {
         dispatch(setOnlineUsers(users));
       });
 
-      // --- START OF MODIFIED CODE ---
-      // A comment explaining the change: This listener now dispatches an action to update the Redux store directly,
-      // which is faster and avoids the race condition of re-fetching from the API.
       socketIo.on("newMessage", (payload) => {
         if (payload.updatedConversation) {
           dispatch(upsertConversation(payload.updatedConversation));
         }
       });
-      // --- END OF MODIFIED CODE ---
 
       return () => {
         socketIo.close();
@@ -79,16 +77,22 @@ const App = () => {
         dispatch(clearSocket());
       }
     }
-  }, [user, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, dispatch]);
 
   if (!authChecked) return null;
 
   return (
     <Routes>
+      {/* A comment explaining the change: Using MainLayout to wrap all authenticated routes. */}
       <Route
         path="/"
-        element={user ? <Home /> : <Navigate to="/login" replace />}
-      />
+        element={user ? <MainLayout /> : <Navigate to="/login" replace />}
+      >
+        <Route index element={<Home />} /> {/* Default page inside layout */}
+        <Route path="user/:id" element={<Right />} /> {/* Chat page inside layout */}
+      </Route>
+
+      {/* Login and Register routes do not use the MainLayout */}
       <Route
         path="/login"
         element={!user ? <Login /> : <Navigate to="/" replace />}
@@ -96,14 +100,6 @@ const App = () => {
       <Route
         path="/register"
         element={!user ? <Registration /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/user/:id"
-        element={user ? <Right /> : <Navigate to="/login" replace />}
-      />
-      <Route
-        path="/msg"
-        element={user ? <Right /> : <Navigate to="/login" replace />}
       />
     </Routes>
   );
