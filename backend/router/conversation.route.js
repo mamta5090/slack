@@ -12,8 +12,6 @@ const router = express.Router();
 
 router.post("/", createOrGetConversation);
 
-// A comment explaining the change: The specific '/my' route is placed BEFORE the generic '/:id' route.
-// This ensures that requests to '/my' are handled by getMyConversations and not misinterpreted by getConversationById as an ID.
 router.get("/my", auth, getMyConversations);
 
 router.get("/user/:userId", getUserConversations);

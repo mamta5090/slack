@@ -117,12 +117,12 @@ const Left = () => {
       </div>
     );
   };
-
   return (
-    <div className="w-[260px] ml-[72px] mt-[42px] h-screen bg-[#3f0e40] text-gray-200 flex flex-col">
-      {/* Header */}
-      <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
-        <div>Koalaliving</div>
+    <div className="w-[260px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#3f0e40] text-gray-200 flex flex-col">
+       {/* Header */}
+       <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
+         <div>Koalaliving</div>
+
         <div className="flex gap-3 text-xl">
           <CiSettings className="cursor-pointer" />
           <FaRegEdit className="cursor-pointer" />
@@ -196,12 +196,7 @@ const Left = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="px-4 py-3 border-t border-purple-900 text-gray-300 text-sm">
-        <div className="cursor-pointer">Apps</div>
-        <div className="cursor-pointer">Slackbot</div>
-        <div className="cursor-pointer">Add apps</div>
-      </div>
+      
     </div>
   );
 };
