@@ -19,6 +19,10 @@ const Sidebar = () => {
   const handleLogout = async () => {
     try {
       await axios.post("http://localhost:5000/api/user/logout");
+       localStorage.removeItem("token");
+
+      // ✅ --- GOOD PRACTICE: REMOVE THE DEFAULT AXIOS HEADER ---
+      delete axios.defaults.headers.common["Authorization"];
       dispatch(setUser(null)); 
       navigate("/login"); 
     } catch (error) {

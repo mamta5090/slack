@@ -1,7 +1,6 @@
-import User from "../models/User.js";
+import User from "../models/User.js"; // Corrected path to User model assuming it's in models folder
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
 
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -23,7 +22,8 @@ export const register = async (req, res) => {
     res.status(201).json({
       token,
       user: {
-        id: user._id,
+        // --- FIX: Change 'id' to '_id' to be consistent ---
+        _id: user._id,
         name: user.name,
         email: user.email,
       },
@@ -51,7 +51,8 @@ export const login = async (req, res) => {
     res.json({
       token,
       user: {
-        id: user._id,
+        // --- FIX: Change 'id' to '_id' to be consistent ---
+        _id: user._id,
         name: user.name,
         email: user.email,
       },
@@ -61,6 +62,24 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// ... keep all other functions (logOut, getAllUsers, getSingleUser, getMe) as they are.
+// Make sure to add the 'getMe' function if you haven't already.
+
+export const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("GetMe Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// ... (other functions)
 
 export const logOut = async (req, res) => {
   try {
@@ -98,3 +117,4 @@ export const getSingleUser=async(req,res)=>{
     res.status(500).json({ message: err.message });
   }
 }
+

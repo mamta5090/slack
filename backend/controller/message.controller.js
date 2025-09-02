@@ -1,3 +1,5 @@
+// controller/message.controller.js
+
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getSocketId, io } from "../socket.js";
@@ -7,18 +9,15 @@ export const sendMessage = async (req, res) => {
     const senderId = req.userId;
     const receiverId = req.params.receiverId;
     const { message } = req.body;
-    if (!senderId || !receiverId || !message) {
-      return res
-        .status(400)
-        .json({ message: "senderId, receiverId and message are required" });
-    }
 
-    const newMessage = await Message.create({
+    // --- Create and save the new message ---
+    let newMessage = await Message.create({
       sender: senderId,
       receiver: receiverId,
       message,
     });
 
+    // --- Find or create the conversation and add the new message ---
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
     });
@@ -26,67 +25,38 @@ export const sendMessage = async (req, res) => {
     if (!conversation) {
       conversation = await Conversation.create({
         participants: [senderId, receiverId],
-        messages: [newMessage._id],
       });
-    } else {
-      conversation.messages.push(newMessage._id);
     }
 
-    const receiverIdStr = String(receiverId);
-    const currentUnread = conversation.unread.get(receiverIdStr) || 0;
-    conversation.unread.set(receiverIdStr, currentUnread + 1);
-
+    conversation.messages.push(newMessage._id);
     await conversation.save();
 
-    // --- START OF MODIFIED REAL-TIME LOGIC ---
-    // A comment explaining the change: We now fetch the updated conversation and create a tailored payload for real-time updates.
+    // --- REAL-TIME LOGIC ---
 
-    const updatedConvo = await Conversation.findById(conversation._id).populate(
-      "participants",
-      "name email"
-    );
-
-    // Payload for the person RECEIVING the message
-    const receiverPayload = {
-      _id: updatedConvo._id,
-      other: updatedConvo.participants.find(p => String(p._id) === String(senderId)),
-      unreadCount: updatedConvo.unread.get(receiverIdStr) || 0,
-      updatedAt: updatedConvo.updatedAt,
-    };
-    
-    // Payload for the person SENDING the message
-    const senderPayload = {
-      _id: updatedConvo._id,
-      other: updatedConvo.participants.find(p => String(p._id) === String(receiverId)),
-      unreadCount: updatedConvo.unread.get(String(senderId)) || 0, // Should be 0 for sender
-      updatedAt: updatedConvo.updatedAt,
-    };
+    // Populate the sender details to send along with the message
+    newMessage = await newMessage.populate("sender", "name email");
 
     const receiverSocketId = getSocketId(receiverId);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", {
-        newMessage,
-        updatedConversation: receiverPayload,
-      });
+      // Send the 'newMessage' event to the receiver
+      io.to(receiverSocketId).emit("newMessage", { newMessage });
     }
 
     const senderSocketId = getSocketId(senderId);
     if (senderSocketId) {
-      io.to(senderSocketId).emit("newMessage", {
-        newMessage,
-        updatedConversation: senderPayload,
-      });
+      // Also send it back to the sender for UI consistency
+      io.to(senderSocketId).emit("newMessage", { newMessage });
     }
-    // --- END OF MODIFIED REAL-TIME LOGIC ---
+    
+    // Respond to the HTTP request
+    return res.status(201).json(newMessage);
 
-    return res.status(200).json(newMessage);
   } catch (error) {
     console.error("sendMessage error:", error);
-    return res
-      .status(500)
-      .json({ message: `send Message error ${error.message || error}` });
+    return res.status(500).json({ message: `Send Message error: ${error.message}` });
   }
 };
+// ... (keep other functions like getAllMessages)
 
 export const getAllMessages = async (req, res) => {
   try {

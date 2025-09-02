@@ -5,14 +5,14 @@ import { IoIosArrowDown, IoMdMore } from "react-icons/io";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setSingleUser } from "../redux/userSlice";
-import { setMessages, addMessage } from "../redux/messageSlice";
+import { setMessages, clearMessages } from "../redux/messageSlice";
 import { fetchConversations } from "../redux/conversationSlice";
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
-import Home from "../component/Home";
+import Home from '../component/Home';
+import { format } from 'date-fns';
 
 const Right = () => {
-  const socket = useSelector((state) => state.socket.socket);
   const listEndRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
@@ -23,41 +23,57 @@ const Right = () => {
 
   const singleUser = useSelector((state) => state.user.singleUser);
   const user = useSelector((state) => state.user.user);
-  const messages = useSelector((state) => state.message.messages);
+  const allMessages = useSelector((state) => state.message.messages);
 
+  // This filtering logic is fine, but it was moved from the top level
+  const messages = allMessages.filter(
+    (msg) =>
+      (String(msg.sender._id || msg.sender) === String(user?._id) && String(msg.receiver) === String(id)) ||
+      (String(msg.sender._id || msg.sender) === String(id) && String(msg.receiver) === String(user?._id))
+  );
+
+  // --- FIX 1: Implement the auth header function ---
   const authHeaders = () => {
     const token = localStorage.getItem("token");
-    return token
-      ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
-      : { "Content-Type": "application/json" };
+    return { Authorization: `Bearer ${token}` };
   };
 
+  // --- FIX 2: Implement the function to mark messages as read ---
   const markThreadAsRead = async () => {
     if (!id) return;
     try {
       await axios.post(
         `http://localhost:5000/api/conversation/read/${id}`,
-        {},
+        {}, // No body needed for this request
         { headers: authHeaders() }
       );
+      // Refresh conversations to update unread counts in the left panel
       dispatch(fetchConversations());
-    } catch {
-      // ignore errors
+    } catch (error) {
+      console.error("Failed to mark thread as read", error);
     }
   };
 
-  const fetchUser = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5000/api/user/${id}`, {
-        headers: authHeaders(),
-      });
-      dispatch(setSingleUser(res.data));
-    } catch (error) {
-      console.error("Error fetching user", error);
-    }
-  };
+  // --- FIX 3: Implement the function to fetch the other user's data ---
+ // In src/pages/Right.jsx
+
+const fetchUser = async () => {
+  if (!id) return;
+  try {
+    // --- FIX: Corrected the API endpoint URL ---
+    const res = await axios.get(
+      `http://localhost:5000/api/user/${id}`, // Ensure "/get" is removed
+      { headers: authHeaders() }
+    );
+    dispatch(setSingleUser(res.data));
+  } catch (error) {
+    console.error("Error fetching single user:", error);
+    dispatch(setSingleUser(null));
+  }
+};
 
   const fetchMessages = async () => {
+    if (!id) return;
     try {
       const res = await axios.get(
         `http://localhost:5000/api/message/getAll/${id}`,
@@ -68,18 +84,17 @@ const Right = () => {
       console.error("Error fetching messages", error);
     }
   };
-
+  
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMsg.trim() || !singleUser?._id) return;
     setLoading(true);
     try {
-      const res = await axios.post(
+      await axios.post(
         `http://localhost:5000/api/message/send/${singleUser._id}`,
         { message: newMsg },
         { headers: authHeaders() }
       );
-      dispatch(addMessage(res.data));
       setNewMsg("");
     } catch (error) {
       console.error("Error sending message", error);
@@ -90,110 +105,79 @@ const Right = () => {
 
   useEffect(() => {
     if (id) {
-      (async () => {
-        await fetchUser();
-        await fetchMessages();
-        await markThreadAsRead();
-      })();
+      dispatch(clearMessages());
+      fetchUser();
+      fetchMessages();
+      markThreadAsRead();
     } else {
       dispatch(setSingleUser(null));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  useEffect(() => {
-    if (!socket || !user?._id || !id) return;
-
-    const handleNewMessage = (payload) => {
-      const msg = payload.newMessage;
-      if (!msg) return;
-
-      const senderId =
-        typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
-
-      if (String(senderId) === id && String(senderId) !== user._id) {
-        dispatch(addMessage(msg));
-        markThreadAsRead();
-      }
-    };
-
-    socket.on("newMessage", handleNewMessage);
-    return () => socket.off("newMessage", handleNewMessage);
-  }, [socket, id, user?._id, dispatch]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id, dispatch]);
 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // This check is the reason you see the <Home/> component
   if (!singleUser) {
     return <Home />;
   }
 
+  const formatTimestamp = (isoString) => {
+    if (!isoString) return '';
+    return format(new Date(isoString), "PPpp");
+  };
+
   return (
-    // A comment explaining the change: The main container takes the full height of the space provided by MainLayout.
-    <div className=" w-[100vh-332px] pt-[109px] h-full flex flex-col bg-white">
-      {/* Header (flex-shrink-0 prevents it from shrinking) */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
-        <div className="flex items-center gap-3">
-          <div className="w-[40px] h-[40px] flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold text-white">
-            {singleUser.name?.charAt(0)?.toUpperCase()}
-          </div>
-          <p className="font-semibold">{singleUser.name}</p>
+    <div className="w-full h-full flex flex-col bg-white">
+      {/* Header */}
+      <div className="flex-shrink-0 flex items-center justify-between p-3 border-b">
+        <div className="flex items-center gap-2">
+          <div className="font-bold text-lg">{singleUser?.name}</div>
+          <IoIosArrowDown />
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 border border-gray-400 rounded-xl px-2 py-1 cursor-pointer">
-            <CiHeadphones />
-            <IoIosArrowDown />
-          </div>
+        <div className="flex items-center gap-4 text-xl text-gray-600">
+          <CiHeadphones className="cursor-pointer" />
           <IoMdMore className="cursor-pointer" />
         </div>
       </div>
 
       {/* Messages List */}
-      {/* A comment explaining the change: 'flex-1' makes this container take up all available vertical space,
-          and 'overflow-y-auto' ensures that only this container scrolls. */}
       <div className="flex-1 p-4 overflow-y-auto space-y-2">
         {messages?.map((msg, idx) => {
-          const senderId =
-            typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
+          const senderId = typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
           const isMine = String(senderId) === String(user._id);
+          const formattedTime = formatTimestamp(msg.createdAt);
 
           return isMine ? (
             <SenderMessage
               key={msg._id || idx}
               message={msg.message}
-              createdAt={msg.createdAt}
+              createdAt={formattedTime}
             />
           ) : (
             <ReceiverMessage
               key={msg._id || idx}
               message={msg.message}
-              createdAt={msg.createdAt}
+              createdAt={formattedTime}
             />
           );
         })}
         <div ref={listEndRef} />
       </div>
 
-      {/* Input (flex-shrink-0 prevents it from shrinking) */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-300 flex gap-2">
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={newMsg}
-          onChange={(e) => setNewMsg(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !loading) handleSendMessage(e);
-          }}
-          className="flex-1 p-2 rounded-lg border border-gray-400 focus:outline-none"
-        />
-        <button
-          onClick={handleSendMessage}
-          disabled={loading || !newMsg.trim()}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg disabled:opacity-50"
-        >
-          {loading ? "Sending..." : "Send"}
-        </button>
+      {/* Input */}
+      <div className="flex-shrink-0 p-4">
+        <form onSubmit={handleSendMessage} className="relative">
+          <input
+            type="text"
+            value={newMsg}
+            onChange={(e) => setNewMsg(e.target.value)}
+            placeholder={`Message #${singleUser?.name}`}
+            className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            disabled={loading}
+          />
+        </form>
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ const SenderMessage = ({ message, createdAt }) => {
         title={pretty}
       >
         <p className="text-sm">{message}</p>
-
+  <p className="text-xs text-purple-200 mt-1 text-right">{createdAt}</p>
         {/* custom tooltip on hover */}
         <div className="absolute hidden group-hover:block text-[10px] bg-black text-white px-2 py-1 rounded shadow -bottom-6 right-0 whitespace-nowrap">
           {pretty}

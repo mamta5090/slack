@@ -61,6 +61,12 @@ const Left = () => {
   }, [conversations]);
 
   const openChat = async (otherId) => {
+    // --- FIX: Add a guard clause to ensure 'me' is loaded ---
+    if (!me?._id) {
+      console.error("Cannot open chat: current user not loaded.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem("token");
       await axios.post(
@@ -117,12 +123,12 @@ const Left = () => {
       </div>
     );
   };
+
   return (
     <div className="w-[260px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#3f0e40] text-gray-200 flex flex-col">
-       {/* Header */}
-       <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
-         <div>Koalaliving</div>
-
+      {/* Header */}
+      <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
+        <div>Koalaliving</div>
         <div className="flex gap-3 text-xl">
           <CiSettings className="cursor-pointer" />
           <FaRegEdit className="cursor-pointer" />
@@ -195,8 +201,6 @@ const Left = () => {
           )}
         </div>
       </div>
-
-      
     </div>
   );
 };
