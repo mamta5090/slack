@@ -129,12 +129,15 @@ const fetchUser = async () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between p-3 border-b">
-        <div className="flex items-center gap-2">
-          <div className="font-bold text-lg">{singleUser?.name}</div>
-          <IoIosArrowDown />
+    // A comment explaining the change: The main container takes the full height of the space provided by MainLayout.
+    <div className="absolute top-12 left-[332px] w-[calc(100vw-332px)] h-[calc(100vh-3rem)] flex flex-col bg-white">
+      {/* Header (flex-shrink-0 prevents it from shrinking) */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
+        <div className="flex items-center gap-3">
+          <div className="w-[40px] h-[40px] flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold text-white">
+            {singleUser.name?.charAt(0)?.toUpperCase()}
+          </div>
+          <p className="font-semibold">{singleUser.name}</p>
         </div>
         <div className="flex items-center gap-4 text-xl text-gray-600">
           <CiHeadphones className="cursor-pointer" />
