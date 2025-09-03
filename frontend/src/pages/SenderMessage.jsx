@@ -1,35 +1,24 @@
 
 
 // export default SenderMessage;
-import React, { useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
+import React from "react";
+import { memo } from "react";
 
 const SenderMessage = ({ message, createdAt }) => {
-  const { messages } = useSelector((state) => state.message);
-  const scroll = useRef();
-
-  useEffect(() => {
-    scroll.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const pretty = createdAt ? new Date(createdAt).toLocaleString() : "";
+  // Format the date into a readable time string, e.g., "10:30 AM"
+  const formattedTime = createdAt 
+    ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+    : "";
 
   return (
-    <div className="flex justify-end mb-2" ref={scroll}>
-      {/* bubble with hover tooltip */}
-      <div
-        className="relative group bg-green-500 text-white px-3 py-2 rounded-lg max-w-[70%]"
-        title={pretty}
-      >
+    <div className="flex justify-end mb-2">
+      <div className="bg-green-500 text-white px-3 py-2 rounded-lg max-w-[70%]">
         <p className="text-sm">{message}</p>
-  <p className="text-xs text-purple-200 mt-1 text-right">{createdAt}</p>
-        {/* custom tooltip on hover */}
-        <div className="absolute hidden group-hover:block text-[10px] bg-black text-white px-2 py-1 rounded shadow -bottom-6 right-0 whitespace-nowrap">
-          {pretty}
-        </div>
+        <p className="text-xs text-purple-200 mt-1 text-right">{formattedTime}</p>
       </div>
     </div>
   );
 };
 
-export default SenderMessage;
+// Wrap with React.memo for performance optimization
+export default memo(SenderMessage);

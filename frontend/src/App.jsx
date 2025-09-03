@@ -16,6 +16,7 @@ import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
 import MainLayout from "./component/MainLayout";
+import VideoRoom from "./pages/VideoRoom";
 
 // Define the server URL in one place
 const SERVER_URL = "http://localhost:5000";
@@ -129,7 +130,12 @@ const App = () => {
         path="/register"
         element={!user ? <Registration /> : <Navigate to="/" replace />}
       />
+       <Route
+        path="/room/:roomID"
+        element={user ? <VideoRoom /> : <Navigate to="/" replace />}
+      />
     </Routes>
+    
   );
 };
 

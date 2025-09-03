@@ -1,8 +1,8 @@
 import axios from "axios";
 import React, { useEffect, useState, useRef } from "react";
 import { CiHeadphones } from "react-icons/ci";
-import { IoIosArrowDown, IoMdMore } from "react-icons/io";
-import { useParams } from "react-router-dom";
+import { IoMdMore } from "react-icons/io";
+import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setSingleUser } from "../redux/userSlice";
 import { setMessages, clearMessages } from "../redux/messageSlice";
@@ -13,78 +13,70 @@ import Home from '../component/Home';
 import { format } from 'date-fns';
 
 const Right = () => {
-  const listEndRef = useRef(null);
-
-  const [loading, setLoading] = useState(false);
-  const [newMsg, setNewMsg] = useState("");
-
-  const { id } = useParams();
+  // --- React and Router Hooks ---
+  const { id } = useParams(); // Gets the other user's ID from the URL
+  const navigate = useNavigate(); // Hook to navigate programmatically
   const dispatch = useDispatch();
+  const listEndRef = useRef(null); // Ref for auto-scrolling to the latest message
 
-  const singleUser = useSelector((state) => state.user.singleUser);
-  const user = useSelector((state) => state.user.user);
-  const allMessages = useSelector((state) => state.message.messages);
+  // --- Component State ---
+  const [loading, setLoading] = useState(false); // For disabling the send button while a message is in flight
+  const [newMsg, setNewMsg] = useState(""); // State for the message input field
 
-  // This filtering logic is fine, but it was moved from the top level
-  const messages = allMessages.filter(
-    (msg) =>
-      (String(msg.sender._id || msg.sender) === String(user?._id) && String(msg.receiver) === String(id)) ||
-      (String(msg.sender._id || msg.sender) === String(id) && String(msg.receiver) === String(user?._id))
-  );
+  // --- Redux State ---
+  const singleUser = useSelector((state) => state.user.singleUser); // The user being chatted with
+  const user = useSelector((state) => state.user.user); // The currently logged-in user
+  const allMessages = useSelector((state) => state.message.messages); // All messages from the store
 
-  // --- FIX 1: Implement the auth header function ---
+  // --- Memoized Message Filtering (optional but good practice) ---
+  // This filters messages to only show the ones relevant to the current conversation
+  const messages = React.useMemo(() => {
+    if (!user?._id || !id) return [];
+    return allMessages.filter(
+      (msg) =>
+        (String(msg.sender?._id) === String(user._id) && String(msg.receiver) === String(id)) ||
+        (String(msg.sender?._id) === String(id) && String(msg.receiver) === String(user._id))
+    );
+  }, [allMessages, user?._id, id]);
+
+  // --- Helper function for auth headers ---
   const authHeaders = () => {
     const token = localStorage.getItem("token");
-    return { Authorization: `Bearer ${token}` };
+    return { headers: { Authorization: `Bearer ${token}` } };
   };
 
-  // --- FIX 2: Implement the function to mark messages as read ---
-  const markThreadAsRead = async () => {
+  // --- API Functions ---
+  const fetchUser = async () => {
     if (!id) return;
     try {
-      await axios.post(
-        `http://localhost:5000/api/conversation/read/${id}`,
-        {}, // No body needed for this request
-        { headers: authHeaders() }
-      );
-      // Refresh conversations to update unread counts in the left panel
-      dispatch(fetchConversations());
+      const res = await axios.get(`http://localhost:5000/api/user/${id}`, authHeaders());
+      dispatch(setSingleUser(res.data));
     } catch (error) {
-      console.error("Failed to mark thread as read", error);
+      console.error("Error fetching single user:", error);
+      dispatch(setSingleUser(null));
     }
   };
-
-  // --- FIX 3: Implement the function to fetch the other user's data ---
- // In src/pages/Right.jsx
-
-const fetchUser = async () => {
-  if (!id) return;
-  try {
-    // --- FIX: Corrected the API endpoint URL ---
-    const res = await axios.get(
-      `http://localhost:5000/api/user/${id}`, // Ensure "/get" is removed
-      { headers: authHeaders() }
-    );
-    dispatch(setSingleUser(res.data));
-  } catch (error) {
-    console.error("Error fetching single user:", error);
-    dispatch(setSingleUser(null));
-  }
-};
 
   const fetchMessages = async () => {
     if (!id) return;
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/message/getAll/${id}`,
-        { headers: authHeaders() }
-      );
+      const res = await axios.get(`http://localhost:5000/api/message/getAll/${id}`, authHeaders());
       dispatch(setMessages(Array.isArray(res.data) ? res.data : []));
     } catch (error) {
       console.error("Error fetching messages", error);
     }
   };
-  
+
+  const markThreadAsRead = async () => {
+    if (!id) return;
+    try {
+      await axios.post(`http://localhost:5000/api/conversation/read/${id}`, {}, authHeaders());
+      dispatch(fetchConversations()); // Refresh conversations to update unread counts
+    } catch (error) {
+      console.error("Failed to mark thread as read", error);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMsg.trim() || !singleUser?._id) return;
@@ -93,7 +85,7 @@ const fetchUser = async () => {
       await axios.post(
         `http://localhost:5000/api/message/send/${singleUser._id}`,
         { message: newMsg },
-        { headers: authHeaders() }
+        authHeaders()
       );
       setNewMsg("");
     } catch (error) {
@@ -103,81 +95,98 @@ const fetchUser = async () => {
     }
   };
 
+  // --- Video Call Handler ---
+  const handleJoinVideoCall = () => {
+    // Ensure both user IDs are available
+    if (!user?._id || !singleUser?._id) {
+      console.error("Cannot start video call: User information is missing.");
+      return;
+    }
+    // Create a unique, consistent room ID by combining the two user IDs.
+    // Sorting them ensures both users will generate the same ID regardless of who starts the call.
+    const roomID = [user._id, singleUser._id].sort().join('_');
+
+    // Navigate to the video room URL with the generated room ID
+    navigate(`/room/${roomID}`);
+  };
+
+  // --- useEffect Hooks ---
+  // This effect runs whenever the user clicks on a different chat (i.e., the 'id' in the URL changes)
   useEffect(() => {
     if (id) {
-      dispatch(clearMessages());
+      dispatch(clearMessages()); // Clear previous chat messages
       fetchUser();
       fetchMessages();
       markThreadAsRead();
     } else {
+      // If no chat is selected, clear the user info
       dispatch(setSingleUser(null));
     }
   }, [id, dispatch]);
 
+  // This effect runs whenever the messages for the current chat change, scrolling to the bottom
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // This check is the reason you see the <Home/> component
+
+  // If no user is selected for chat, render the welcome/home component instead of a chat window
   if (!singleUser) {
     return <Home />;
   }
-
+  
+  // --- Timestamp Formatter ---
   const formatTimestamp = (isoString) => {
     if (!isoString) return '';
-    return format(new Date(isoString), "PPpp");
+    // Formats date to a more readable string like "10:30 AM"
+    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // --- Render Logic ---
   return (
-    // A comment explaining the change: The main container takes the full height of the space provided by MainLayout.
     <div className="absolute top-12 left-[332px] w-[calc(100vw-332px)] h-[calc(100vh-3rem)] flex flex-col bg-white">
-      {/* Header (flex-shrink-0 prevents it from shrinking) */}
+      {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
         <div className="flex items-center gap-3">
-          <div className="w-[40px] h-[40px] flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold text-white">
+          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-600 text-lg font-bold text-white">
             {singleUser.name?.charAt(0)?.toUpperCase()}
           </div>
           <p className="font-semibold">{singleUser.name}</p>
         </div>
         <div className="flex items-center gap-4 text-xl text-gray-600">
-          <CiHeadphones className="cursor-pointer" />
+          <CiHeadphones 
+            className="cursor-pointer hover:text-purple-600 transition-colors" 
+            onClick={handleJoinVideoCall} 
+          />
           <IoMdMore className="cursor-pointer" />
         </div>
       </div>
 
       {/* Messages List */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-2">
-        {messages?.map((msg, idx) => {
-          const senderId = typeof msg.sender === "object" ? msg.sender?._id : msg.sender;
-          const isMine = String(senderId) === String(user._id);
+      <div className="flex-1 p-4 overflow-y-auto space-y-1">
+        {messages.map((msg, idx) => {
+          const isMine = String(msg.sender?._id) === String(user._id);
           const formattedTime = formatTimestamp(msg.createdAt);
 
           return isMine ? (
-            <SenderMessage
-              key={msg._id || idx}
-              message={msg.message}
-              createdAt={formattedTime}
-            />
+            <SenderMessage key={msg._id || idx} message={msg.message} createdAt={formattedTime} />
           ) : (
-            <ReceiverMessage
-              key={msg._id || idx}
-              message={msg.message}
-              createdAt={formattedTime}
-            />
+            <ReceiverMessage key={msg._id || idx} message={msg.message} createdAt={formattedTime} />
           );
         })}
+        {/* Invisible element to which we scroll */}
         <div ref={listEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex-shrink-0 p-4">
+      {/* Message Input Form */}
+      <div className="flex-shrink-0 p-4 border-t border-gray-200">
         <form onSubmit={handleSendMessage} className="relative">
           <input
             type="text"
             value={newMsg}
             onChange={(e) => setNewMsg(e.target.value)}
-            placeholder={`Message #${singleUser?.name}`}
-            className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder={`Message ${singleUser?.name}`}
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
             disabled={loading}
           />
         </form>
