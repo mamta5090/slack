@@ -1,13 +1,9 @@
-
-
-// export default SenderMessage;
-import React from "react";
-import { memo } from "react";
+import React, { memo } from "react";
 
 const SenderMessage = ({ message, createdAt }) => {
   // Format the date into a readable time string, e.g., "10:30 AM"
-  const formattedTime = createdAt 
-    ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+  const formattedTime = createdAt
+    ? new Date(createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : "";
 
   return (

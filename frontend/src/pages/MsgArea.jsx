@@ -12,7 +12,7 @@ import ReceiverMessage from "./ReceiverMessage";
 import Home from '../component/Home';
 import { format } from 'date-fns';
 
-const Right = () => {
+const MsgRight = () => {
  
   const { id } = useParams(); 
   const navigate = useNavigate(); 
@@ -143,7 +143,7 @@ const Right = () => {
 
 
   return (
-    <div className="absolute top-12 right-[0px] w-[calc(100vw-332px)] h-[calc(100vh-3rem)] flex flex-col bg-white">
+    <div className="absolute top-12 left-[332px] w-[calc(100vw-332px)] h-[calc(100vh-3rem)] flex flex-col bg-white">
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-2 border-b border-gray-300">
         <div className="flex items-center gap-3">
@@ -168,9 +168,9 @@ const Right = () => {
           const formattedTime = formatTimestamp(msg.createdAt);
 
           return isMine ? (
-            <SenderMessage key={msg._id || idx} message={msg.message} createdAt={msg.createdAt} />
+            <SenderMessage key={msg._id || idx} message={msg.message} createdAt={formattedTime} />
           ) : (
-            <ReceiverMessage key={msg._id || idx} message={msg.message} createdAt={msg.createdAt} />
+            <ReceiverMessage key={msg._id || idx} message={msg.message} createdAt={formattedTime} />
           );
         })}
         {/* Invisible element to which we scroll */}
@@ -194,4 +194,4 @@ const Right = () => {
   );
 };
 
-export default Right;
+export default MsgRight;

@@ -1,12 +1,12 @@
-import React from "react";
-import { Outlet } from "react-router-dom";
-import Topbar from "../pages/Topbar";
-import Sidebar from "../pages/Sidebar";
-import Left from "../pages/Left";
+import React from 'react'
+import MsgLeft from '../pages/MsgLeft'
+import MsgArea from '../pages/MsgArea'
+import Topbar from '../pages/Topbar'
+import Sidebar from '../pages/Sidebar'
 
-const MainLayout = () => {
+const Message = () => {
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
+       <div className="w-full h-screen flex flex-col overflow-hidden">
       <div className="flex-shrink-0">
         <Topbar />
       </div>
@@ -15,14 +15,14 @@ const MainLayout = () => {
           <Sidebar />
         </div>
         <div className="flex-shrink-0">
-          <Left />
+          <MsgLeft />
         </div>
         <div className="flex-grow overflow-hidden">
-          <Outlet />
+          <MsgArea />
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default MainLayout;
+export default Message

@@ -1,8 +1,6 @@
 import React from 'react';
 
 const Home = () => {
-  // A comment explaining the change: This component is simplified. The layout is handled by MainLayout.
-  // It now only needs to render the content for the home/welcome page.
   return (
     <div className="w-full h-full flex items-center justify-center bg-gray-100">
       <div className="text-center">

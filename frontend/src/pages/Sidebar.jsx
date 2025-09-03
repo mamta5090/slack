@@ -39,11 +39,14 @@ const Sidebar = () => {
 
       {/* --- Menu Center --- */}
       <div className="flex flex-col gap-6 items-center text-gray-400">
-        <button className="flex items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition">
-          <RiHome4Fill className="text-2xl" />
+        <button className="flex items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
+        onClick={()=>navigate('/home')}>
+          <RiHome4Fill className="text-2xl" 
+          />
         </button>
 
-        <button className="flex items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition">
+        <button className="flex items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
+        onClick={()=>navigate('/msg')}>
           <LuMessagesSquare className="text-2xl" />
         </button>
 
@@ -56,7 +59,7 @@ const Sidebar = () => {
         </button>
 
         <button
-          onClick={() => navigate("/msg")}
+          
           className="flex items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
         >
           <IoIosMore className="text-2xl" />

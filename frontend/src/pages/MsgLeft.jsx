@@ -8,7 +8,7 @@ import { TbTriangleInvertedFilled } from "react-icons/tb";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
 import { setAllUsers } from "../redux/userSlice";
 
-const Left = () => {
+const MsgLeft = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id: activeChatId } = useParams();
@@ -94,7 +94,7 @@ const Left = () => {
       <div
         key={user._id}
         onClick={() => openChat(user._id)}
-        className={`flex items-center justify-between hover:bg-white hover:text-black text-white rounded-md p-2 cursor-pointer ${
+        className={`flex items-center justify-between  hover:text-black text-white rounded-md p-2 cursor-pointer ${
           isActive ? "bg-purple-800" : ""
         }`}
       >
@@ -150,18 +150,18 @@ const Left = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        {/* Channels */}
-        <div className="text-sm px-4 py-2 text-gray-300">Channels</div>
-        <div className="flex flex-col space-y-1 px-2">
+      
+        {/* <div className="text-sm px-4 py-2 text-gray-300">Channels</div> */}
+        {/* <div className="flex flex-col space-y-1 px-2">
           <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># cyrus</div>
           <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># general</div>
           <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># hr-activities</div>
           <div className="hover:bg-white hover:text-black rounded-md px-3 py-1 cursor-pointer"># random</div>
           <div className="text-purple-300 px-3 py-1 cursor-pointer">+ Add channels</div>
-        </div>
+        </div> */}
 
         {/* Direct Messages */}
-        <div className="flex items-center gap-2 text-sm px-4 py-3 text-gray-300">
+        <div className="flex  items-center gap-2 text-sm px-4 py-3 text-gray-300">
           <TbTriangleInvertedFilled />
           <span>Direct Messages</span>
         </div>
@@ -205,4 +205,4 @@ const Left = () => {
   );
 };
 
-export default Left;
+export default MsgLeft;
