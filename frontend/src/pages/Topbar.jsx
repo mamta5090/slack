@@ -68,7 +68,7 @@ const Topbar = () => {
   };
 
   return (
-    <div className="w-full h-12 fixed bg-gray-800 text-white flex items-center justify-between shadow-md px-4 z-50">
+    <div className="w-full h-12 fixed bg-[#5a2a5c] text-white flex items-center justify-between shadow-md px-4 z-50">
       <div className="flex items-center gap-5 w-[36%]">
         <FaArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
         <FaArrowRight onClick={() => navigate(1)} className="cursor-pointer" />
@@ -79,7 +79,7 @@ const Topbar = () => {
         <input
           type="text"
           placeholder="Search Koalaliving..."
-          className="bg-gray-700 text-white px-2 focus:outline-none w-64"
+          className="bg-[#5a2a5c] text-white px-2 focus:outline-none w-64"
         />
         <CiSearch className="text-xl ml-2" />
       </div>

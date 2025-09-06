@@ -15,7 +15,10 @@ import Home from "./component/Home";
 import Right from "./pages/Right";
 import MainLayout from "./component/MainLayout";
 import VideoRoom from "./pages/VideoRoom";
-import Message from "./component/Message";
+import Profile from "./ismore/Profile";
+
+
+import ProfilePage from "./ismore/ProfilePage";
 
 const SERVER_URL = "http://localhost:5000";
 
@@ -98,32 +101,40 @@ const App = () => {
     <Routes>
     
       <Route
-        path="/"
-        element={user ? <MainLayout /> : <Navigate to="/login" replace />}
-      >
-        <Route index element={<Home />} />
-        <Route path="user/:id" element={<Right/>} />
-      </Route>
-      <Route
-        path="/login"
-        element={!user ? <Login /> : <Navigate to="/" replace />}
-      />
-       <Route
-        path="/home"
-        element={!user ? <Home /> : <Navigate to="/" replace />}
-      />
-      <Route
-        path="/register"
-        element={!user ? <Registration /> : <Navigate to="/" replace />}
-      />
-       <Route
-        path="/room/:roomID"
-        element={user ? <VideoRoom /> : <Navigate to="/" replace />}
-      />
-       <Route
-        path="/msg"
-        element={user ? <Message/> : <Navigate to="/" replace />}
-      />
+    path="/"
+    element={user ? <MainLayout /> : <Navigate to="/login" replace />}
+  >
+    <Route index element={<Home />} />
+    <Route path="user/:id" element={<Right/>} />
+  </Route>
+  <Route
+    path="/login"
+    element={!user ? <Login /> : <Navigate to="/" replace />}
+  />
+   <Route
+    path="/home"
+    element={!user ? <Home /> : <Navigate to="/" replace />}
+  />
+  <Route
+    path="/register"
+    element={!user ? <Registration /> : <Navigate to="/" replace />}
+  />
+   <Route
+    path="/room/:roomID"
+    element={user ? <VideoRoom /> : <Navigate to="/" replace />}
+  />
+   {/* <Route
+    path="/msg"
+    element={user ? <Message/> : <Navigate to="/" replace />}
+  /> */}
+  <Route
+    path="/profilepage"
+    element={user ? <ProfilePage/> : <Navigate to="/" replace />}
+  />
+   <Route
+    path="/profile"
+    element={user ? <Profile/> : <Navigate to="/" replace />}
+  />
     </Routes>
     
   );

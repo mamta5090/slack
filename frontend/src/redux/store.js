@@ -25,14 +25,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import userSlice from "./userSlice";
 import messageSlice from "./messageSlice";
 import socketSlice from "./SocketSlice";
-import conversationSlice from "./conversationSlice"; // A comment explaining the change: Import the new slice.
+import conversationSlice from "./conversationSlice"; 
 
 const store = configureStore({
   reducer: {
     user: userSlice,
     message: messageSlice,
     socket: socketSlice,
-    conversations: conversationSlice, // A comment explaining the change: Add the new slice to the store's reducer.
+    conversations: conversationSlice, 
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

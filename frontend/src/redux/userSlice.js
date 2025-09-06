@@ -39,6 +39,7 @@ const initialState = {
   users: [],
   allUsers: [], // A comment explaining the change: Added state to hold all users for suggestions.
   singleUser: null,
+  profileData:null,
 };
 
 const userSlice = createSlice({
@@ -54,14 +55,17 @@ const userSlice = createSlice({
     setUsers: (state, action) => {
       state.users = action.payload;
     },
-    setAllUsers: (state, action) => { // A comment explaining the change: New reducer to update the allUsers state.
+    setAllUsers: (state, action) => {
       state.allUsers = action.payload;
     },
     setSingleUser: (state, action) => {
       state.singleUser = action.payload;
     },
+    setProfileData:(state,action)=>{
+      state.profileData=action.payload
+    }
   },
 });
 
-export const { setUser, clearUser, setUsers, setAllUsers, setSingleUser } = userSlice.actions; // A comment explaining the change: Export the new action creator.
+export const { setUser,setProfileData, clearUser, setUsers, setAllUsers, setSingleUser } = userSlice.actions; 
 export default userSlice.reducer;
