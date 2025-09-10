@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import io from "socket.io-client";
 import axios from "axios";
@@ -23,6 +23,7 @@ import ProfilePage from "./ismore/ProfilePage";
 const SERVER_URL = "http://localhost:5000";
 
 const App = () => {
+  const navigate=useNavigate()
   const { user } = useSelector((state) => state.user);
   const { socket } = useSelector((state) => state.socket);
   const dispatch = useDispatch();
@@ -65,6 +66,28 @@ const App = () => {
 
       socketIo.on("getOnlineUsers", (users) => {
         dispatch(setOnlineUsers(users));
+      });
+
+        socketIo.on("incoming-call", async (payload) => {
+        // payload: { from: { id, name }, roomID }
+        try {
+          const caller = payload.from || {};
+          const roomID = payload.roomID;
+          // Simple accept/reject using confirm prompt:
+          const accept = window.confirm(`${caller.name || "Someone"} is calling you. Accept?`);
+          // inform server of answer, forwarded to caller
+          socketIo.emit("answer-call", {
+            to: caller.id, // caller's userId
+            accepted: accept === true,
+            roomID,
+          });
+          if (accept) {
+            // navigate to the room (join)
+            navigate(`/room/${roomID}`);
+          }
+        } catch (err) {
+          console.error("incoming-call handler error:", err);
+        }
       });
 
       socketIo.on("newMessage", (payload) => {

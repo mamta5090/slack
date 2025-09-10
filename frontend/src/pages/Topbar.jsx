@@ -1,29 +1,3 @@
-
-// PREVIOUS CODE
-/*
-import React from "react";
-import { CiClock2, CiSearch } from "react-icons/ci";
-import { FaArrowRight, FaArrowLeft } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-
-const Topbar = () => {
-  const navigate = useNavigate();
-  const user = useSelector((state) => state.user.user); 
-
-  return (
-    <div className="w-full h-12 fixed bg-gray-800 text-white flex items-center justify-between shadow-md px-4">
-      // ... content
-      <div className="flex items-center space-x-4">
-        <span className="cursor-pointer">🔔</span>
-        // ... profile icon
-      </div>
-    </div>
-  );
-};
-*/
-
-// MODIFIED CODE
 import React, { useState, useEffect, useRef } from "react"; // A comment explaining the change: Added hooks for state and refs.
 import { CiClock2, CiSearch } from "react-icons/ci";
 import { FaArrowRight, FaArrowLeft, FaBell } from "react-icons/fa"; // A comment explaining the change: Using FaBell icon for better styling.
@@ -40,7 +14,6 @@ const Topbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // A comment explaining the change: Close dropdown when clicking outside.
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -85,7 +58,7 @@ const Topbar = () => {
       </div>
 
       <div className="flex items-center space-x-4">
-        {/* A comment explaining the change: Notification bell with badge and dropdown logic. */}
+
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
