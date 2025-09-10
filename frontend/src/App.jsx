@@ -16,7 +16,7 @@ import Right from "./pages/Right";
 import MainLayout from "./component/MainLayout";
 import VideoRoom from "./pages/VideoRoom";
 import Profile from "./ismore/Profile";
-
+import './index.css'
 
 import ProfilePage from "./ismore/ProfilePage";
 

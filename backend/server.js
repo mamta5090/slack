@@ -72,9 +72,13 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+
+
 const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => res.send('server is running'));
+
+app.get("/favicon.ico", (req, res) => res.status(204).end()); 
 
 // ✅ Used by the frontend to restore the user on refresh
 app.get('/api/user/me', auth, async (req, res) => {

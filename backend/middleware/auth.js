@@ -1,4 +1,3 @@
-// middleware/auth.js
 import jwt from "jsonwebtoken";
 
 const auth = (req, res, next) => {
@@ -12,7 +11,9 @@ const auth = (req, res, next) => {
       token = req.cookies.token;
     }
 
-    console.log("🔐 auth middleware - token received:", token ? typeof token === 'string' ? token.slice(0,40) + '...' : token : token);
+    console.log("🔐 auth middleware - token received:", 
+      token ? `${token.substring(0,20)}...${token.substring(token.length - 20)}` : "No token"
+    );
 
     if (!token) {
       return res.status(401).json({ message: "Authentication token missing" });
@@ -23,7 +24,7 @@ const auth = (req, res, next) => {
       req.userId = decoded.id;
       return next();
     } catch (err) {
-      console.error("🔐 jwt.verify error:", err);
+      console.error("🔐 jwt.verify error:", err.message);
       if (err.name === "TokenExpiredError") {
         return res.status(401).json({ message: "Token expired" });
       }

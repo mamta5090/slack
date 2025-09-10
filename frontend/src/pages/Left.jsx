@@ -125,7 +125,7 @@ const Left = () => {
   };
 
   return (
-    <div className="w-[460px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col">
+    <div className=" w-[460px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col">
       {/* Header */}
       <div className="font-bold text-lg text-white p-3 flex justify-between items-center border-b border-purple-900">
         <div>Koalaliving</div>
