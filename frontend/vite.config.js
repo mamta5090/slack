@@ -5,14 +5,14 @@ export default defineConfig({
   plugins: [react()],
   // vite.config.js
 server: {
-  proxy: {
-    "/api": {
-      target: "https://slack-1.onrender.com",
-      changeOrigin: true,
-      secure: false
-    }
-  }
-},
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000", // 👈 make sure this is http
+        changeOrigin: true,
+        secure: false, // disable SSL check
+      },
+    },
+  },
 
 
   define: {

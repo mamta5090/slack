@@ -41,39 +41,43 @@ export const register = async (req, res) => {
 };
 
 // login
+
 export const login = async (req, res) => {
-  const payload = jwt.verify('<TOKEN>', process.env.JWT_SECRET);
-  console.log('token payload:', payload);
-  const { email, password } = req.body;
-  console.log('>>> Login request body:', req.body);
-
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
-  }
-
   try {
+    console.log(">>> LOGIN HIT - body:", req.body);
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      console.warn("Login validation failed - missing fields");
+      return res.status(400).json({ message: "Email and password required" });
+    }
+
     const user = await User.findOne({ email });
+    console.log(">>> User lookup result:", !!user, user ? user._id : null);
+
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
+
+    // If you used bcryptjs in registration ensure same package here
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log(">>> bcrypt.compare result:", isMatch);
+
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
+
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
+
     res.json({
       token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-      },
+      user: { _id: user._id, name: user.name, email: user.email },
     });
-  } catch (error) {
-      console.error('JWT verify error:', err.message);
-    res.status(500).json({ message: "Server error" });
+  } catch (err) {
+    console.error("LOGIN ERROR (stack):", err && err.stack ? err.stack : err);
+    res.status(500).json({ message: "Server error during login" });
   }
 };
 

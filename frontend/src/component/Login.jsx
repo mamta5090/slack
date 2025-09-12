@@ -18,19 +18,14 @@ const Login = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   console.log({ email, password });
-try {
-  const res = await axios.post("/api/user/login", { email, password });
-  console.log("RAW RESPONSE:", res);
-  console.log("res.data:", res.data);
-   console.log("🔎 RAW AXIOS RESPONSE:", res);
-  console.log("🔎 res.status:", res.status);
-  console.log("🔎 res.headers:", res.headers);
-  console.log("🔎 res.data (payload):", res.data);
-  const { token, user } = res.data || {};
-  if (!token || !user) {
-    console.error("Invalid login response body:", res.data);
-    throw new Error("Invalid login response");
-  }
+  try {
+    const res = await axios.post("/api/user/login", {
+  email,
+  password,
+});
+
+    const { token, user } = res.data;
+    if (!token || !user) throw new Error("Invalid login response")
     localStorage.setItem("token", token);
     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     dispatch(setUser(user));
@@ -38,10 +33,6 @@ try {
     navigate("/");
   } catch (error) {
     console.error(error);
-     console.error("LOGIN ERROR (axios error object):", error);
-  console.error("error.response?.status:", error?.response?.status);
-  console.error("error.response?.headers:", error?.response?.headers);
-  console.error("error.response?.data:", error?.response?.data);
   }
 };
  
