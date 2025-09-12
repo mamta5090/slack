@@ -22,6 +22,10 @@ try {
   const res = await axios.post("/api/user/login", { email, password });
   console.log("RAW RESPONSE:", res);
   console.log("res.data:", res.data);
+   console.log("🔎 RAW AXIOS RESPONSE:", res);
+  console.log("🔎 res.status:", res.status);
+  console.log("🔎 res.headers:", res.headers);
+  console.log("🔎 res.data (payload):", res.data);
   const { token, user } = res.data || {};
   if (!token || !user) {
     console.error("Invalid login response body:", res.data);
@@ -34,6 +38,10 @@ try {
     navigate("/");
   } catch (error) {
     console.error(error);
+     console.error("LOGIN ERROR (axios error object):", error);
+  console.error("error.response?.status:", error?.response?.status);
+  console.error("error.response?.headers:", error?.response?.headers);
+  console.error("error.response?.data:", error?.response?.data);
   }
 };
  
