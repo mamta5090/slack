@@ -25,7 +25,6 @@ import { IoSend } from "react-icons/io5";
 import { RxCross1 } from "react-icons/rx";
 import { FiMessageCircle } from "react-icons/fi";
 import { MdOutlinePlaylistAdd } from "react-icons/md";
-import CallUserButton from "../component/callUserButton";
 
 const Right = () => {
   const { id } = useParams();
@@ -236,8 +235,6 @@ const Right = () => {
               <RiArrowDropDownLine className="text-2xl" />
             </div>
 
-            {/* Keep CallUserButton if you still want an explicit button */}
-            {/* <CallUserButton calleeId={singleUser._id} calleeName={singleUser.name} /> */}
           </div>
 
           <IoMdMore className="cursor-pointer" />
