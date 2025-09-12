@@ -7,7 +7,7 @@ export default defineConfig({
 server: {
     proxy: {
       "/api": {
-        target: "http://localhost:5000", // 👈 make sure this is http
+        target: "https://slack-6u84.onrender.com", // 👈 make sure this is http
         changeOrigin: true,
         secure: false, // disable SSL check
       },
