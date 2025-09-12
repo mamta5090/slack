@@ -2,41 +2,24 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
-import { setUser } from "../redux/userSlice";
+
 
 import { RiHome4Fill } from "react-icons/ri";
 import { LuMessagesSquare, LuPencilRuler } from "react-icons/lu";
 import { IoMdNotifications, IoIosMore } from "react-icons/io";
 import { CiSaveDown2 } from "react-icons/ci";
 import { CgProfile } from "react-icons/cg";
+import Sidebarprofile from "../component/profile/Sidebarprofile";
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false); // profile dropdown
   const [more, setMore] = useState(false); // "More" menu
 
-  const dispatch = useDispatch();
-  const user = useSelector((state) => state.user.user);
+
 
   const moreRef = useRef(null);
-  const profileRef = useRef(null);
   const moreButtonRef = useRef(null);
-  const profileButtonRef = useRef(null);
-
-  const handleLogout = async () => {
-    try {
-      await axios.post("http://localhost:5000/api/user/logout");
-      localStorage.removeItem("token");
-      delete axios.defaults.headers.common["Authorization"];
-      dispatch(setUser(null));
-      navigate("/login");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
-  const profileRouteValue =
-    user?.userName || user?.username || user?.name || user?._id || "me";
 
   const moreItems = [
     { title: "Templates", desc: "Kick-start any job with these pre-built bundles" },
@@ -49,33 +32,7 @@ const Sidebar = () => {
     { title: "External connection", desc: "Connect external tools" },
   ];
 
-  // click-outside + Escape handler to close menus
-  useEffect(() => {
-    function handleDocClick(e) {
-      // close 'more' when clicking outside its box and the button
-      if (more && moreRef.current && !moreRef.current.contains(e.target) && !moreButtonRef.current.contains(e.target)) {
-        setMore(false);
-      }
-      // close 'profile' when clicking outside its box and the button
-      if (open && profileRef.current && !profileRef.current.contains(e.target) && !profileButtonRef.current.contains(e.target)) {
-        setOpen(false);
-      }
-    }
 
-    function handleEsc(e) {
-      if (e.key === "Escape") {
-        setMore(false);
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleDocClick);
-    document.addEventListener("keydown", handleEsc);
-    return () => {
-      document.removeEventListener("mousedown", handleDocClick);
-      document.removeEventListener("keydown", handleEsc);
-    };
-  }, [more, open]);
 
   return (
     <nav
@@ -199,70 +156,7 @@ const Sidebar = () => {
           +
         </button>
 
-        {/* Profile Button */}
-        <div className="relative">
-          <button
-            ref={profileButtonRef}
-            type="button"
-            className="flex items-center justify-center h-10 w-10 rounded-full bg-gray-600 text-white cursor-pointer"
-            onClick={() => {
-              console.log("Profile clicked");
-              setOpen(s => !s);
-            }}
-            aria-haspopup="true"
-            aria-expanded={open}
-            title="Profile menu"
-            aria-label="Profile menu"
-          >
-            <CgProfile className="text-xl" />
-          </button>
-
-          {open && (
-            <div
-              ref={profileRef}
-              className="absolute left-[80px] bottom-0 mb-12 w-48 bg-white rounded-xl shadow-lg border border-gray-200 z-50"
-              role="menu"
-              aria-label="Profile menu options"
-            >
-              <div className="p-2">
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
-                  onClick={() => {
-                    navigate(`/profile/${profileRouteValue}`);
-                    setOpen(false);
-                  }}
-                >
-                  Profile
-                </button>
-
-                <button
-                  type="button"
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg cursor-pointer"
-                  onClick={() => {
-                    navigate("/profilepage");
-                    setOpen(false);
-                  }}
-                >
-                  Preferences
-                </button>
-
-                <hr className="my-2" />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleLogout();
-                    setOpen(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
-                >
-                  Sign out
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+      <Sidebarprofile/>
         
       </div>
     </nav>

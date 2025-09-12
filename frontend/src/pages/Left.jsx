@@ -1,5 +1,5 @@
 // src/pages/Left.jsx
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -7,13 +7,11 @@ import { CiSettings, CiSearch } from "react-icons/ci";
 import { FaRegEdit, FaEdit } from "react-icons/fa";
 import { TbTriangleInvertedFilled } from "react-icons/tb";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
-import { setAllUsers, clearUser } from "../redux/userSlice";
-import { MdKeyboardArrowDown, MdKeyboardArrowRight } from "react-icons/md";
-import { IoRocketOutline } from "react-icons/io5";
-import slack from '../assets/slack.png'
+import { setAllUsers } from "../redux/userSlice";
+import Koalaliving from "../component/koalaliving/Koalaliving";
+import dp from '../assets/dp.webp'
 
 const Left = () => {
-  const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { id: activeChatId } = useParams();
@@ -23,7 +21,6 @@ const Left = () => {
   const { onlineUsers = [] } = useSelector((s) => s.socket) || {};
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [dropdown, setDropdown] = useState(false);
 
   useEffect(() => {
     dispatch(fetchConversations());
@@ -42,24 +39,6 @@ const Left = () => {
       fetchAllUsers();
     }
   }, [dispatch, allUsers.length]);
-
-  // close dropdown when clicking outside or pressing Escape
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdown && dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdown(false);
-      }
-    };
-    const onEsc = (e) => {
-      if (e.key === "Escape") setDropdown(false);
-    };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [dropdown]);
 
   const searchResults = useMemo(() => {
     if (!searchTerm) return [];
@@ -129,6 +108,8 @@ const Left = () => {
               }`}
             >
               {user.name?.charAt(0)?.toUpperCase()}
+
+             
             </div>
             <div
               className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-700 ${
@@ -147,143 +128,12 @@ const Left = () => {
     );
   };
 
-  const handleSignOut = () => {
-    localStorage.removeItem("token");
-    dispatch(clearUser());
-    navigate("/login");
-    setDropdown(false);
-  };
-
   return (
     <div className="w-[460px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col">
       {/* Header */}
-      <div className=" text-white p-3 flex justify-between items-center border-b border-purple-900">
+      <div className="text-white p-3 flex justify-between items-center border-b border-purple-900">
         <div className="flex flex-row items-center gap-[25px]">
-          <div className="relative">
-            <div
-              className="flex items-center gap-[5px] hover:bg-[#958197] mt-[20px] cursor-pointer px-3 py-2 rounded-md"
-              onClick={() => setDropdown((d) => !d)}
-            >
-              <p className="font-medium">Koalaliving</p>
-              <MdKeyboardArrowDown />
-            </div>
-
-            {dropdown && (
-              <div
-                ref={dropdownRef}
-                className="absolute top-[56px] left-0 w-72 bg-white text-black rounded-lg shadow-xl z-50"
-                style={{ minWidth: 240 }}
-              >
-                {/* Workspace header */}
-                <div className="flex items-center gap-3 px-4 py-3 border-b hover:bg-[#275982] hover:text-white">
-                  <div className="bg-[#616061] rounded-xl w-10 h-10 flex items-center justify-center text-white font-bold">
-                    K
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm">Koalaliving</p>
-                    <p className="text-xs text-gray-500 ">1 workspace</p>
-                  </div>
-                  <div className="text-gray-400">
-                    <MdKeyboardArrowRight />
-                  </div>
-                </div>
-
-                {/* Pro banner */}
-                <div className="px-4 py-3 border-b  hover:bg-[#275982] hover:text-white">
-                  <p className="text-xs text-gray-700 mb-1 hover:text-white">
-                    Your workspace is currently on Slack's <strong>Pro</strong> subscription.
-                  </p>
-                  <button
-                    className="text-blue-600 text-sm hover:underline"
-                    onClick={() => {
-                      alert("Open billing / Learn more (placeholder)");
-                      setDropdown(false);
-                    }}
-                  >
-                    Learn more
-                  </button>
-                </div>
-
-                {/* Promo */}
-                <div className="px-4 py-3 border-b flex gap-3 items-start hover:bg-[#275982] hover:text-white">
-                  <div className="mt-0.5 text-purple-600">
-                    <IoRocketOutline size={18} />
-                  </div>
-                  <div className="text-sm">
-                    <div className="font-medium">Want access to advanced AI features?</div>
-                    <div className="text-xs text-gray-600">
-                      Get access to powerful, time-saving AI features with Business+.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Menu options */}
-                <div className="flex flex-col text-sm  ">
-                  <button
-                    className="text-left px-4 py-3  border-b  hover:bg-[#275982] hover:text-white"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(window.location.href);
-                      setDropdown(false);
-                    }}
-                  >
-                    Invite people to Koalaliving
-                  </button>
-
-                  <button
-                    className="text-left px-4 py-3  hover:bg-[#275982] hover:text-white flex items-center justify-between "
-                    onClick={() => {
-                      setDropdown(false);
-                      navigate("/profilepage");
-                    }}
-                  >
-                    <span>Preferences</span>
-                    <MdKeyboardArrowRight className="text-gray-400" />
-                  </button>
-
-                  <button
-                    className="text-left px-3 py-3  hover:bg-[#275982] hover:text-white flex items-center justify-between border-b"
-                    onClick={() => {
-                      setDropdown(false);
-                      // tools & settings - hook into modal or nav
-                    }}
-                  >
-                    <span>Tools & settings</span>
-                    <MdKeyboardArrowRight className="text-gray-400" />
-                  </button>
-
-                  <button
-                    className="text-left px-4 py-3  hover:bg-[#275982] hover:text-white"
-                    onClick={() => {
-                      setDropdown(false);
-                      alert("Sign in on mobile (placeholder)");
-                    }}
-                  >
-                    Sign in on mobile
-                  </button>
-
-                  <button
-                    className="text-left px-4 py-3  hover:bg-[#275982] hover:text-white"
-                    onClick={handleSignOut}
-                  >
-                    Sign out
-                  </button>
-
-                  <button
-                    className="text-left px-4 py-3  hover:bg-[#275982] hover:text-white flex gap-[95px] flex-row"
-                    onClick={() => {
-                      setDropdown(false);
-                      alert("Open the Slack app (placeholder)");
-                    }}
-                  >
-                 <div>   Open the Slack app</div>
-                 <img src={slack} className="h-[20px]"/>
-                  </button>
-                </div>
-
-              
-              </div>
-            )}
-          </div>
+          <Koalaliving />
 
           <div className="hover:bg-[#958197]">
             <CiSettings />
@@ -359,9 +209,7 @@ const Left = () => {
                   .filter((u) => String(u._id) !== String(me?._id))
                   .map((user) => renderUserItem(user, false))
               )}
-              <div className="text-purple-300 px-3 py-2 cursor-pointer">
-                + Invite people
-              </div>
+              <div className="text-purple-300 px-3 py-2 cursor-pointer">+ Invite people</div>
             </>
           )}
         </div>

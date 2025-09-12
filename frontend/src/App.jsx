@@ -19,6 +19,7 @@ import Profile from "./ismore/Profile";
 import './index.css'
 
 import ProfilePage from "./ismore/ProfilePage";
+import Invite from "./component/koalaliving/Invite";
 
 const SERVER_URL = "http://localhost:5000";
 
@@ -157,6 +158,10 @@ const App = () => {
    <Route
     path="/profile"
     element={user ? <Profile/> : <Navigate to="/" replace />}
+  />
+   <Route
+    path="/invite"
+    element={user ? <Invite/> : <Navigate to="/" replace />}
   />
     </Routes>
     
