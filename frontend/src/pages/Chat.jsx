@@ -8,7 +8,7 @@ const Chat = ({ senderId, receiverId }) => {
   // fetch messages
   useEffect(() => {
     const   res  = async () => {
-      const res = await axios.get(`http://localhost:3000/api/message/${senderId}/${receiverId}`);
+      const res = await axios.get(`/api/message/${senderId}/${receiverId}`);
       setMessages(res.data);
     };
     fetchMessages();
@@ -17,7 +17,7 @@ const Chat = ({ senderId, receiverId }) => {
   // send message
   const sendMessage = async () => {
     if (!text) return;
-    await axios.post("http://localhost:3000/api/message/send", {
+    await axios.post("/api/message/send", {
       senderId,
       receiverId,
       text,

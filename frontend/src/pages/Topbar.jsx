@@ -28,7 +28,7 @@ const Topbar = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        `http://localhost:5000/api/conversation/read/${otherId}`,
+        `/api/conversation/read/${otherId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -37,7 +37,7 @@ const VideoCall = ({ stream, callAccepted, connectionRef, onLeaveCall, isAudioOn
             if (otherUserId) {
                 try {
                     const token = localStorage.getItem("token");
-                    const res = await axios.get(`http://localhost:5000/api/user/${otherUserId}`, {
+                    const res = await axios.get(`/api/user/${otherUserId}`, {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     if (res.data?.name) {

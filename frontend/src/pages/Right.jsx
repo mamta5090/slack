@@ -61,7 +61,7 @@ const Right = () => {
   const fetchUser = async () => {
     if (!id) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/user/${id}`, authHeaders());
+      const res = await axios.get(`/api/user/${id}`, authHeaders());
       dispatch(setSingleUser(res.data));
     } catch (error) {
       console.error("Error fetching single user:", error);
@@ -72,7 +72,7 @@ const Right = () => {
   const fetchMessages = async () => {
     if (!id) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/message/getAll/${id}`, authHeaders());
+      const res = await axios.get(`/api/message/getAll/${id}`, authHeaders());
       dispatch(setMessages(Array.isArray(res.data) ? res.data : []));
     } catch (error) {
       console.error("Error fetching messages", error);
@@ -82,7 +82,7 @@ const Right = () => {
   const markThreadAsRead = async () => {
     if (!id) return;
     try {
-      await axios.post(`http://localhost:5000/api/conversation/read/${id}`, {}, authHeaders());
+      await axios.post(`/api/conversation/read/${id}`, {}, authHeaders());
       dispatch(fetchConversations());
     } catch (error) {
       console.error("Failed to mark thread as read", error);
@@ -95,7 +95,7 @@ const Right = () => {
     setLoading(true);
     try {
       await axios.post(
-        `http://localhost:5000/api/message/send/${singleUser._id}`,
+        `/api/message/send/${singleUser._id}`,
         { message: newMsg },
         authHeaders()
       );

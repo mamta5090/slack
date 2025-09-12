@@ -28,7 +28,7 @@ const Left = () => {
       const fetchAllUsers = async () => {
         try {
           const token = localStorage.getItem("token");
-          const res = await axios.get("http://localhost:5000/api/user/get", {
+          const res = await axios.get("/api/user/get", {
             headers: { Authorization: `Bearer ${token}` },
           });
           dispatch(setAllUsers(res.data));
@@ -72,7 +72,7 @@ const Left = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.post(
-        "http://localhost:5000/api/conversation/",
+        "/api/conversation/",
         { senderId: me._id, receiverId: otherId },
         { headers: { Authorization: `Bearer ${token}` } }
       );

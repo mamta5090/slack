@@ -2,8 +2,15 @@ import User from "../models/User.js"; // Corrected path to User model assuming i
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// register
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
+  console.log('>>> Register request body:', req.body);
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Name, email and password are required' });
+  }
+
   try {
     let user = await User.findOne({ email });
     if (user) {
@@ -22,7 +29,6 @@ export const register = async (req, res) => {
     res.status(201).json({
       token,
       user: {
-        // --- FIX: Change 'id' to '_id' to be consistent ---
         _id: user._id,
         name: user.name,
         email: user.email,
@@ -34,8 +40,15 @@ export const register = async (req, res) => {
   }
 };
 
+// login
 export const login = async (req, res) => {
   const { email, password } = req.body;
+  console.log('>>> Login request body:', req.body);
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -51,7 +64,6 @@ export const login = async (req, res) => {
     res.json({
       token,
       user: {
-        // --- FIX: Change 'id' to '_id' to be consistent ---
         _id: user._id,
         name: user.name,
         email: user.email,
@@ -62,6 +74,7 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // ... keep all other functions (logOut, getAllUsers, getSingleUser, getMe) as they are.
 // Make sure to add the 'getMe' function if you haven't already.

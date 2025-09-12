@@ -113,7 +113,7 @@ const handleSend = async () => {
 
     // axios: second arg = body, third arg = config
     const res = await axios.post(
-      "http://localhost:5000/api/invite/invitelink",
+      "/api/invite/invitelink",
       payload,
       {
         headers: {

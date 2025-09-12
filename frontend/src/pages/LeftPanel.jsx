@@ -25,7 +25,7 @@ const MsgLeft = () => {
       const fetchAllUsers = async () => {
         try {
           const token = localStorage.getItem("token");
-          const res = await axios.get("http://localhost:5000/api/user/get", {
+          const res = await axios.get("/api/user/get", {
             headers: { Authorization: `Bearer ${token}` },
           });
           dispatch(setAllUsers(res.data));

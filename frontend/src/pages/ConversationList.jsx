@@ -6,7 +6,7 @@ const ConversationList = ({ userId, onSelect }) => {
 
   useEffect(() => {
     const fetchConvs = async () => {
-      const res = await axios.get(`http://localhost:3000/api/conversation/${userId}`);
+      const res = await axios.get(`/api/conversation/${userId}`);
       setConversations(res.data);
     };
     fetchConvs();
