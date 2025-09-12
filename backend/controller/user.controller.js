@@ -42,6 +42,8 @@ export const register = async (req, res) => {
 
 // login
 export const login = async (req, res) => {
+  const payload = jwt.verify('<TOKEN>', process.env.JWT_SECRET);
+  console.log('token payload:', payload);
   const { email, password } = req.body;
   console.log('>>> Login request body:', req.body);
 
@@ -70,7 +72,7 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+      console.error('JWT verify error:', err.message);
     res.status(500).json({ message: "Server error" });
   }
 };
