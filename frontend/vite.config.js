@@ -3,13 +3,13 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  // vite.config.js
+  
 server: {
     proxy: {
       "/api": {
-        target: "http://localhost:5000", // 👈 make sure this is http
+        target: "http://localhost:5000",
         changeOrigin: true,
-        secure: false, // disable SSL check
+        secure: false, 
       },
     },
   },

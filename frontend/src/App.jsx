@@ -17,9 +17,19 @@ import MainLayout from "./component/MainLayout";
 import VideoRoom from "./pages/VideoRoom";
 import Profile from "./ismore/Profile";
 import './index.css'
+import Signin from './slack/Signin'
+
 
 import ProfilePage from "./ismore/ProfilePage";
 import Invite from "./component/koalaliving/Invite";
+import SlackLogin from "./slack/SlackLogin";
+import ConfirmEmail from "./slack/ConfirmEmail";
+import LaunchWorkspace from "./slack/LaunchWorkspace";
+import NameStep from "./slack/NameStep";
+import Company from "./slack/Company";
+import Team from "./slack/Team";
+import SlackPro from "./slack/SlackPro";
+import Welcome from "./slack/Welcome";
 
 const SERVER_URL = "http://localhost:5000";
 
@@ -124,13 +134,13 @@ const App = () => {
   return (
     <Routes>
     
-      <Route
+      {/* <Route
     path="/"
     element={user ? <MainLayout /> : <Navigate to="/login" replace />}
   >
     <Route index element={<Home />} />
     <Route path="user/:id" element={<Right/>} />
-  </Route>
+  </Route> */}
   <Route
     path="/login"
     element={!user ? <Login /> : <Navigate to="/" replace />}
@@ -163,6 +173,15 @@ const App = () => {
     path="/invite"
     element={user ? <Invite/> : <Navigate to="/" replace />}
   />
+   <Route path="/signin" element={<Signin/>} />
+    <Route path="/" element={<SlackLogin/>} />
+    <Route path="/email" element={<ConfirmEmail/>}/>
+   <Route path="/launchworkspace" element={<LaunchWorkspace/>}/>
+   <Route path="/namestep" element={<NameStep/>}/>
+   <Route path="/company" element={<Company/>}/>
+  <Route path="/team" element={<Team/>}/>
+   <Route path="/slackpro" element={<SlackPro/>}/>
+    <Route path="/welcome" element={<Welcome/>}/>
     </Routes>
     
   );

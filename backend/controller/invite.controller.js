@@ -24,8 +24,8 @@ export const createInvite = async (req, res) => {
       invitedBy: req.userId || null,
     });
 
-    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173"; // ensure set
-    const inviterName = req.name || "Someone"; // you can set req.userName in auth middleware if available
+    const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173"; 
+    const inviterName = req.name || "Someone"; 
 
     const sendPromises = invite.emails.map((e) => {
       const link = `${frontendBase}/invite/accept?token=${e.token}&email=${encodeURIComponent(e.address)}`;

@@ -1,8 +1,8 @@
-import User from "../models/User.js"; // Corrected path to User model assuming it's in models folder
+import User from "../models/User.js"; 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-// register
+
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
   console.log('>>> Register request body:', req.body);
@@ -40,7 +40,7 @@ export const register = async (req, res) => {
   }
 };
 
-// login
+
 
 export const login = async (req, res) => {
   try {
@@ -58,15 +58,12 @@ export const login = async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: "User not found" });
     }
-
-    // If you used bcryptjs in registration ensure same package here
     const isMatch = await bcrypt.compare(password, user.password);
     console.log(">>> bcrypt.compare result:", isMatch);
 
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid password" });
     }
-
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
@@ -82,8 +79,7 @@ export const login = async (req, res) => {
 };
 
 
-// ... keep all other functions (logOut, getAllUsers, getSingleUser, getMe) as they are.
-// Make sure to add the 'getMe' function if you haven't already.
+
 
 export const getMe = async (req, res) => {
   try {
@@ -98,13 +94,13 @@ export const getMe = async (req, res) => {
   }
 };
 
-// ... (other functions)
+
 
 export const logOut = async (req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      secure: false, // set true in production with HTTPS
+      secure: false, 
       sameSite: "Strict",
     });
 
