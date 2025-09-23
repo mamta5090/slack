@@ -27,23 +27,21 @@ const Signin = () => {
 
     try {
       setLoading(true);
-      // adjust endpoint to match your backend. Example: /api/auth/magic-link or /api/slack/signin
-      const result = await axios.post(
-        "http://localhost:5000/api/slack/signin",
-        { email },
-        { withCredentials: true }
-      );
+     const result = await axios.post("http://localhost:5000/api/slack/signin", { email }, { withCredentials: true });
 
-      // assuming backend returns { user, token } or { user }
-      const userPayload = result?.data?.user ?? result?.data;
-      if (!userPayload) {
-        setError("Unexpected server response.");
-        return;
-      }
+const token = result?.data?.token;
+const userPayload = result?.data?.user ?? result?.data;
 
-      dispatch(setSlackUser(userPayload));
-      // navigate to next step (slacklogin or dashboard)
-      navigate("/");
+if (token) {
+  localStorage.setItem("token", token);
+  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+}
+
+if (userPayload) {
+  dispatch(setSlackUser(userPayload));
+}
+navigate("/");
+
     } catch (err) {
       console.error(err);
       const msg =
@@ -121,7 +119,7 @@ const Signin = () => {
 
       {/* Footer Links */}
       <p className="mt-10 text-gray-600">Already using Slack?</p>
-      <p onClick={() => navigate("/slacklogin")} className="text-blue-600 cursor-pointer">
+      <p onClick={() => navigate("/")} className="text-blue-600 cursor-pointer">
         Sign in to an existing workspace
       </p>
 

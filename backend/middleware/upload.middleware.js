@@ -1,25 +1,22 @@
-// middleware/multer.js
+// middleware/upload.middleware.js
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
-
 // ensure uploads directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+const uploadDir = path.resolve("uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
-  },
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    const safe = file.originalname.replace(/\s+/g, "_");
-    cb(null, `${Date.now()}-${safe}`);
-  },
+    const ext = path.extname(file.originalname);
+    const name = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, name);
+  }
 });
 
+// 5 MB limit (adjust as needed)
 export const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -28,5 +25,5 @@ export const upload = multer({
     const ok = allowed.test(file.mimetype);
     if (!ok) return cb(new Error("Only images allowed"));
     cb(null, true);
-  },
+  }
 });

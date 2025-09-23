@@ -19,6 +19,7 @@ const ProfilePage = () => {
   const [open, setOpen] = useState(false);
   const navigate=useNavigate()
 
+
   // filtered users derived from allUsers
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -164,21 +165,22 @@ const ProfilePage = () => {
             {filtered.length === 0 ? (
               <div className="text-gray-500">No people found.</div>
             ) : (
-              <div className="h-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+              <div className="h-full  grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                 {filtered.map((cardUser, i) => {
                   const key = cardUser._id || cardUser.id || i;
                   return (
                     <div
                       key={key}
-                      className="relative bg-white rounded-lg border p-4 shadow-sm hover:shadow-md transition"
+                      className="relative rounded-lg border p-4 shadow-sm hover:shadow-md transition"
+                    onClick={()=>navigate('/profile')}
                     >
                       {/* top-right edit button for current logged-in user */}
-                      {currentUser && cardUser._id === currentUser._id && (
+                      {/* {currentUser && cardUser._id === currentUser._id && (
                         <button className="absolute top-3 right-3 bg-white border rounded-full px-2 py-1 text-sm"
                         onClick={()=>navigate('/profile')}>
                           Edit
                         </button>
-                      )}
+                      )} */}
 
                       <div className="flex flex-col items-center text-center">
                         <div className="relative">

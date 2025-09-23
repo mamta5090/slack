@@ -101,7 +101,6 @@ const handleSend = async () => {
     alert("Please add at least one valid email.");
     return;
   }
-
   try {
     const payload = {
       emails: valid,
@@ -110,7 +109,6 @@ const handleSend = async () => {
       message,
       workspace: workspaceName,
     };
-
     // axios: second arg = body, third arg = config
     const res = await axios.post(
       "/api/invite/invitelink",

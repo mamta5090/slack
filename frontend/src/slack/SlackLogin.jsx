@@ -46,13 +46,32 @@ const SlackLogin = () => {
       setLoading(true);
       console.log("Submitting:", { email, captchaValue });
 
-      const res = await axios.post("http://localhost:5000/api/slack/slacklogin", {
-        email,
-        captcha: captchaValue, // send captcha token to backend
-      });
-      const payload = res.data?.user ?? res.data;
-      dispatch(setSlackUser(payload));
-      navigate("/email");
+     // inside SlackLogin.handleSubmit after axios response
+const res = await axios.post("http://localhost:5000/api/slack/slacklogin", {
+  email,
+  captcha: captchaValue,
+});
+
+const token = res?.data?.token;
+const user = res?.data?.user ?? null;
+
+if (token) {
+  // store token raw
+  localStorage.setItem("token", token);
+} else {
+  console.warn("Login response had no token:", res.data);
+}
+
+if (user) {
+  dispatch(setSlackUser(user));
+}
+
+// optional: set default axios header immediately
+axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+// then navigate
+navigate("/email");
+
     } catch (err) {
       console.error(err);
       setError(

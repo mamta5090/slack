@@ -40,7 +40,7 @@ const Sidebar = () => {
       aria-label="Sidebar"
     >
       <button
-        onClick={() => navigate("/home")}
+        onClick={() => navigate("/")}
         type="button"
         className="flex items-center justify-center h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-xl cursor-pointer"
         aria-label="Go to Home"

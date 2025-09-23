@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from "path";
 
 import connectDB from './config/db.js';
 import userRouter from './router/user.route.js';
@@ -9,6 +10,7 @@ import conversationRoute from './router/conversation.route.js';
 import messageRoute from './router/message.route.js';
 import inviteRouter from './router/invite.routes.js';
 import slackRouter from './router/slack.route.js';
+import workspaceRouter from './router/workspace.routes.js';
 
 import { app, server } from './socket.js';  
 import auth from './middleware/auth.js';
@@ -29,6 +31,10 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+
+// serve uploads statically so fallback local URLs work
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 const PORT = process.env.PORT || 5000;
 
@@ -47,13 +53,16 @@ app.get('/api/user/me', auth, async (req, res) => {
   }
 });
 
+
+
 const SECRET_KEY=process.env.SECRET_KEY
 
 app.use('/api/user', userRouter);
 app.use('/api/conversation', conversationRoute);
 app.use('/api/message', messageRoute);
 app.use('/api/invite', inviteRouter);
-app.use('/api/slack',slackRouter)
+app.use('/api/slack',slackRouter);
+app.use("/api/workspace",workspaceRouter)
 
 
 connectDB();

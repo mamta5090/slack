@@ -22,6 +22,10 @@ const slackUserSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  workspace:{
+    type:mongoose.Schema.Types.ObjectId,
+    ref:"Workspace"
+  },
     otp: String,
 otpExpiry: Date,
 },{timestamps:true});
