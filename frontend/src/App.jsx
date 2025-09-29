@@ -15,7 +15,8 @@ import Home from "./component/Home";
 import Right from "./pages/Right";
 import MainLayout from "./component/MainLayout";
 import VideoRoom from "./pages/VideoRoom";
-import Profile from "./ismore/Profile";
+
+
 import "./index.css";
 import Signin from "./slack/Signin";
 
@@ -160,14 +161,12 @@ const App = () => {
         path="/profilepage"
         element={user ? <ProfilePage /> : <Navigate to="/login" replace />}
       />
-      <Route
-        path="/profile"
-        element={user ? <Profile /> : <Navigate to="/login" replace />}
-      />
+      
       <Route
         path="/invite"
         element={user ? <Invite /> : <Navigate to="/login" replace />}
       />
+     
 
      
       <Route path="/signin" element={<Signin />} />

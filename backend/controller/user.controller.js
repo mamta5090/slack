@@ -70,7 +70,7 @@ export const login = async (req, res) => {
 
     res.json({
       token,
-      user: { _id: user._id, name: user.name, email: user.email },
+      user: { _id: user._id, name: user.name, email: user.email,profileImage:user.profileImage },
     });
   } catch (err) {
     console.error("LOGIN ERROR (stack):", err && err.stack ? err.stack : err);
@@ -133,22 +133,48 @@ export const getSingleUser=async(req,res)=>{
   }
 }
 
-export const editProfile=async(req,res)=>{
-  try {
-     const { name, email, profileImage } = req.body; 
-      const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+// controller/user.controller.js
+
+export const editProfile = async (req, res) => {
+    try {
+        // Ensure the logged-in user can only edit their own profile
+        if (req.userId !== req.params.id) {
+            return res.status(403).json({ message: "Forbidden: You can only edit your own profile." });
+        }
+
+        const { name, displayName, role, number, location, namePronunciation, email, date,title,topic  } = req.body;
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Update fields if they were provided in the request
+        user.name = name || user.name;
+        user.displayName = displayName || user.displayName;
+        user.role = role || user.role;
+        user.number = number || user.number;
+        user.location = location || user.location;
+        user.namePronunciation = namePronunciation || user.namePronunciation;
+        user.email = email || user.email;
+        user.date = date || user.date;
+         user.title = title || user.title; 
+         user.topic=topic || user.topic;
+
+        // If a new file was uploaded, update the profileImage path
+        if (req.file) {
+            // Prepend the path for serving static files
+            user.profileImage = `uploads/${req.file.filename}`;
+        }
+
+        const updatedUser = await user.save();
+        
+        return res.status(200).json(updatedUser);
+    } catch (error) {
+        console.error("editProfile error:", error);
+        return res.status(500).json({ message: `editProfile error: ${error.message}` });
     }
-   user.name=name
-   user.email=email
-   user.profilImage=profileImage
-   await user.save()
-   return res.status(200).json(user)
-  } catch (error) {
-    return res.status(500).json({message:`edit prfile error ${error}`})
-  }
-}
+};
 
 export const getProfile=async(req,res)=>{
   try {

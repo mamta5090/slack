@@ -6,6 +6,8 @@ import {
   getConversationById,
   getMyConversations,
   markAsRead,
+  updateConversationTopic,
+  createGroupConversation,
 } from "../controller/conversation.controller.js";
 
 const router = express.Router();
@@ -17,5 +19,7 @@ router.get("/my", auth, getMyConversations);
 router.get("/user/:userId", getUserConversations);
 router.get("/:id", getConversationById);
 router.post("/read/:otherUserId", auth, markAsRead);
+router.put("/topic/with/:otherUserId", auth, updateConversationTopic);
+router.post("/group",auth,createGroupConversation)
 
 export default router;

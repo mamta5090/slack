@@ -10,6 +10,7 @@ import { fetchConversations, selectAllConversations } from "../redux/conversatio
 import { setAllUsers } from "../redux/userSlice";
 import Koalaliving from "../component/koalaliving/Koalaliving";
 import dp from '../assets/dp.webp'
+import Avatar from "../component/Avatar";
 
 const Left = () => {
   const navigate = useNavigate();
@@ -92,29 +93,19 @@ const Left = () => {
     const hasUnread = isConversation && item.unreadCount > 0;
     const isActive = String(user._id) === String(activeChatId);
 
-    return (
+     return (
       <div
         key={user._id}
         onClick={() => openChat(user._id)}
-        className={`flex items-center justify-between hover:bg-[#958197] hover:text-black rounded-md p-2 cursor-pointer ${
-          isActive ? "bg-white text-black" : ""
-        }`}
+        className={`flex items-center justify-between hover:bg-[#958197] hover:text-black rounded-md p-2 cursor-pointer ${isActive ? "bg-white text-black" : ""}`}
       >
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div
-              className={`w-[32px] h-[32px] flex items-center justify-center rounded-full text-sm font-bold ${
-                isConversation ? "bg-blue-700" : "bg-blue-600"
-              }`}
-            >
-              {user.name?.charAt(0)?.toUpperCase()}
 
-             
-            </div>
+            <Avatar user={user} size="md" />
+            
             <div
-              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-gray-700 ${
-                isOnline ? "bg-green-500" : "bg-gray-500"
-              }`}
+              className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#5a2a5c] ${isOnline ? "bg-green-500" : "bg-gray-500"}`}
             />
           </div>
           <p className="font-medium text-sm">{user.name}</p>
