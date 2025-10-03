@@ -93,7 +93,7 @@ const Sidebar = () => {
       <div className="flex flex-col gap-2 items-center text-white space-y-5">
         
         {/* Home */}
-        <button type="button" className="sidebar-btn" onClick={() => navigate("/homepage")}>
+        <button type="button" className="sidebar-btn" onClick={() => navigate("/home")}>
           <div className="hover:bg-[#5a2a5c] p-2 rounded-xl"><RiHome4Fill className="text-xl" /></div>
           <span className="text-xs mt-1">Home</span>
         </button>

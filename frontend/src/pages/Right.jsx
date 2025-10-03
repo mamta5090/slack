@@ -384,7 +384,7 @@ const Right = () => {
 
   // --- 4. RENDER JSX ---
   return (
-    <div className="w-full flex flex-col bg-white ">
+    <div className="w-full flex flex-col bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 ">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpenEdit(true)}>

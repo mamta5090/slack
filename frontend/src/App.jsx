@@ -33,10 +33,12 @@ import Welcome from "./slack/Welcome";
 import Workspace from "./slack/Workspace";
 import Dms from "./component/sidebar/Dms";
 import Later from "./component/sidebar/Later";
-import HomePage from "./component/sidebar/HomePage";
+import HomePage from "./component/sidebar/HomePageSidebar";
 import Files from "./component/sidebar/Files";
 import More from "./component/sidebar/More";
 import Avtivity from "./component/sidebar/Activity";
+import HomePageSidebar from "./component/sidebar/HomePageSidebar";
+import Left from "./pages/Left";
 
 
 const SERVER_URL = "http://localhost:5000";
@@ -147,8 +149,14 @@ const App = () => {
         {user && (
           <>
             <Route index element={<Home />} />
-            <Route path="user/:id" element={<Right />} />
+          <Route path="user/:id" element={
+          <div className="w-full h-full flex flex-row">
+          <HomePageSidebar/>
+            <Right />             
+          </div>
+        } />
           </>
+          
         )}
       </Route>
 
@@ -192,8 +200,8 @@ const App = () => {
         element={user ? <More /> : <Navigate to="/login" replace />}
       />
         <Route
-        path="/homepage"
-        element={user ? <HomePage /> : <Navigate to="/login" replace />}
+        path="/home"
+        element={user ? <Home/> : <Navigate to="/login" replace />}
       />
      
 

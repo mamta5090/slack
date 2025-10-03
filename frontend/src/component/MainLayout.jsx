@@ -2,22 +2,19 @@ import React from "react";
 import { Outlet } from "react-router-dom";
 import Topbar from "../pages/Topbar";
 import Sidebar from "../pages/Sidebar";
-import Left from "../pages/Left";
 
 const MainLayout = () => {
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
-      <div className="flex-shrink-0">
-        <Topbar />
-      </div>
+      {/* Topbar is always present */}
+      <Topbar />
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-shrink-0">
-          <Sidebar />
-        </div>
-        <div className="flex-shrink-0">
-          <Left />
-        </div>
-        <div className="flex-grow overflow-hidden">
+        {/* The thin icon Sidebar is always present */}
+        <Sidebar />
+        
+        {/* The Outlet is a flexible placeholder. The router will fill this space. 
+            The extra div ensures the content starts after the thin sidebar. */}
+        <div className="flex-1 h-full">
           <Outlet />
         </div>
       </div>

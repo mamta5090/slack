@@ -2,6 +2,8 @@ import React from 'react'
 import Topbar from '../../pages/Topbar'
 import Sidebar from '../../pages/Sidebar'
 import Left from '../../pages/Left'
+import Right from '../../pages/Right'
+import { Outlet } from 'react-router-dom'
 
 const Dms = () => {
   return (
@@ -14,10 +16,10 @@ const Dms = () => {
           <Sidebar />
         </div>
         <div className="flex-shrink-0">
-          <Left />
+        <Outlet/>
         </div>
         <div className="flex-grow overflow-hidden">
-          {/* <Outlet /> */}
+         <Right/>
         </div>
       </div>
     </div>
