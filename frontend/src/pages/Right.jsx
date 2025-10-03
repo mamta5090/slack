@@ -29,13 +29,14 @@ import { FaRegFolderClosed } from "react-icons/fa6";
 import { MdPersonSearch } from "react-icons/md";
 
 const Right = () => {
-  // --- 1. ALL HOOKS AT THE TOP LEVEL ---
+
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
+  
 
-  // State Hooks
+
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [calling, setCalling] = useState(false);
@@ -383,9 +384,9 @@ const Right = () => {
 
   // --- 4. RENDER JSX ---
   return (
-    <div className="w-[calc(100vw-332px)] h-[calc(100vh-3rem)] flex flex-col bg-white ml-[190px] mt-[50px]">
+    <div className="w-full flex flex-col bg-white ">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 pl-[40px]">
+      <div className="flex items-center justify-between px-4 py-2 ">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => setOpenEdit(true)}>
           <div className="relative">
             <Avatar user={singleUser} size="md" />
@@ -515,14 +516,14 @@ const Right = () => {
       )}
 
       {/* Message and Canvas tabs */}
-      <div className="border-b border-gray-300 flex flex-row gap-[30px] px-[15px] pb-[10px] ml-[50px]">
+      <div className="border-b border-gray-300 flex flex-row gap-[30px] px-[15px] pb-[10px] ">
         <div className="flex flex-row items-center gap-[5px] font-semibold"><FiMessageCircle /><p>Message</p></div>
         <div className="flex flex-row items-center gap-[5px] font-semibold"><MdOutlinePlaylistAdd /><p>Add canvas</p></div>
         <div className="font-semibold"><div>+</div></div>
       </div>
 
       {/* Messages List */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-gray-50 pl-[140px]">
+      <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-gray-50 ">
      {messages.map((msg, idx) => {
   const isMine = String(msg.sender?._id) === String(user._id);
   const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
@@ -537,7 +538,7 @@ const Right = () => {
       </div>
 
       {/* Message Input Area */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white m-[40px]">
+      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white ">
         <div className="border border-gray-300 rounded-lg overflow-hidden">
           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2">
             <FiBold className="cursor-pointer" /><FiItalic className="cursor-pointer" /><FaStrikethrough className="cursor-pointer" /><GoLink className="cursor-pointer" /><AiOutlineOrderedList className="cursor-pointer" /><FaListUl className="cursor-pointer" /><GoQuote className="cursor-pointer" /><FaCode className="cursor-pointer" /><RiCodeBlock className="cursor-pointer" />

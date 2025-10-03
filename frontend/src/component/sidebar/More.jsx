@@ -1,6 +1,9 @@
 import React from 'react'
+import Topbar from '../../pages/Topbar'
+import Sidebar from '../../pages/Sidebar'
+import Left from '../../pages/Left'
 
-const Activity = () => {
+const More = () => {
   return (
    <div className="w-full h-screen flex flex-col overflow-hidden">
       <div className="flex-shrink-0">
@@ -10,19 +13,15 @@ const Activity = () => {
         <div className="flex-shrink-0">
           <Sidebar />
         </div>
-        <div className="flex flex-col">
-          
-          <div>
-
-          </div>
-
-          <div>
-            
-          </div>
+        <div className="flex-shrink-0">
+          <Left />
+        </div>
+        <div className="flex-grow overflow-hidden">
+          {/* <Outlet /> */}
         </div>
       </div>
     </div>
   )
 }
 
-export default Activity
+export default More
