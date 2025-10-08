@@ -93,7 +93,7 @@ export const getAllChannels = async (req, res) => {
     if(!userId){
       return res.status(401).json({msg:'Authentication error. User ID not found.'})
     }
-    const channels=(await Channel.find({members:userId})).toSorted('name:1')
+    const channels=await Channel.find({members:userId}).sort({name:1})
     res.status(200).json(channels)
   } catch (error) {
     console.error('GET ALL CHANNELS ERROR:', error);

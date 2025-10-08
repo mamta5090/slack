@@ -7,7 +7,7 @@ const channelRouter=express.Router()
 channelRouter.post('/create',auth, createChannel)
 channelRouter.post('/:channelId/members',auth,addMember)
 channelRouter.delete('/:channelId/members/me',auth,leaveChannel)
-channelRouter.get('/getAllChannel',auth,getAllChannels)
+channelRouter.get('/getAllChannel', auth, getAllChannels);
 
 export default channelRouter
 

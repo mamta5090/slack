@@ -4,10 +4,9 @@ import { FaLink } from "react-icons/fa6";
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAllChannels, setChannel } from '../../redux/channelSlice.js'
-
-const NewChannel = () => {
-    // --- FIX: Removed unused local state. Redux handles this now. ---
-    // const [channels, setChannels] = useState([]);
+import {setUser} from '../../redux/userSlice.js'
+const NewChannel = ({ isVisible, onClose }) => {
+   
      const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [channelsOpen, setChannelsOpen] = useState(false);
@@ -15,7 +14,8 @@ const NewChannel = () => {
     const [channelName, setChannelName] = useState('slack-group');
     const [visibility, setVisibility] = useState('public');
     const [showAllTemplates, setShowAllTemplates] = useState(false);
-    const [openAddChannel, setOpenAddChannel] = useState(false);
+    const [openAddChannel, setOpenAddChannel] = useState();
+
 
     const dispatch = useDispatch();
     // This will now work because the store is configured correctly
@@ -23,79 +23,106 @@ const NewChannel = () => {
 
     const handleNext = () => setStep(2);
     const handleBack = () => setStep(1);
-    const handleClose = () => {
-        setChannelsOpen(false);
-        setTimeout(() => setStep(1), 300);
+   const handleClose = () => {
+        onClose();
+        setTimeout(() => {
+            setStep(1); // Reset internal state for next time
+            setError(null);
+        }, 300);
     };
 
-    const fetchAllChannels = async () => {
-        try {
-            // --- FIX: Use the correct, RESTful API endpoint ---
-            const result = await axios.get('http://localhost:5000/api/channel', { withCredentials: true });
-            dispatch(setAllChannels(result.data));
-            console.log("Fetched channels:", result.data);
-        } catch (error) {
-            // --- FIX: Typo from 'console.llog' to 'console.log' ---
-            console.log("error fetching channel:", error.response?.data || error.message);
+
+const fetchAllChannels = async () => {
+    try {
+        const token = localStorage.getItem("token");
+
+        // --- DEBUGGING: Let's see what the token is ---
+        console.log("Attempting to fetch channels. Token found:", token);
+
+        // --- CRITICAL CHECK: Do not make the call if there is no token ---
+        if (!token) {
+            console.error("No token found in localStorage. Aborting API call.");
+            // Optionally, you could redirect to login here or show an error message.
+            return; 
         }
-    };
 
-    const handleChannel = async (e) => {
-        e.preventDefault()
-        setLoading(false)
-        try {
-            const result = await axios.post(
-                'http://localhost:5000/api/channel/create',
-                { name: channelName, visibility: visibility },
-                { withCredentials: true }
-            );
-            dispatch(setChannel(result.data));
-            setLoading(false)
-            // --- FIX: This is CRITICAL for the UI to update after creating a new channel ---
-            await fetchAllChannels(); 
-            console.log("Created channel:", result.data);
-            handleClose();
-        } catch (error) {
-            console.error("Error creating channel:", error.response?.data || error.message);
-            setLoading(false)
-            setError(error.message.data)
+        const result = await axios.get('http://localhost:5000/api/channel/getAllChannel', {
+            headers: {
+                // Ensure the token is sent correctly in the header
+                Authorization: `Bearer ${token}`
+            }
+        });
+
+        dispatch(setAllChannels(result.data));
+        console.log("Successfully fetched channels:", result.data);
+
+    } catch (error) {
+        // This will now give us a more detailed error from the backend
+        console.error("Error fetching channels:", error.response?.data || error.message);
+    }
+};
+
+   const handleChannel = async (e) => {
+    e.preventDefault();
+    setLoading(true); // Set loading to true at the start
+
+    try {
+        // --- FIX: Get the token from localStorage ---
+        const token = localStorage.getItem("token");
+
+        // --- FIX: Add a check for the token ---
+        if (!token) {
+            console.error("Cannot create channel, no token found.");
+            setError("You must be logged in to create a channel.");
+            setLoading(false);
+            return;
         }
-    };
 
-    useEffect(() => {
+        const result = await axios.post(
+            'http://localhost:5000/api/channel/create',
+            { name: channelName, visibility: visibility },
+            { 
+                // --- FIX: Add the Authorization header ---
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+
+        dispatch(setChannel(result.data));
+        await fetchAllChannels(); // This is great, it refetches the list
+        console.log("Created channel:", result.data);
+        handleClose();
+
+    } catch (error) {
+        console.error("Error creating channel:", error.response?.data || error.message);
+        setError(error.response?.data?.msg || "Failed to create channel.");
+    } finally {
+        setLoading(false); // Ensure loading is set to false in the end
+    }
+};
+
+    const user=useSelector((state)=>state.user.user)
+   useEffect(() => {
+    // Only fetch channels if the user object exists (meaning they are logged in)
+    if (user) {
         fetchAllChannels();
-    }, []);
+    }
+}, [user]);
 
+  if (!isVisible) {
+        return null;
+    }
 
     return (
         <div>
-            <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white' onClick={() => setOpenAddChannel(prev => !prev)}>
-                <div className='bg-gray-700 px-2 rounded'>+</div>
-                <p>Add channels</p>
-            </div>
+           
 
-            {/* Your list of channels, correctly rendered from Redux state */}
-            <div className="p-2 text-white">
-                <h3 className="font-bold mb-2">Channels</h3>
-                <ul>
-                    {allChannels && allChannels.map((ch) => (
-                        <li key={ch._id} className="p-1 px-2 rounded hover:bg-[#350d36] cursor-pointer truncate">
-                            # {ch.name}
-                        </li>
-                    ))}
-                </ul>
-            </div>
+       
 
-            {openAddChannel && (
-                <div className="fixed inset-0 z-50 flex items-center ml-20 mt-30 px-4 ">
-                    <div className='w-[160px] h-[100px] bg-white text-black rounded inset-0 flex flex-col  justify-center z-50 transition-opacity'>
-                        <div className='px-2 hover:bg-blue-600 hover:text-white cursor-pointer' onClick={() => { setChannelsOpen(true); setOpenAddChannel(false); }}>Create a new channel</div>
-                        <div className='px-2 hover:bg-blue-600 hover:text-white mt-2 cursor-pointer'>Browse channel</div>
-                    </div>
-                </div>
-            )}
+        
 
-            {channelsOpen && (
+            {isVisible && (
                 // ... your modal JSX ...
                  <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50">
                  <div className="bg-white w-[90%] max-w-[800px] h-[500px] rounded-lg shadow-lg z-50 flex relative">

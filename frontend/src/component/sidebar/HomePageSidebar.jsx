@@ -17,8 +17,12 @@ import { CiHeadphones } from "react-icons/ci";
 import { LuSendHorizontal } from "react-icons/lu";
 import { FaFileArchive } from "react-icons/fa";
 import { CiStar } from "react-icons/ci";
+import { HiOutlineDotsVertical } from "react-icons/hi";
 import { IoMdArrowDropdown } from "react-icons/io";
 import NewChannel from '../subpage/NewChannel';
+import { MdKeyboardArrowRight } from "react-icons/md";
+import { setChannel } from '../../redux/channelSlice';
+
 
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
@@ -26,15 +30,21 @@ const HomePageSidebar = () => {
     const { id: activeChatId } = useParams();
 
     const [startOpen, setStartOpen] = useState(false);
-
+    const [openChannel, setOpenChannel] = useState();
     const [directMessageOpen, setDirectMessageOpen] = useState(true);
     const [openApp, setOpenApp] = useState(false);
- 
+    const [openBox,setOpenBox]=useState(false)
+    const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
+    const [openAddChannel,setOpenAddChannel]=useState(false)
+    const [openCreate,setCreateOpen]=useState(false)
+    const [manageOpen,setManageOpen]=useState(false)
+    const [cancel,setCancel]=useState(false)
 
     const me = useSelector((state) => state.user.user);
     const { allUsers = [] } = useSelector((state) => state.user);
     const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
     const channel=useSelector((state)=>state.channel.channel)
+    const allChannels=useSelector((state)=>state.channel.allChannels)
 
     useEffect(() => {
         dispatch(fetchConversations());
@@ -122,21 +132,133 @@ const HomePageSidebar = () => {
                     </div>
                 )}
 
- {/* {channel && (
-    <div className='text-white bg-[#683c6a] rounded flex flex-row items-center gap-1 p-1 font-bold'>
-        <p># {channel.name}</p>
-    </div>
-)} */}
 
-{/* {channel.length > 0 ? (
-    channel.map((user)=>{
-       <div className='text-white bg-[#683c6a] rounded flex flex-row items-center gap-1 p-1 font-bold'>
-        <p># {channel.name}</p>
-    </div> 
-    })
-)} */}
-               
-<NewChannel/>
+
+
+    
+<div className="flex text-[#d8c5dd] items-center justify-between cursor-pointer hover:bg-[#683c6a] p-1 rounded group">
+                    <div className='flex items-center gap-[10px] flex-grow' onClick={() => setOpenChannel(prev => !prev)}>
+                        <IoMdArrowDropdown className={`transition-transform duration-200 ${openChannel ? "rotate-0" : "-rotate-90"}`} />
+                        <p>Channels</p>
+                    </div>
+                    <div className='relative'>
+                        <div className='hover:bg-[#350d36] rounded p-1' onClick={() => setOpenAddChannel(prev => !prev)}>
+                            <span className="opacity-0 group-hover:opacity-100 transition-opacity"><HiOutlineDotsVertical /></span>
+                        </div>
+                     
+                    </div>
+                </div>
+
+                {openChannel && (
+                    <div className="p-2 text-white">
+                        <ul>
+                            {allChannels && allChannels.map((ch) => (
+                                <li key={ch._id} className="p-1 px-2 rounded hover:bg-[#350d36] cursor-pointer truncate">
+                                    # {ch.name}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+                
+                                <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white'  onClick={() => setOpenBox(prev=>!prev)}>
+                {/* <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white' onClick={() => setIsNewChannelModalOpen(true)}  onClick={() => setOpenBox(prev => !prev)}> */}
+                    <div className='bg-gray-700 px-2 rounded'>+</div>
+                    <p>Add channels</p>
+                </div>
+
+  {openAddChannel && (
+
+<div className="absolute ml-[190px] flex flex-col -translate-y-1/2  w-[300px] h-[170px]  top-90 rounded-lg bg-white shadow-lg   z-50 text-black">
+              <div className="flex flex-col shadow-lg shadow-gray-400  ">
+                                <div   className='gap-[200px] flex border-b px-4  items-center  py-4 hover:bg-blue-600 hover:text-white'
+                                    onClick={() => {
+                                      setCreateOpen(prev=>!prev);
+                                    //   setOpenChannel(false)
+                                      //setOpenBox(false);
+                                    }}>
+                                    <p>Create </p>
+                                    <MdKeyboardArrowRight />
+                                </div>
+                                 <div   className='gap-[185px] flex border-b px-4 items-center  py-4 hover:bg-blue-600 hover:text-white'
+                                    onClick={() => {
+                                        setManageOpen(true); 
+                                        openAddChannel(false);
+                                    }}>
+                                    <p>Manage </p>
+                                    <MdKeyboardArrowRight />
+                                </div>
+                                <div className='px-3 gap-[130px] py-4 flex flex-row  hover:bg-blue-600 hover:text-white cursor-pointer'>
+                                    <p>Show and sort</p>
+                                    <div className='flex items-center'>
+                                        <p>All</p>
+                                          <MdKeyboardArrowRight />
+                                    </div>
+                                </div>
+                            </div>
+                           </div>
+                        )}
+
+                          {openCreate && (
+<div className="absolute ml-[480px] flex flex-col -translate-y-1/2  w-[200px] h-[100px]  top-80 rounded-lg bg-white shadow-lg   z-50 text-black">
+              <div className="flex flex-col   ">
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
+                                    onClick={() => {
+                                        setIsNewChannelModalOpen(true); 
+                                        setOpenBox(false);
+                                    }}>
+                                    Create channel
+                                </div>
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'>Browse channels</div>
+                            </div>
+                            </div>
+                        )}
+
+                          {manageOpen && (
+<div className="absolute ml-[480px] flex flex-col -translate-y-1/2  w-[200px] h-[130px]  top-95 shadow-lg shadow-gray-400 rounded-lg bg-white shadow-lg   z-50 text-black">
+              <div className="flex flex-col   ">
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
+                                    onClick={() => {
+                                        setManageOpen(prev=>!prev)
+                                        //setIsNewChannelModalOpen(true); 
+                                        //setOpenBox(false);
+                                    }}>
+                                    Browser channel
+                                </div>
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'>Edit sections</div>
+                                                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
+                                                                onClick={()=>setCancel(true)}>Leave inactive channels</div>
+                            </div>
+                            </div>
+                        )}
+
+                        {cancel && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50">
+                 <div className="bg-white w-[90%] max-w-[800px] h-[500px] rounded-lg shadow-lg z-50 flex relative">
+                    </div>
+                    </div>
+                        )}
+
+                  {openBox && (
+<div className="absolute ml-[90px] flex flex-col -translate-y-1/2  w-[200px] h-[100px]  top-120 rounded-lg bg-white shadow-lg   z-50 text-black">
+              <div className="flex flex-col   ">
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
+                                    onClick={() => {
+                                        setIsNewChannelModalOpen(true); 
+                                        setOpenBox(false);
+                                    }}>
+                                    Create a new channel
+                                </div>
+                                <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'>Browse channels</div>
+                            </div>
+                            </div>
+                        )}
+
+                {/* --- RENDER THE MODAL HERE (SIMPLIFIED) --- */}
+                <NewChannel 
+                    isVisible={isNewChannelModalOpen} 
+                    onClose={() => setIsNewChannelModalOpen(false)} 
+                />
                 {/* Direct messages */}
                 <div
                     className="flex text-[#d8c5dd] items-center gap-3 cursor-pointer hover:bg-[#683c6a] p-1 rounded group"
