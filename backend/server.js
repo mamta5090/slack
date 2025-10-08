@@ -11,6 +11,7 @@ import messageRoute from './router/message.route.js';
 import inviteRouter from './router/invite.routes.js';
 import slackRouter from './router/slack.route.js';
 import workspaceRouter from './router/workspace.routes.js';
+import channelController from './router/channel.route.js'
 
 import { app, server } from './socket.js';  
 import auth from './middleware/auth.js';
@@ -63,7 +64,7 @@ app.use('/api/message', messageRoute);
 app.use('/api/invite', inviteRouter);
 app.use('/api/slack',slackRouter);
 app.use("/api/workspace",workspaceRouter)
-
+app.use("/api/channel",channelController)
 
 connectDB();
 

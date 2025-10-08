@@ -15,9 +15,9 @@ const Dms = () => {
         <div className="flex-shrink-0">
           <Sidebar />
         </div>
-        <div className="flex-shrink-0">
-        <Outlet/>
-        </div>
+        {/* <div className="flex-shrink-0">
+        <Left/>
+        </div> */}
         <div className="flex-grow overflow-hidden">
          <Right/>
         </div>

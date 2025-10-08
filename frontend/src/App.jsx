@@ -33,11 +33,10 @@ import Welcome from "./slack/Welcome";
 import Workspace from "./slack/Workspace";
 import Dms from "./component/sidebar/Dms";
 import Later from "./component/sidebar/Later";
-import HomePage from "./component/sidebar/HomePageSidebar";
+import HomePage from "./component/Home";
 import Files from "./component/sidebar/Files";
 import More from "./component/sidebar/More";
 import Avtivity from "./component/sidebar/Activity";
-import HomePageSidebar from "./component/sidebar/HomePageSidebar";
 import Left from "./pages/Left";
 
 
@@ -136,12 +135,11 @@ const App = () => {
   }, [user, dispatch]);
 
   if (!authChecked) {
-    return null; // wait until auth check is complete
+    return null; 
   }
 
   return (
     <Routes>
-      {/* Default route → SlackLogin if not logged in, else → MainLayout */}
       <Route
         path="/"
         element={user ? <MainLayout /> : <SlackLogin />}
@@ -149,14 +147,13 @@ const App = () => {
         {user && (
           <>
             <Route index element={<Home />} />
-          <Route path="user/:id" element={
-          <div className="w-full h-full flex flex-row">
-          <HomePageSidebar/>
-            <Right />             
-          </div>
-        } />
+            <Route path="user/:id" element={
+              <div className="w-full h-full flex flex-row">
+                <Left />   
+                <Right />  
+              </div>
+            } />
           </>
-          
         )}
       </Route>
 
@@ -200,8 +197,8 @@ const App = () => {
         element={user ? <More /> : <Navigate to="/login" replace />}
       />
         <Route
-        path="/home"
-        element={user ? <Home/> : <Navigate to="/login" replace />}
+        path="/homepage"
+        element={user ? <HomePage /> : <Navigate to="/login" replace />}
       />
      
 

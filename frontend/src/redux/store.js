@@ -5,6 +5,7 @@ import socketSlice from "./SocketSlice";
 import conversationSlice from "./conversationSlice"; 
 import slackUserSlice from './slackUserSlice'
 import workspaceSlice from './workspaceSlice'
+import channelSlice from './channelSlice'
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     conversations: conversationSlice, 
     slackUser:slackUserSlice,
     workspace:workspaceSlice,
+    channel:channelSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

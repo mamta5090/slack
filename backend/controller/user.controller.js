@@ -133,23 +133,19 @@ export const getSingleUser=async(req,res)=>{
   }
 }
 
-// controller/user.controller.js
+
 
 export const editProfile = async (req, res) => {
     try {
-        // Ensure the logged-in user can only edit their own profile
         if (req.userId !== req.params.id) {
             return res.status(403).json({ message: "Forbidden: You can only edit your own profile." });
         }
-
         const { name, displayName, role, number, location, namePronunciation, email, date,title,topic  } = req.body;
         const user = await User.findById(req.params.id);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-
-        // Update fields if they were provided in the request
         user.name = name || user.name;
         user.displayName = displayName || user.displayName;
         user.role = role || user.role;
@@ -160,15 +156,10 @@ export const editProfile = async (req, res) => {
         user.date = date || user.date;
          user.title = title || user.title; 
          user.topic=topic || user.topic;
-
-        // If a new file was uploaded, update the profileImage path
         if (req.file) {
-            // Prepend the path for serving static files
             user.profileImage = `uploads/${req.file.filename}`;
         }
-
         const updatedUser = await user.save();
-        
         return res.status(200).json(updatedUser);
     } catch (error) {
         console.error("editProfile error:", error);

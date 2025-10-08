@@ -120,9 +120,9 @@ const Left = () => {
   };
 
   return (
-    <div className="w-[460px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col">
+    <div className="w-[890px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col">
       {/* Header */}
-      <div className="text-white p-3 flex justify-between items-center border-b border-purple-900">
+      {/* <div className="text-white p-3 flex justify-between items-center border-b border-purple-900">
         <div className="flex flex-row items-center gap-[25px]">
           <Koalaliving />
 
@@ -138,6 +138,23 @@ const Left = () => {
           <CiSettings className="cursor-pointer" />
           <FaRegEdit className="cursor-pointer" />
         </div>
+      </div> */}
+
+      <div>
+          <div className="p-3 border-b flex justify-between items-center">
+                <h3 className="font-bold">Direct messages</h3>
+                <label className="flex items-center text-xs cursor-pointer">
+                  <span className="mr-2">Unread messages</span>
+                  <div className="relative">
+                    <input type="checkbox" className="sr-only peer" />
+                    <div className="block bg-gray-300 w-8 h-4 rounded-full peer-checked:bg-green-500"></div>
+                    <div className="dot absolute left-1 top-0.5 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-full"></div>
+                  </div>
+                  <div className="hover:bg-[#958197]">
+            <FaEdit className="text-xl mx-2"/>
+          </div>
+                </label>
+              </div>
       </div>
 
       {/* Search */}
@@ -145,7 +162,7 @@ const Left = () => {
         <div className="relative">
           <input
             type="text"
-            placeholder="Search"
+            placeholder="find a DM"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-[#958197] text-white rounded-md py-2 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm"
@@ -155,22 +172,6 @@ const Left = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar">
-        {/* Channels */}
-        <div className="text-sm px-4 py-2 text-gray-300">Channels</div>
-        <div className="flex flex-col space-y-1 px-2">
-          <div className="hover:bg-[#958197] hover:text-black rounded-md px-3 py-1 cursor-pointer"># cyrus</div>
-          <div className="hover:bg-[#958197] hover:text-black rounded-md px-3 py-1 cursor-pointer"># general</div>
-          <div className="hover:bg-[#958197] hover:text-black rounded-md px-3 py-1 cursor-pointer"># hr-activities</div>
-          <div className="hover:bg-[#958197] hover:text-black rounded-md px-3 py-1 cursor-pointer"># random</div>
-          <div className="text-purple-300 px-3 py-1 cursor-pointer">+ Add channels</div>
-        </div>
-
-        {/* Direct Messages */}
-        <div className="flex items-center gap-2 text-sm px-4 py-3 text-gray-300">
-          <TbTriangleInvertedFilled />
-          <span>Direct Messages</span>
-        </div>
-
         <div className="px-2">
           {searchTerm ? (
             <>

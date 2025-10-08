@@ -14,7 +14,6 @@ export const createInvite = async (req, res) => {
       const token = crypto.randomBytes(20).toString("hex");
       return { address: email, token, status: "pending", sentAt: null };
     });
-
     const invite = await Invite.create({
       emails: emailObjs,
       role,
@@ -23,13 +22,10 @@ export const createInvite = async (req, res) => {
       workspace,
       invitedBy: req.userId || null,
     });
-
     const frontendBase = process.env.FRONTEND_URL || "http://localhost:5173"; 
     const inviterName = req.name || "Someone"; 
-
     const sendPromises = invite.emails.map((e) => {
       const link = `${frontendBase}/invite/accept?token=${e.token}&email=${encodeURIComponent(e.address)}`;
-
       return sendInviteEmail({
         to: e.address,
         inviterName,
@@ -39,9 +35,7 @@ export const createInvite = async (req, res) => {
       }).then(info => ({ status: "fulfilled", email: e.address, info }))
         .catch(err => ({ status: "rejected", email: e.address, error: err.message || err }));
     });
-
     const results = await Promise.allSettled(sendPromises);
-
     const updateOps = [];
     results.forEach((r) => {
       if (r.status === "fulfilled" && r.value?.status === "fulfilled") {
@@ -57,14 +51,11 @@ export const createInvite = async (req, res) => {
         console.error("Mail promise rejected", r);
       }
     });
-
     if (updateOps.length) await Promise.all(updateOps);
-
     const sendSummary = results.map((r) => {
       if (r.status === "fulfilled") return { email: r.value?.email, result: r.value?.status };
       return { email: null, result: "error", detail: r.reason };
     });
-
     return res.status(201).json({
       message: "Invites processed (check sendSummary for per-email status)",
       invite,
