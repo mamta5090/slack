@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
@@ -6,6 +6,8 @@ import axios from 'axios';
 import Koalaliving from '../koalaliving/Koalaliving';
 import Avatar from '../Avatar';
 import slackbot from '../../assets/slackbot.png';
+import LeaveInactiveChannelsModal from '../subpage/LeaveInactiveChannelsModal';
+import useClickOutside from '../../hook/useClickOutside';
 
 import { setAllUsers } from '../../redux/userSlice';
 import { fetchConversations } from '../../redux/conversationSlice'; 
@@ -84,6 +86,42 @@ const HomePageSidebar = () => {
         navigate(`/user/${otherId}`);
     };
 
+   // const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
+    const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false); // <-- STATE FOR THE NEW MODAL
+
+    // Menu states
+    // const [isAddChannelMenuOpen, setIsAddChannelMenuOpen] = useState(false);
+    // const [isChannelsMenuOpen, setIsChannelsMenuOpen] = useState(false);
+    // const [isCreateSubMenuOpen, setIsCreateSubMenuOpen] = useState(false);
+    // const [isManageSubMenuOpen, setIsManageSubMenuOpen] = useState(false);
+    
+    // Refs for closing menus
+    const addChannelMenuRef = useRef(null);
+    const channelsMenuRef = useRef(null);
+    useClickOutside(addChannelMenuRef, () => setIsAddChannelMenuOpen(false));
+    useClickOutside(channelsMenuRef, () => {
+        openCreate(false);
+        openCreate(false);
+        manageOpen(false);
+    });
+
+    //const allChannels = useSelector((state) => state.channel.allChannels);
+    // ... other selectors and useEffects are fine
+
+    // --- HANDLERS TO OPEN MODALS ---
+    const handleOpenCreateChannel = () => {
+        setIsNewChannelModalOpen(true);
+        openCreate(false);
+        openCreate(false);
+    };
+    
+    const handleOpenLeaveInactive = () => {
+        setIsLeaveModalOpen(true);
+        openCreate(false);
+        manageOpen(false);
+    };
+
+
     return (
         <div className="md:w-[350px] w-[200px] min-h-screen bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0">
             {/* header */}
@@ -137,12 +175,15 @@ const HomePageSidebar = () => {
 
     
 <div className="flex text-[#d8c5dd] items-center justify-between cursor-pointer hover:bg-[#683c6a] p-1 rounded group">
-                    <div className='flex items-center gap-[10px] flex-grow' onClick={() => setOpenChannel(prev => !prev)}>
+                    <div className='flex items-center gap-[10px] flex-grow' 
+                     onClick={() => setOpenChannel(prev => !prev)}
+                    >
                         <IoMdArrowDropdown className={`transition-transform duration-200 ${openChannel ? "rotate-0" : "-rotate-90"}`} />
                         <p>Channels</p>
                     </div>
                     <div className='relative'>
-                        <div className='hover:bg-[#350d36] rounded p-1' onClick={() => setOpenAddChannel(prev => !prev)}>
+                        <div className='hover:bg-[#350d36] rounded p-1' 
+                        onClick={() => setOpenAddChannel(prev => !prev)}>
                             <span className="opacity-0 group-hover:opacity-100 transition-opacity"><HiOutlineDotsVertical /></span>
                         </div>
                      
@@ -162,33 +203,36 @@ const HomePageSidebar = () => {
                 )}
                 
                                 <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white'  onClick={() => setOpenBox(prev=>!prev)}>
-                {/* <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white' onClick={() => setIsNewChannelModalOpen(true)}  onClick={() => setOpenBox(prev => !prev)}> */}
                     <div className='bg-gray-700 px-2 rounded'>+</div>
                     <p>Add channels</p>
                 </div>
 
   {openAddChannel && (
 
-<div className="absolute ml-[190px] flex flex-col -translate-y-1/2  w-[300px] h-[170px]  top-90 rounded-lg bg-white shadow-lg   z-50 text-black">
+<div className="absolute md:ml-[340px] ml-[190px] flex flex-col -translate-y-1/2  w-[300px] h-[146px]  top-90 rounded-lg bg-white shadow-lg   z-50 text-black">
               <div className="flex flex-col shadow-lg shadow-gray-400  ">
-                                <div   className='gap-[200px] flex border-b px-4  items-center  py-4 hover:bg-blue-600 hover:text-white'
-                                    onClick={() => {
-                                      setCreateOpen(prev=>!prev);
-                                    //   setOpenChannel(false)
-                                      //setOpenBox(false);
-                                    }}>
+                                <div   className='gap-[200px] flex border-b px-4  items-center  py-3 hover:bg-blue-600 hover:text-white'
+                                    onClick={() =>
+                                        {
+                                              
+                                            setCreateOpen(prev=>!prev)
+                                            setManageOpen(false);
+                                        } }
+                                    >
                                     <p>Create </p>
                                     <MdKeyboardArrowRight />
                                 </div>
-                                 <div   className='gap-[185px] flex border-b px-4 items-center  py-4 hover:bg-blue-600 hover:text-white'
-                                    onClick={() => {
-                                        setManageOpen(true); 
-                                        openAddChannel(false);
-                                    }}>
+                                 <div   className='gap-[185px] flex border-b px-4 items-center  py-3 hover:bg-blue-600 hover:text-white'
+                                    // onMouseEnter={() => {
+                                    //     setManageOpen(true); 
+                                    // }}
+                                    //onMouseLeave={() => setManageOpen(false)}
+                                    onClick={() => setManageOpen(prev=>!prev)}
+                                    >
                                     <p>Manage </p>
                                     <MdKeyboardArrowRight />
                                 </div>
-                                <div className='px-3 gap-[130px] py-4 flex flex-row  hover:bg-blue-600 hover:text-white cursor-pointer'>
+                                <div className='px-3 gap-[130px] py-3 flex flex-row  hover:bg-blue-600 hover:text-white cursor-pointer'>
                                     <p>Show and sort</p>
                                     <div className='flex items-center'>
                                         <p>All</p>
@@ -205,7 +249,8 @@ const HomePageSidebar = () => {
                                 <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
                                     onClick={() => {
                                         setIsNewChannelModalOpen(true); 
-                                        setOpenBox(false);
+                                        setCreateOpen(false)
+                                        setOpenAddChannel(false);
                                     }}>
                                     Create channel
                                 </div>
@@ -219,25 +264,38 @@ const HomePageSidebar = () => {
               <div className="flex flex-col   ">
                                 <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
                                     onClick={() => {
-                                        setManageOpen(prev=>!prev)
-                                        //setIsNewChannelModalOpen(true); 
-                                        //setOpenBox(false);
+                                      
+                                        setIsNewChannelModalOpen(true); 
+                                        setManageOpen(false);
                                     }}>
                                     Browser channel
                                 </div>
                                 <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'>Edit sections</div>
                                                                 <div className='px-3 py-2 hover:bg-blue-600 hover:text-white cursor-pointer'
-                                                                onClick={()=>setCancel(true)}>Leave inactive channels</div>
+                                                               onClick={handleOpenLeaveInactive}>Leave inactive channels</div>
                             </div>
                             </div>
                         )}
 
-                        {cancel && (
+                        {/* {cancel && (
                             <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/50">
                  <div className="bg-white w-[90%] max-w-[800px] h-[500px] rounded-lg shadow-lg z-50 flex relative">
                     </div>
                     </div>
-                        )}
+                        )} */}
+
+                          <NewChannel 
+                isVisible={isNewChannelModalOpen} 
+                onClose={() => setIsNewChannelModalOpen(false)} 
+            />
+            <LeaveInactiveChannelsModal 
+                isVisible={isLeaveModalOpen} 
+                onClose={() => {
+                    setIsLeaveModalOpen(false)
+                     setOpenAddChannel(false);
+                     setManageOpen(false);
+                    } }
+            />
 
                   {openBox && (
 <div className="absolute ml-[90px] flex flex-col -translate-y-1/2  w-[200px] h-[100px]  top-120 rounded-lg bg-white shadow-lg   z-50 text-black">

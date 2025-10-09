@@ -61,9 +61,9 @@ export const addMember = async (req, res) => {
 export const leaveChannel = async (req, res) => {
     try {
         const { channelId } = req.params;
-        // Use req.userId, which is set by your middleware
-        const userId = req.userId;
 
+        const userId = req.userId;
+console.log(`[Backend] Received request to leave channel with ID: ${channelId}`);
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
