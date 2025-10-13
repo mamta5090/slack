@@ -41,7 +41,7 @@ const Topbar = () => {
 
   return (
     // Corrected: Use left-0 and right-0 for robust full-width coverage
-    <div className="h-12 fixed top-0 left-0 right-0 bg-[#3f0c41] text-white flex items-center justify-between shadow-md px-4 z-50">
+ <div className="h-12 fixed top-0 left-0 right-0 bg-[#3f0c41] text-white flex items-center justify-between shadow-md px-4 z-50">
       <div className="flex items-center gap-5">
         <FaArrowLeft onClick={() => navigate(-1)} className="cursor-pointer" />
         <FaArrowRight onClick={() => navigate(1)} className="cursor-pointer" />

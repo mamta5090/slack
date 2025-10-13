@@ -109,7 +109,7 @@ const HomePageSidebar = () => {
     };
 
     return (
-        <div className="md:w-[350px] fixed w-[200px] h-screen bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 over">
+ <div className="fixed top-12 left-[6%] md:w-[25%] w-[25%] h-full bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 z-40">
             {/* Header */}
             <div className='flex flex-row justify-between items-center p-1 border-b border-gray-700'>
                 <Koalaliving />

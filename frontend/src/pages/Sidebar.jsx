@@ -78,7 +78,7 @@ const Sidebar = () => {
 
   return (
     <nav
-      className="bg-[#3f0c41] fixed w-[72px] flex flex-col justify-between items-center py-4 shadow-lg top-12 bottom-0 z-50"
+     className="bg-[#3f0c41] fixed w-[6%] flex flex-col justify-between items-center py-4 shadow-lg top-12 bottom-0 z-40"
       aria-label="Sidebar"
     >
       <button

@@ -6,14 +6,14 @@ import HomeRight from '../pages/HomeRight';
 
 const HomePage = () => {
   return (
-    <div className="w-full h-screen flex flex-row overflow-hidden">
+    <div className="w-full h-screen bg-[#f3f4f6]">
       <Topbar />
-      <Sidebar />
-      <div className='ml-[72px] mt-[48px]'>
+      <div className="flex h-full">
+        <Sidebar />
         <HomePageSidebar />
-      </div>
-      <div className="flex-1 h-full bg-[#f3f4f6] ml-[350px] mt-[48px]">
-        <HomeRight />
+        <main className="flex-1 h-full  pl-[calc(6%+25%)]">
+          <HomeRight />
+        </main>
       </div>
     </div>
   );

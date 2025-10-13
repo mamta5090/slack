@@ -1,6 +1,7 @@
 import React, { memo } from "react";
 import { useSelector } from "react-redux";
 import dp from "../assets/dp.webp";
+import Avatar from "../component/Avatar";
 
 const SenderMessage = ({ message, createdAt }) => {
   const user = useSelector((state) => state.user.user);
@@ -13,13 +14,15 @@ const SenderMessage = ({ message, createdAt }) => {
     <div className="flex mb-2">
       <div className="flex flex-row gap-2 items-start">
       
-       <div className="rounded-xl bg-gray-500">
+       {/* <div className="rounded-xl bg-gray-500">
          <img
-          src={user?.profileImage || dp}
+          src={Avatar || dp}
           alt="User Avatar"
           className="rounded-xl h-10 w-10 object-cover"
         />
-       </div>
+       </div> */}
+
+       {user && <Avatar user={user} size="md" />}
 
       
         <div className="flex flex-col px-3 py-2 rounded-lg max-w-[70%]">
