@@ -8,11 +8,11 @@ import Koalaliving from '../koalaliving/Koalaliving';
 import Avatar from '../Avatar';
 import LeaveInactiveChannelsModal from '../subpage/LeaveInactiveChannelsModal';
 import NewChannel from '../subpage/NewChannel';
-import useClickOutside from '../../hook/useClickOutside'; // Ensure this path is correct
+import useClickOutside from '../../hook/useClickOutside'; 
 
 // Asset and Redux Imports
 import slackbot from '../../assets/slackbot.png';
-import { setAllUsers } from '../../redux/userSlice';
+import { setAllUsers, setSingleUser } from '../../redux/userSlice';
 import { fetchConversations } from '../../redux/conversationSlice';
 
 // Icon Imports
@@ -50,6 +50,7 @@ const HomePageSidebar = () => {
     const { allUsers = [] } = useSelector((state) => state.user);
     const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
     const allChannels = useSelector((state) => state.channel.allChannels);
+    const singleUser=useSelector((state)=>state.user.singleUser)
 
     // --- 1. Create refs for each floating menu container ---
     const channelOptionsRef = useRef(null); // For the "..." menu and all its children
@@ -199,27 +200,40 @@ const HomePageSidebar = () => {
                 </div>
 
                 {/* Direct Messages Section */}
-                <div className="flex text-[#d8c5dd] items-center gap-3 cursor-pointer hover:bg-[#683c6a] p-1 rounded group" onClick={() => setDirectMessageOpen(p => !p)}>
-                    <IoMdArrowDropdown className={`transition-transform duration-200 ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
-                    <p>Direct message</p>
-                </div>
-                {directMessageOpen && (
-                    <div className="pl-4 pr-2 space-y-1">
-                        {allUsers.filter(u => u._id !== me?._id).map((user) => {
-                            const isOnline = onlineUsers.includes(user._id);
-                            const isActive = user._id === activeChatId;
-                            return (
-                                <div key={user._id} onClick={() => openChat(user._id)} className={`flex items-center gap-2 p-1 rounded-md cursor-pointer ${isActive ? "bg-[#958197] text-black" : "hover:bg-[#683c6a]"}`}>
-                                    <div className="relative">
-                                        <Avatar user={user} size="md" />
-                                        <div className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-white ${isOnline ? "bg-green-500" : "bg-gray-500"}`} />
-                                    </div>
-                                    <p className="text-sm">{user.name}</p>
-                                </div>
-                            );
-                        })}
+               {/* Direct Messages Section */}
+                <div className='mt-4 px-2'>
+                    <div className="flex text-[#d8c5dd] items-center gap-1 cursor-pointer hover:bg-[#350d36] px-2 py-1 rounded-md" onClick={() => setDirectMessageOpen(p => !p)}>
+                        <IoMdArrowDropdown className={`transition-transform duration-200 text-lg ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
+                        <p className='font-semibold text-sm'>Direct messages</p>
                     </div>
-                )}
+                    {directMessageOpen && (
+                        <div className="mt-1 space-y-0.5">
+                            {allUsers.filter(u => u._id !== me?._id).map((user) => {
+                                const isOnline = onlineUsers.includes(user._id);
+                                const isActive = user._id === activeChatId;
+                                return (
+                                    // FIX: Call openChat(user._id) here
+                                    <div 
+                                        key={user._id} 
+                                        onClick={() => openChat(user._id)} 
+                                        className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer pl-6 ${isActive ? "bg-[#1164a3] text-white" : "hover:bg-[#350d36] text-[#d8c5dd]"}`}
+                                    >
+                                        <div className="relative flex-shrink-0">
+                                            <Avatar user={user} size="sm" />
+                                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] ${isOnline ? "bg-[#2bac76]" : "border-none"}`} />
+                                        </div>
+                                        <p className="text-sm truncate">{user.name}</p>
+                                    </div>
+                                );
+                            })}
+                             <div className='flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#350d36] cursor-pointer pl-6 text-[#d8c5dd]' onClick={() => setInvite(true)}>
+                                <div className='bg-[#4c1d4e] w-5 h-5 flex items-center justify-center rounded text-sm'>+</div>
+                                <p className='text-sm'>Add coworkers</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
 
  <div className='flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-[#683c6a] rounded-md'
  onClick={()=>setInvite(true)}>

@@ -38,6 +38,8 @@ import Files from "./component/sidebar/Files";
 import More from "./component/sidebar/More";
 import Avtivity from "./component/sidebar/Activity";
 import Left from "./pages/Left";
+import HomeSidebar from "./component/sidebar/HomePageSidebar";
+import HomeRight from "./pages/HomeRight";
 
 
 const SERVER_URL = "http://localhost:5000";
@@ -140,21 +142,30 @@ const App = () => {
 
   return (
     <Routes>
-      <Route
+      {/* <Route
         path="/"
-        element={user ? <MainLayout /> : <SlackLogin />}
+        element={user ? <Home /> : <SlackLogin />}
       >
         {user && (
           <>
             <Route index element={<Home />} />
             <Route path="user/:id" element={
               <div className="w-full h-full flex flex-row">
-                <Left />   
-                <Right />  
+                <HomeSidebar />   
+                <HomeRight />  
               </div>
             } />
           </>
         )}
+      </Route> */}
+
+     <Route
+        path="/"
+        element={user ? <Home /> : <Navigate to="/login" />}
+      >
+          {/* Nested routes for the home layout */}
+          <Route index element={<HomePage />} />
+          <Route path="user/:id" element={<HomePage />} />
       </Route>
 
 

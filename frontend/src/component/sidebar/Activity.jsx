@@ -55,21 +55,20 @@ const ActivityItem = ({ activity }) => {
 };
 
 
-// The main container component
+
 const Activity = () => {
   const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState('All');
   const [showUnread, setShowUnread] = useState(false);
+  //const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
 
-  // --- FIX #1: Use the correct keys from your store ---
-  // The key for your user slice is 'user', not 'auth'.
-  // We also safely access the user property in case the auth state is null.
+
   const authState = useSelector((state) => state.user);
-  const user = authState?.user; // Assuming your userSlice's state is { user: {...} }
+  const user = authState?.user; 
 
   const { currentWorkspace } = useSelector((state) => state.workspace);
 
-  // --- FIX #2: The key for your activity slice is 'activityData', not 'activity' ---
+
   const { items: activities, status, error } = useSelector((state) => state.activityData);
 
   useEffect(() => {
@@ -131,7 +130,13 @@ const Activity = () => {
           </div>
           <div className="flex-1 overflow-y-auto">{renderContent()}</div>
         </div>
-        <div className="flex-1 bg-[#3f0e40]" />
+        <div className="flex-1 bg-white" >
+
+
+
+
+
+        </div>
       </div>
     </div>
   );

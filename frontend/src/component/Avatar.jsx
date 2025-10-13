@@ -1,46 +1,52 @@
-import React from "react";
-import dp from '../assets/dp.webp'; 
+// src/component/Avatar.jsx
 
+import React from "react";
+
+// Define your backend URL in one place
 const SERVER_URL = "http://localhost:5000"; 
 
-
+/**
+ * A helper function to construct the full image URL.
+ * It handles cases where the path might already be a full URL.
+ */
 const getImageUrl = (path) => {
-  if (!path) return null;
-  if (path.startsWith('http') || path.startsWith('blob:')) return path;
-  return `${SERVER_URL}/${path.replace(/\\/g, '/')}`;
+  if (!path) {
+    return null; // Return null if there's no path
+  }
+  // If the path is already a full URL (from Google, Facebook, etc.), use it directly
+  if (path.startsWith('http')) {
+    return path;
+  }
+  // Otherwise, prepend the backend server URL
+  return `${SERVER_URL}/${path}`;
 };
 
 const Avatar = ({ user, size = 'md' }) => {
-  const sizeClasses = {
-    sm: 'w-8 h-8 text-sm',    // For Topbar
-    md: 'w-[20px] h-[20px] text-sm', // For Left sidebar
-    lg: 'w-28 h-28 text-4xl', // For Profile Page cards
-    xl: 'w-56 h-56 text-8xl', // For Profile Page main avatar
-  };
+    const sizeClasses = {
+        sm: 'w-8 h-8',
+        md: 'w-10 h-10',
+        lg: 'w-16 h-16',
+    };
 
-  const selectedSize = sizeClasses[size] || sizeClasses['md'];
+    if (!user) {
+        return <div className={`${sizeClasses[size]} bg-gray-300 rounded-full`}></div>;
+    }
 
-  const imageUrl = user ? getImageUrl(user.profileImage) : null;
-
-  if (imageUrl || (user && dp)) {
+    const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
+    
+    // Use the helper function to get the correct, full image URL
+    const imageUrl = getImageUrl(user.profileImage);
 
     return (
-      <img
-        src={imageUrl || dp}
-        alt={user?.name || 'User Avatar'}
-        className={`${selectedSize} object-cover rounded`}
-      />
+        <div className={`flex items-center justify-center ${sizeClasses[size]} bg-indigo-500 text-white rounded-full font-bold`}>
+            {/* Use the constructed imageUrl here */}
+            {imageUrl ? (
+                <img src={imageUrl} alt={user.name} className="w-full h-full rounded-full object-cover" />
+            ) : (
+                <span>{initial}</span>
+            )}
+        </div>
     );
-  }
-
-  // Otherwise, show a styled <div> with the first letter of the name
-  return (
-    <div
-      className={`${selectedSize} rounded bg-purple-600 flex items-center justify-center text-white font-bold`}
-    >
-      {user?.name?.charAt(0).toUpperCase() || '?'}
-    </div>
-  );
 };
 
 export default Avatar;
