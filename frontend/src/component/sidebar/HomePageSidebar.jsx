@@ -91,7 +91,7 @@ const HomePageSidebar = () => {
         } catch (err) {
             console.error("Failed to create or get conversation:", err);
         }
-        navigate(`/user/${otherId}`);
+         navigate(`/${otherId}`);
     };
     
     // Handlers to open modals and close menus at the same time
@@ -109,7 +109,7 @@ const HomePageSidebar = () => {
     };
 
     return (
- <div className="fixed top-12 left-[6%] md:w-[25%] w-[25%] h-full bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 z-40">
+ <div className="fixed top-12 left-[5%] md:w-[25%] w-[25%] h-full bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 ">
             {/* Header */}
             <div className='flex flex-row justify-between items-center p-1 border-b border-gray-700'>
                 <Koalaliving />

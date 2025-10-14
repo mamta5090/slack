@@ -8,12 +8,11 @@ import { setSocket, setOnlineUsers, clearSocket } from "./redux/SocketSlice";
 import { setUser } from "./redux/userSlice";
 import { upsertConversation } from "./redux/conversationSlice";
 import { addMessage } from "./redux/messageSlice";
-
 import Registration from "./component/Registration";
 import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
-import MainLayout from "./component/MainLayout";
+
 import VideoRoom from "./pages/VideoRoom";
 
 
@@ -163,20 +162,24 @@ const App = () => {
         path="/"
         element={user ? <Home /> : <Navigate to="/login" />}
       >
+         <Route
+    path="/:id"
+    element={user ? <Home /> : <Navigate to="/login" replace />}
+  />
           {/* Nested routes for the home layout */}
-          <Route index element={<HomePage />} />
-          <Route path="user/:id" element={<HomePage />} />
+          {/* <Route index element={<HomePage />} />
+          <Route path="user/:id" element={<HomePage />} /> */}
       </Route>
 
 
 
       <Route
         path="/login"
-        element={!user ? <Login /> : <Navigate to="/" replace />}
+        element={!user ? <Login /> : <Navigate to="/home" replace />}
       />
       <Route
         path="/register"
-        element={!user ? <Registration /> : <Navigate to="/" replace />}
+        element={!user ? <Registration /> : <Navigate to="/home" replace />}
       />
       <Route
         path="/room/:roomID"
@@ -192,9 +195,13 @@ const App = () => {
         element={user ? <Avtivity /> : <Navigate to="/login" replace />}
       />
         <Route
-        path="/dms"
-        element={user ? <Dms /> : <Navigate to="/login" replace />}
-      />
+    path="/dms"
+    element={user ? <Dms /> : <Navigate to="/login" replace />}
+  />
+  <Route
+    path="/dms/:id"
+    element={user ? <Dms /> : <Navigate to="/login" replace />}
+  />
         <Route
         path="/files"
         element={user ? <Files/> : <Navigate to="/login" replace />}
