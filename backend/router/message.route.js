@@ -1,4 +1,3 @@
-// router/message.route.js
 import express from "express";
 import auth from "../middleware/auth.js";
 import {
@@ -6,13 +5,12 @@ import {
   getAllMessages,
   getPreviousChat, 
 } from "../controller/message.controller.js";
+import {upload} from '../middleware/multer.js'
 
 const router = express.Router();
 
-router.post("/send/:receiverId", auth, sendMessage);
+router.post("/send/:receiverId", auth,upload.single('image'), sendMessage);
 router.get("/getAll/:receiverId", auth, getAllMessages);
-
-// ✅ NEW: recent chat partners sorted by updatedAt (most recent first)
 router.get("/previous", auth, getPreviousChat);
 
 export default router;

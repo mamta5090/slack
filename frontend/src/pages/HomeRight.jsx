@@ -36,6 +36,7 @@ import { MdPersonSearch } from "react-icons/md";
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
+import EmojiPicker from 'emoji-picker-react';
 
 
 const HomeRight = () => {
@@ -44,6 +45,7 @@ const HomeRight = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
+  const imageRef=useRef()
 
   // --- 2. STATE MANAGEMENT ---
   const [loading, setLoading] = useState(false);
@@ -56,8 +58,35 @@ const HomeRight = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [activeTab, setActiveTab] = useState('about');
+  const [showPicker, setShowPicker] = useState(false);
+   const [input, setInput] = useState('')
+   const [frontendImage,setFrontendImage]=useState(null)
+   const [backendImage,setBackendImage]=useState(null)
+   const [pluesOpen,setPlusOpen]=useState()
+  
 
-  // --- 3. REDUX SELECTORS ---
+  const onEmojiClick = (emojiData) => {
+    setNewMsg(prevnewMsg => prevnewMsg + emojiData.emoji)
+    setShowPicker(false)
+  }
+
+   const handleImage = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setBackendImage(file);
+      setFrontendImage(URL.createObjectURL(file));
+    }
+  };
+
+  const cancelImage=async()=>{
+    setBackendImage(null)
+    setFrontendImage(null)
+    if(imageRef.current){
+      imageRef.current.value=""
+    }
+  }
+
+
   const { allUsers = [] } = useSelector((state) => state.user);
   const singleUser = useSelector((state) => state.user.singleUser);
   const user = useSelector((state) => state.user.user);
@@ -72,7 +101,6 @@ const HomeRight = () => {
 
   const messages = useMemo(() => {
     if (!user?._id || !id) return [];
-    // This logic correctly filters for a 1-on-1 conversation
     return allMessages.filter(
       (msg) =>
         (String(msg.sender?._id) === String(user._id) && String(msg.receiver) === String(id)) ||
@@ -93,33 +121,29 @@ const HomeRight = () => {
     );
   }, [searchQuery, allUsers, user, singleUser, selectedUsers]);
 
-  // --- 5. EFFECT HOOKS ---
+
   useEffect(() => {
-    // When the selected user changes, update the topic in our local state
     if (singleUser) {
       setTopic(singleUser.conversationTopic || "");
     }
   }, [singleUser]);
 
   useEffect(() => {
-    // When the ID in the URL changes, fetch all necessary data for that chat
     if (id) {
       dispatch(clearMessages());
       fetchUser();
       fetchMessages();
       markThreadAsRead();
     } else {
-      // If there's no ID, clear the selected user from Redux
       dispatch(setSingleUser(null));
     }
   }, [id, dispatch]);
 
   useEffect(() => {
-    // Automatically scroll to the latest message
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // --- 6. HELPER FUNCTIONS & EVENT HANDLERS ---
+
   const authHeaders = () => {
     const token = localStorage.getItem("token");
     return { headers: { Authorization: `Bearer ${token}` } };
@@ -132,7 +156,7 @@ const HomeRight = () => {
       dispatch(setSingleUser(res.data));
     } catch (error) {
       console.error("Error fetching single user:", error);
-      dispatch(setSingleUser(null)); // Clear on error
+      dispatch(setSingleUser(null)); 
     }
   };
 
@@ -169,7 +193,7 @@ const HomeRight = () => {
     }
   };
   
-  // ... (other handlers like handleKeyDown, handleSaveTopic, etc. remain the same) ...
+ 
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -433,11 +457,7 @@ const HomeRight = () => {
         <div className="font-semibold text-2xl"><div>+</div></div>
       </div>
 
-      {/* Message and Canvas tabs */}
-      {/* <div className="border-b border-gray-300 flex flex-row gap-[30px] px-[15px] py-2 ">
-        <div className="flex flex-row items-center gap-[5px] font-semibold text-sm"><FiMessageCircle /><p>Messages</p></div>
-        <div className="flex flex-row items-center gap-[5px] font-semibold text-sm text-gray-500 hover:text-black cursor-pointer"><MdOutlinePlaylistAdd /><p>Add canvas</p></div>
-      </div> */}
+    
 
       {/* Messages List */}
       <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">
@@ -453,33 +473,7 @@ const HomeRight = () => {
         <div ref={listEndRef} />
       </div>
 
-      {/* Message Input Area */}
-      {/* <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white ">
-        <div className="border border-gray-300 rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2">
-            <FiBold className="cursor-pointer" /><FiItalic className="cursor-pointer" />
-          </div>
-          <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
-            <textarea
-              value={newMsg}
-              onChange={(e) => setNewMsg(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message ${singleUser?.name}`}
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
-                <div className="flex items-center gap-3 text-gray-600">
-                    <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file"><IoAddSharp /></button>
-                    <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji"><BsEmojiSmile /></button>
-                </div>
-                <button type="submit" className="flex items-center justify-center w-8 h-8 bg-[#007a5a] text-white rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || !newMsg.trim()}>
-                    <IoSend />
-                </button>
-            </div>
-          </form>
-        </div>
-      </div> */}
+   
 
        {openEdit && (
              <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-15">
@@ -588,20 +582,7 @@ const HomeRight = () => {
 
 
 
-      {/* Messages List */}
-      {/* <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-gray-50 ">
-     {messages.map((msg, idx) => {
-  const isMine = String(msg.sender?._id) === String(user._id);
-  const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-  return isMine ? (
-    <SenderMessage key={key} message={msg.message} createdAt={msg.createdAt} />
-  ) : (
-    <ReceiverMessage key={key} message={msg.message} createdAt={msg.createdAt} user={msg.sender} />
-  );
-})}
-
-        <div ref={listEndRef} />
-      </div> */}
+     
 
       {/* Message Input Area */}
       <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
@@ -610,7 +591,23 @@ const HomeRight = () => {
             <FiBold className="cursor-pointer" /><FiItalic className="cursor-pointer" /><FaStrikethrough className="cursor-pointer" /><GoLink className="cursor-pointer" /><AiOutlineOrderedList className="cursor-pointer" /><FaListUl className="cursor-pointer" /><GoQuote className="cursor-pointer" /><FaCode className="cursor-pointer" /><RiCodeBlock className="cursor-pointer" />
           </div>
 
+  {showPicker && (
+            <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow'>
+              <EmojiPicker width={350} height={450} className="shadow-lg"
+                onEmojiClick={onEmojiClick} />
+            </div>
+          )}
+
           <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
+            
+                <input
+          type="file"
+          accept='image/*'
+          ref={imageRef}
+          hidden
+          onChange={handleImage}
+        />
+
             <textarea
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
@@ -622,10 +619,21 @@ const HomeRight = () => {
 
             <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
               <div className="flex items-center gap-3 text-gray-600">
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file"><IoAddSharp /></button>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji"><BsEmojiSmile /></button>
+                <img src={frontendImage}/>
+                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file"
+                onClick={()=>setPlusOpen(prev=>!prev)}><IoAddSharp /></button>
+                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji"
+                onClick={() => setShowPicker(prev => !prev)}>
+                  <BsEmojiSmile /></button>
                 <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Mention">@</button>
               </div>
+
+{pluesOpen && (
+  <div>
+    <div onC>Upload from your computer</div>
+  </div>
+)
+}
 
               <div className="flex items-center gap-2">
                 <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || !newMsg.trim()}>
