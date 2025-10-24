@@ -1,9 +1,8 @@
 import React, { memo } from "react";
 import { useSelector } from "react-redux";
-import dp from "../assets/dp.webp";
 import Avatar from "../component/Avatar";
 
-const SenderMessage = ({ message, createdAt }) => {
+const SenderMessage = ({ message, createdAt, image }) => {
   const user = useSelector((state) => state.user.user);
 
   const formattedTime = createdAt
@@ -12,30 +11,25 @@ const SenderMessage = ({ message, createdAt }) => {
 
   return (
     <div className="flex mb-2">
-      <div className="flex flex-row gap-2 items-start">
-      
-       {/* <div className="rounded-xl bg-gray-500">
-         <img
-          src={Avatar || dp}
-          alt="User Avatar"
-          className="rounded-xl h-10 w-10 object-cover"
-        />
-       </div> */}
-
-       {user && <Avatar user={user} size="md" />}
-
-      
-        <div className="flex flex-col px-3 py-2 rounded-lg max-w-[70%]">
+      <div className="flex flex-row gap-2 py-3 items-start">
+        {user && <Avatar user={user} size="md"  />}
+        <div className="flex flex-col px-3  rounded-lg max-w-[80%] ">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="font-semibold">{user?.name || "Unknown"}</h1>
-            <p className="text-xs w-[100px] text-gray-400">{formattedTime}</p>
+            <h1 className="font-bold text-[18px]">{user?.name || "Unknown"}</h1>
+            <p className="text-xs font-semibold">{formattedTime}</p>
           </div>
-          <p className="text-sm">{message}</p>
+          {image && (
+            <img 
+              src={image} 
+              alt="Sent content" 
+              className="rounded-md mt-2 w-[380px] h-[200px]"
+            />
+          )}
+          {message && <p className="text-sm mt-1">{message}</p>}
         </div>
       </div>
     </div>
   );
 };
-
 
 export default memo(SenderMessage);

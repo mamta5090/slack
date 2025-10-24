@@ -8,41 +8,71 @@ export const sendMessage = async (req, res) => {
     const senderId = req.userId;
     const receiverId = req.params.receiverId;
     const { message } = req.body;
-    let image=null
-    if(req.file){
-      image=uploadOnCloudinary(req.file.path)
+    let imageUrl = null;
+
+    // Step 1: Handle the image upload if a file exists
+    if (req.file) {
+      const uploadResult = await uploadOnCloudinary(req.file.path);
+      if (uploadResult && uploadResult.url) {
+        imageUrl = uploadResult.url;
+      } else {
+        console.error("Cloudinary upload failed, but proceeding without image.");
+      }
     }
-    let newMessage = await Message.create({
+
+    // --- THE FIX IS HERE ---
+    // Step 2: Build an object with ALL the message data first.
+    const messageData = {
       sender: senderId,
       receiver: receiverId,
-      message,
-      image
-    });
+      message: message || '',
+    };
+
+    // If an image was uploaded, add its URL to the data object.
+    if (imageUrl) {
+      messageData.image = imageUrl;
+    }
+
+    // Step 3: Create the new message in the database with the complete data object.
+    // This ensures the 'image' field is saved permanently.
+    let newMessage = await Message.create(messageData);
+
+
+    // Step 4: Find or create the conversation
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
     });
+
     if (!conversation) {
       conversation = await Conversation.create({
         participants: [senderId, receiverId],
       });
     }
+
+    // Step 5: Update the conversation
     conversation.messages.push(newMessage._id);
     await conversation.save();
-    newMessage = await newMessage.populate("sender", "name email");
+
+    // Step 6: Populate sender details for the response
+    const populatedMessage = await Message.findById(newMessage._id).populate("sender", "name email");
+
+    // Step 7: Emit via sockets and send the response
     const receiverSocketId = getSocketId(receiverId);
     if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", { newMessage });
+      io.to(receiverSocketId).emit("newMessage", { newMessage: populatedMessage });
     }
     const senderSocketId = getSocketId(senderId);
     if (senderSocketId) {
-      io.to(senderSocketId).emit("newMessage", { newMessage });
+      io.to(senderSocketId).emit("newMessage", { newMessage: populatedMessage });
     }
-    return res.status(201).json(newMessage);
+
+    return res.status(201).json(populatedMessage);
   } catch (error) {
     console.error("sendMessage error:", error);
     return res.status(500).json({ message: `Send Message error: ${error.message}` });
   }
 };
+
 
 
 export const getAllMessages = async (req, res) => {

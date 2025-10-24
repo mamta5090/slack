@@ -9,6 +9,7 @@ import Avatar from '../Avatar';
 import LeaveInactiveChannelsModal from '../subpage/LeaveInactiveChannelsModal';
 import NewChannel from '../subpage/NewChannel';
 import useClickOutside from '../../hook/useClickOutside'; 
+import Channel from '../../pages/Channel';
 
 // Asset and Redux Imports
 import slackbot from '../../assets/slackbot.png';
@@ -24,11 +25,12 @@ import { HiOutlineDotsVertical } from "react-icons/hi";
 import { IoMdArrowDropdown } from "react-icons/io";
 import { MdKeyboardArrowRight } from "react-icons/md";
 import Invite from '../koalaliving/Invite';
+import { setChannel, setSelectedChannelId } from '../../redux/channelSlice';
 
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { id: activeChatId } = useParams();
+const { id: activeChatId, channelId: activeChannelId } = useParams();
 
     // State for accordions (inline content that pushes other content down)
     const [startOpen, setStartOpen] = useState(false);
@@ -51,23 +53,25 @@ const HomePageSidebar = () => {
     const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
     const allChannels = useSelector((state) => state.channel.allChannels);
     const singleUser=useSelector((state)=>state.user.singleUser)
+const channel=useSelector((state)=>state.channel.channel)
+const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
 
-    // --- 1. Create refs for each floating menu container ---
-    const channelOptionsRef = useRef(null); // For the "..." menu and all its children
-    const addChannelBoxRef = useRef(null);  // For the "+ Add channels" pop-up
+    const channelOptionsRef = useRef(null); 
+    const addChannelBoxRef = useRef(null); 
 
-    // --- 2. Implement the useClickOutside hook to close the menus ---
+
     useClickOutside(channelOptionsRef, () => {
         setOpenAddChannel(false);
         setCreateOpen(false);
         setManageOpen(false);
+        
     });
 
     useClickOutside(addChannelBoxRef, () => {
         setOpenBox(false);
     });
 
-    // Fetch initial data
+   
     useEffect(() => {
         dispatch(fetchConversations());
         if (!allUsers || allUsers.length === 0) {
@@ -83,18 +87,30 @@ const HomePageSidebar = () => {
         }
     }, [dispatch, allUsers.length]);
 
-    const openChat = async (otherId) => {
+      const openChat = async (otherId) => {
         if (!me?._id) return;
         try {
             await axios.post("/api/conversation/", { senderId: me._id, receiverId: otherId });
             dispatch(fetchConversations());
+            // Navigate to the specific route for Direct Messages
+            navigate(`/dm/${otherId}`);
         } catch (err) {
             console.error("Failed to create or get conversation:", err);
         }
-         navigate(`/${otherId}`);
     };
     
-    // Handlers to open modals and close menus at the same time
+
+   const openChannelPage = (channel) => {
+    try {
+       //const result= await axios.post("/api/channel/members/me", { channelId: channel._id }); // Error happens here
+        dispatch(setSelectedChannelId(channel));
+        dispatch(setChannel(channel));
+        navigate(`/channel/${channel._id}`);
+    } catch(err) {
+        console.error("Failed to join or open channel:", err);
+    }
+};
+
     const handleOpenCreateChannel = () => {
         setIsNewChannelModalOpen(true);
         setOpenAddChannel(false);
@@ -140,11 +156,19 @@ const HomePageSidebar = () => {
                     </div>
                 </div>
 
-                {openChannel && (
+                  {openChannel && (
                     <div className="p-2 text-white">
                         <ul>
                             {allChannels && allChannels.map((ch) => (
-                                <li key={ch._id} className="p-1 px-2 rounded hover:bg-[#350d36] cursor-pointer truncate"># {ch.name}</li>
+                                <li 
+                                    key={ch._id} 
+                                    // Highlighting the active channel will now work correctly
+                                    className={`p-1 px-2 rounded cursor-pointer truncate ${activeChannelId === ch._id ? 'bg-[#1164a3]' : 'hover:bg-[#350d36]'}`}
+                                    // Call the new navigation function that changes the URL
+                                    onClick={() => openChannelPage(ch)}
+                                >
+                                    # {ch.name}
+                                </li>
                             ))}
                         </ul>
                     </div>

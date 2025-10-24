@@ -12,6 +12,8 @@ import Registration from "./component/Registration";
 import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
+import Channel from "./pages/Channel";
+import WelcomeScreen from "./pages/WelcomeScreen";
 
 import VideoRoom from "./pages/VideoRoom";
 
@@ -158,29 +160,29 @@ const App = () => {
         )}
       </Route> */}
 
-     <Route
+      <Route
         path="/"
-        element={user ? <Home /> : <Navigate to="/login" />}
+        element={user ? <Home /> : <Navigate to="/login" replace />}
       >
-         <Route
-    path="/:id"
-    element={user ? <Home /> : <Navigate to="/login" replace />}
-  />
-          {/* Nested routes for the home layout */}
-          {/* <Route index element={<HomePage />} />
-          <Route path="user/:id" element={<HomePage />} /> */}
+        {/* Children routes */}
+        <Route index element={<WelcomeScreen />} />
+        <Route path="dm/:id" element={<HomeRight />} />
+
+        {/* 👇 THIS IS THE CRITICAL LINE THAT MUST BE HERE 👇 */}
+        <Route path="channel/:channelId" element={<Channel />} />
+
+        {/* ... other routes that use the main layout, like files, more, etc. ... */}
+        <Route path="files" element={<Files />} />
+
       </Route>
 
 
 
-      <Route
-        path="/login"
-        element={!user ? <Login /> : <Navigate to="/home" replace />}
-      />
-      <Route
-        path="/register"
-        element={!user ? <Registration /> : <Navigate to="/home" replace />}
-      />
+     <Route path="/home" element={<Navigate to="/" replace />} />
+
+      {/* Standalone Routes */}
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
+      <Route path="/register" element={!user ? <Registration /> : <Navigate to="/" replace />} />
       <Route
         path="/room/:roomID"
         element={user ? <VideoRoom /> : <Navigate to="/login" replace />}

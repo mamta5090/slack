@@ -14,6 +14,7 @@ import { fetchConversations } from "../redux/conversationSlice";
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
 import Avatar from "../component/Avatar";
+import useClickOutside from "../hook/useClickOutside";
 
 // Icons
 import { CiHeadphones, CiStar, CiClock2 } from "react-icons/ci";
@@ -39,8 +40,9 @@ import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
 
 
+
 const HomeRight = () => {
-  // --- 1. SETUP & HOOKS ---
+//  plusMenuRef  = useRef(null);
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -63,6 +65,7 @@ const HomeRight = () => {
    const [frontendImage,setFrontendImage]=useState(null)
    const [backendImage,setBackendImage]=useState(null)
    const [pluesOpen,setPlusOpen]=useState()
+   const [cross]=useState()
   
 
   const onEmojiClick = (emojiData) => {
@@ -85,6 +88,12 @@ const HomeRight = () => {
       imageRef.current.value=""
     }
   }
+
+  //  useClickOutside(plusMenuRef ,() => {
+  //       if (pluesOpen) { // Only try to close if it's already open
+  //   setPlusOpen(false);
+  // }
+  //   });
 
 
   const { allUsers = [] } = useSelector((state) => state.user);
@@ -180,12 +189,21 @@ const HomeRight = () => {
     }
   };
 
-  const sendMessage = async () => {
-    if (!newMsg.trim() || !singleUser?._id) return;
+  const sendMessage = async (e) => {
+    e.preventDefault()
+    if (!newMsg.trim() && !backendImage) return;
     setLoading(true);
     try {
-      await axios.post(`http://localhost:5000/api/message/send/${singleUser._id}`, { message: newMsg }, authHeaders());
+      const formData=new FormData()
+      formData.append("message",newMsg)
+      if(backendImage){
+        formData.append("image",backendImage)
+      }
+      await axios.post(`http://localhost:5000/api/message/send/${singleUser._id}`, formData, authHeaders());
       setNewMsg("");
+      setNewMsg('')
+      cancelImage()
+      setFrontendImage(null)
     } catch (error) {
       console.error("Error sending message", error);
     } finally {
@@ -198,7 +216,7 @@ const HomeRight = () => {
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      sendMessage(e);
     }
   };
 
@@ -460,18 +478,31 @@ const HomeRight = () => {
     
 
       {/* Messages List */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">
-        {messages.map((msg, idx) => {
-          const isMine = String(msg.sender?._id) === String(user._id);
-          const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-          return isMine ? (
-            <SenderMessage key={key} message={msg.message} createdAt={msg.createdAt} />
-          ) : (
-            <ReceiverMessage key={key} message={msg.message} createdAt={msg.createdAt} user={msg.sender} />
-          );
-        })}
-        <div ref={listEndRef} />
-      </div>
+     <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">
+  {messages.map((msg, idx) => {
+    const isMine = String(msg.sender?._id) === String(user._id);
+    const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+    
+    // --- FIX: Pass the msg.image property to your components ---
+    return isMine ? (
+      <SenderMessage 
+        key={key} 
+        message={msg.message} 
+        createdAt={msg.createdAt} 
+        image={msg.image}
+      />
+    ) : (
+      <ReceiverMessage 
+        key={key} 
+        message={msg.message} 
+        createdAt={msg.createdAt} 
+        user={msg.sender}
+        image={msg.image} 
+      />
+    );
+  })}
+  <div ref={listEndRef} />
+</div>
 
    
 
@@ -585,69 +616,102 @@ const HomeRight = () => {
      
 
       {/* Message Input Area */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
-        <div className="border border-gray-300 rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2">
-            <FiBold className="cursor-pointer" /><FiItalic className="cursor-pointer" /><FaStrikethrough className="cursor-pointer" /><GoLink className="cursor-pointer" /><AiOutlineOrderedList className="cursor-pointer" /><FaListUl className="cursor-pointer" /><GoQuote className="cursor-pointer" /><FaCode className="cursor-pointer" /><RiCodeBlock className="cursor-pointer" />
+     <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
+  <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
+    {/* 1. TOP TOOLBAR */}
+    <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+      <FiBold className="cursor-pointer" />
+      <FiItalic className="cursor-pointer" />
+      <FaStrikethrough className="cursor-pointer" />
+      <GoLink className="cursor-pointer" />
+      <AiOutlineOrderedList className="cursor-pointer" />
+      <FaListUl className="cursor-pointer" />
+      <GoQuote className="cursor-pointer" />
+      <FaCode className="cursor-pointer" />
+      <RiCodeBlock className="cursor-pointer" />
+    </div>
+
+    {/* 2. MAIN FORM: Wraps the preview, textarea, and bottom toolbar */}
+    <form onSubmit={sendMessage} className="flex flex-col order-2">
+      
+      {/* --- TEXTAREA (NOW FIRST) --- */}
+      <textarea
+        value={newMsg}
+        onChange={(e) => setNewMsg(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={`Message ${singleUser?.name}`}
+        className="w-full p-3 min-h-[60px] outline-none resize-none"
+        disabled={loading}
+      />
+      
+      {/* --- IMAGE PREVIEW (NOW SECOND, BELOW TEXTAREA) --- */}
+      {/* This will only appear when an image is selected */}
+      {frontendImage && (
+        <div className="p-2">
+          <div className="relative w-20 h-20"> {/* 80px x 80px container */}
+            <div className="group relative h-full w-full">
+              <img
+                src={frontendImage}
+                alt="Preview"
+                className="h-full w-full rounded-md object-cover"
+              />
+              <button
+                onClick={cancelImage}
+                className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                aria-label="Remove image"
+              >
+                <RxCross2 size={14} />
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
-  {showPicker && (
-            <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow'>
-              <EmojiPicker width={350} height={450} className="shadow-lg"
-                onEmojiClick={onEmojiClick} />
+      {/* --- BOTTOM TOOLBAR & SUBMIT BUTTON (Stays at the bottom) --- */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
+        <div className="flex items-center gap-3 text-gray-600">
+          <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" 
+          onClick={() =>
+            setPlusOpen(prev=>!prev)
+
+          } >
+            <IoAddSharp />
+          </button>
+          <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
+            <BsEmojiSmile />
+          </button>
+        </div>
+
+        {pluesOpen && (
+          <div
+          className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2">
+            <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer">
+              Upload from your computer
+              <input type="file" hidden accept="image/*" ref={imageRef} onChange={handleImage} />
             </div>
-          )}
+          </div>
+        )}
 
-          <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
-            
-                <input
-          type="file"
-          accept='image/*'
-          ref={imageRef}
-          hidden
-          onChange={handleImage}
-        />
-
-            <textarea
-              value={newMsg}
-              onChange={(e) => setNewMsg(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message ${singleUser?.name}`}
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
-
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
-              <div className="flex items-center gap-3 text-gray-600">
-                <img src={frontendImage}/>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file"
-                onClick={()=>setPlusOpen(prev=>!prev)}><IoAddSharp /></button>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji"
-                onClick={() => setShowPicker(prev => !prev)}>
-                  <BsEmojiSmile /></button>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Mention">@</button>
-              </div>
-
-{pluesOpen && (
-  <div>
-    <div onC>Upload from your computer</div>
-  </div>
-)
-}
-
-              <div className="flex items-center gap-2">
-                <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || !newMsg.trim()}>
-                  <IoSend />
-                </button>
-
-                <div className="h-5 w-px bg-gray-300" />
-                <button type="button" className="p-1 rounded hover:bg-gray-200"><MdKeyboardArrowDown className="text-2xl" /></button>
-              </div>
-            </div>
-          </form>
+        <div className="flex items-center gap-2">
+          <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!newMsg.trim() && !backendImage)}>
+            <IoSend />
+          </button>
+          <div className="h-5 w-px bg-gray-300" />
+          <button type="button" className="p-1 rounded hover:bg-gray-200">
+            <MdKeyboardArrowDown className="text-2xl" />
+          </button>
         </div>
       </div>
+    </form>
 
+    {/* 3. EMOJI PICKER (Positioned absolutely, its place in the DOM doesn't affect layout) */}
+    {showPicker && (
+      <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow z-10'>
+        <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
+      </div>
+    )}
+  </div>
+</div>
     </div>
   );
 };

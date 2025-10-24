@@ -100,3 +100,30 @@ export const getAllChannels = async (req, res) => {
     res.status(500).json({ msg: 'Server error occurred while fetching channels.' });
   }
 }
+
+export const getChannelById = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+console.log(channelId);
+        // Best practice: Validate the ID format before querying
+        if (!mongoose.Types.ObjectId.isValid(channelId)) {
+            return res.status(400).json({ message: 'Invalid channel ID format' });
+        }
+
+        const channel = await Channel.findById(channelId);
+
+        if (!channel) {
+            return res.status(404).json({ message: 'Channel not found' });
+        }
+
+        // Also check if the user requesting is actually a member of the channel
+        if (!channel.members.includes(req.userId)) {
+            return res.status(403).json({ message: 'You are not a member of this channel' });
+        }
+
+        res.status(200).json(channel);
+    } catch (error) {
+        console.error('GET CHANNEL BY ID ERROR:', error);
+        res.status(500).json({ msg: 'Server error while fetching channel details.' });
+    }
+};

@@ -38,10 +38,10 @@ const Avatar = ({ user, size = 'md' }) => {
     const imageUrl = getImageUrl(user.profileImage);
 
     return (
-        <div className={`flex items-center justify-center ${sizeClasses[size]} bg-indigo-500 text-white rounded-full font-bold`}>
+        <div className={`flex items-center justify-center ${sizeClasses[size]} bg-gray-400 text-white rounded-full font-bold`}>
             {/* Use the constructed imageUrl here */}
             {imageUrl ? (
-                <img src={imageUrl} alt={user.name} className="w-full h-full rounded-full object-cover" />
+                <img src={imageUrl} alt={user.name} className="w-full h-full rounded-xl object-cover" />
             ) : (
                 <span>{initial}</span>
             )}
