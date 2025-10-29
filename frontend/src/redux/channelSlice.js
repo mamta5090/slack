@@ -1,10 +1,11 @@
 import { createSlice } from "@reduxjs/toolkit"
-// import reducer from "./userSlice" // This import is unused and can be removed
+
 
 const initialState={
     channel:null,
     allChannels:[],
-    selectedChannelId:null
+    selectedChannelId:null,
+    addMember:[]
 };
 
 const channelSlice=createSlice({
@@ -19,9 +20,20 @@ const channelSlice=createSlice({
         },
         setSelectedChannelId:(state,action)=>{
             state.selectedChannelId=action.payload;
+        },
+        // setAddMember:(state,action)=>{
+        //     state.addMember=action.payload;
+        // },
+        addMembers: (state, action) => { // This ADDS
+            const newMembers = action.payload;
+            const existingMemberIds = new Set(state.addMember.map(member => member._id));
+            const uniqueNewMembers = newMembers.filter(
+                member => !existingMemberIds.has(member._id)
+            );
+            state.addMember.push(...uniqueNewMembers);
         }
     }
 })
 
-export const {setChannel,setAllChannels,setSelectedChannelId}=channelSlice.actions
+export const {setChannel,setAllChannels,setSelectedChannelId,setAddMember,addMembers}=channelSlice.actions
 export default channelSlice.reducer;

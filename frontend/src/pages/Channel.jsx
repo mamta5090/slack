@@ -6,16 +6,10 @@ import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
 import { FiMessageCircle } from "react-icons/fi";
-
-// Redux Actions
 import { setMessages, clearMessages } from "../redux/messageSlice";
 import { setSelectedChannelId } from "../redux/channelSlice";
-
-// Components
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
-
-// Icons
 import { FaUserFriends } from "react-icons/fa";
 import { IoMdMore } from "react-icons/io";
 import { IoSend, IoAddSharp } from "react-icons/io5";
@@ -27,24 +21,21 @@ const Channel = () => {
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
 
-  // State
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [activeTab, setActiveTab] = useState("messages");
   const [isSubPageOpen, setIsSubPageOpen] = useState(false);
-
-  // Redux Selectors
+  const [openEditTopic, setOpenEditTopic] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [saving, setSaving] = useState(false);
+    
   const user = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.message.messages) || [];
   const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
 
-  // Fetch channel details & messages
   useEffect(() => {
-    // clear previous messages when switching channels
     dispatch(clearMessages());
-
     const shouldFetchChannel = !selectedChannel || String(selectedChannel._id) !== String(channelId);
-
     if (shouldFetchChannel) {
       const fetchChannelDetails = async () => {
         try {
@@ -59,7 +50,7 @@ const Channel = () => {
 
     const fetchChannelMessages = async () => {
       try {
-        const res = await axios.get(`/api/message/channel/${channelId}`);
+        const res = await axios.get(`/api/channels/${channelId}/messages`);
         dispatch(setMessages(Array.isArray(res.data) ? res.data : []));
       } catch (error) {
         console.error("Error fetching channel messages:", error);
@@ -99,6 +90,23 @@ const Channel = () => {
       handleSendMessage();
     }
   };
+
+   const handleSaveTopic = async () => {
+    try {
+      const payload = { topic };
+      const res = await axios.put(`/api/conversation/topic/with/${user._id}`, payload, authHeaders());
+      if (res.data) console.log("Topic updated successfully", res.data);
+      setOpenEditTopic(false);
+    } catch (error) {
+      console.error("Error updating topic:", error);
+      alert("Failed to update topic.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+    const handleTopicChange = (e) => setTopic(e.target.value);
+      const handleCancel = () => { setOpenEdit(false); setOpenEditTopic(false); };
 
   if (!selectedChannel || String(selectedChannel._id) !== String(channelId)) {
     return (
@@ -212,6 +220,25 @@ const Channel = () => {
           <div ref={listEndRef} />
         </div>
       </main>
+
+        {openEditTopic && (
+              <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
+                <div className="bg-white w-[600px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
+                  <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b">
+                    <h2 className="text-xl font-bold">Edit topic</h2>
+                    <button onClick={() => setOpenEditTopic(false)} className="text-xl text-gray-600" aria-label="Close edit modal"><RxCross2 /></button>
+                  </div>
+                  <div className="flex flex-col p-6 space-y-5 overflow-y-auto">
+                    <input type="text" value={topic} onChange={handleTopicChange} className="border rounded-xl p-2 hover:bg-[#f8f8f8]" />
+                    <p className="text-sm text-gray-700">Add a topic to your conversation with {user.name}. This will be visible to both of you at the top of your DM.</p>
+                  </div>
+                  <div className="flex items-center gap-3 py-4 px-6 justify-end border-t">
+                    <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded" disabled={saving}>Cancel</button>
+                    <button type="button" onClick={handleSaveTopic} className="px-4 py-2 bg-green-600 text-white rounded" disabled={saving}>{saving ? "Saving..." : "Save topic"}</button>
+                  </div>
+                </div>
+              </div>
+            )}
 
       {/* Input area */}
       <footer className="flex-shrink-0 p-4 border-t bg-white">

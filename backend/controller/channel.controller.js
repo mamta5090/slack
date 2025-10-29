@@ -1,5 +1,6 @@
 import Channel from '../models/channel.model.js';
-
+import Message from '../models/message.model.js';
+import mongoose from 'mongoose';
 export const createChannel = async (req, res) => {
     try {
         const createdBy = req.userId;
@@ -33,28 +34,45 @@ export const createChannel = async (req, res) => {
 export const addMember = async (req, res) => {
     try {
         const { channelId } = req.params;
-        const { userIdToAdd } = req.body;
-        // Use req.userId, which is set by your middleware
-        const currentUserId = req.userId;
+        // 1. Expect an array of members from the request body
+        const { members } = req.body;
+        const currentUserId = req.userId; // User performing the action
+
+        // 2. Add validation for the incoming data
+        if (!members || !Array.isArray(members) || members.length === 0) {
+            return res.status(400).json({ message: 'Member IDs must be provided as a non-empty array.' });
+        }
 
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
         }
+
+        // Check for permission (optional but good practice)
         if (!channel.managedBy.includes(currentUserId)) {
             return res.status(403).json({ message: 'You do not have permission to add members to this channel' });
         }
-        if (channel.members.includes(userIdToAdd)) {
-            return res.status(400).json({ message: 'User is already a member of this channel' });
+
+        // 3. Filter out users who are already in the channel
+        const newMemberIds = members.filter(
+            memberId => !channel.members.includes(memberId)
+        );
+
+        if (newMemberIds.length === 0) {
+            return res.status(400).json({ message: 'All specified users are already members of this channel.' });
         }
 
-        channel.members.push(userIdToAdd);
+        // 4. Add all the new, unique members to the channel at once
+        channel.members.push(...newMemberIds);
+        
         await channel.save();
+        
+        // Return the updated channel
         res.status(200).json(channel);
 
     } catch (error) {
         console.error('ADD MEMBER ERROR:', error);
-        res.status(500).json({ message: 'Error adding member', error });
+        res.status(500).json({ message: 'Server error while adding members', error });
     }
 };
 
@@ -125,5 +143,29 @@ console.log(channelId);
     } catch (error) {
         console.error('GET CHANNEL BY ID ERROR:', error);
         res.status(500).json({ msg: 'Server error while fetching channel details.' });
+    }
+};
+
+export const getChannelMessages = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const userId = req.userId;
+
+        // Check if the user is a member of the channel first
+        const channel = await Channel.findById(channelId);
+        if (!channel || !channel.members.includes(userId)) {
+            return res.status(403).json({ message: "You are not authorized to view these messages." });
+        }
+
+        // Find all messages where the receiverId is the channelId
+        const messages = await Message.find({ receiverId: channelId })
+            .populate('senderId', 'name profilePic') // Optional: get sender info
+            .sort({ createdAt: 1 }); // Sort by creation time
+
+        res.status(200).json(messages);
+
+    } catch (error) {
+        console.error('GET CHANNEL MESSAGES ERROR:', error);
+        res.status(500).json({ message: 'Server error while fetching messages.' });
     }
 };
