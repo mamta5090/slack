@@ -14,13 +14,9 @@ import Home from "./component/Home";
 import Right from "./pages/Right";
 import Channel from "./pages/Channel";
 import WelcomeScreen from "./pages/WelcomeScreen";
-
 import VideoRoom from "./pages/VideoRoom";
-
-
 import "./index.css";
 import Signin from "./slack/Signin";
-
 import ProfilePage from "./ismore/ProfilePage";
 import Invite from "./component/koalaliving/Invite";
 import SlackLogin from "./slack/SlackLogin";
@@ -42,15 +38,12 @@ import Left from "./pages/Left";
 import HomeSidebar from "./component/sidebar/HomePageSidebar";
 import HomeRight from "./pages/HomeRight";
 
-
 const SERVER_URL = "http://localhost:5000";
 
 const App = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.user);
-  const { socket } = useSelector((state) => state.socket);
   const dispatch = useDispatch();
-
   const [authChecked, setAuthChecked] = useState(false);
 
   // 🔹 Auth check
@@ -60,7 +53,8 @@ const App = () => {
       if (token) {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         try {
-          const res = await axios.get(`${SERVER_URL}/api/slack/me`);
+          // FIX #1: Corrected the API endpoint from /api/slack/me to /api/user/me
+          const res = await axios.get(`${SERVER_URL}/api/user/me`);
           if (res.data?.user) {
             dispatch(setUser(res.data.user));
           } else {
@@ -81,13 +75,16 @@ const App = () => {
   // 🔹 Socket setup
   useEffect(() => {
     if (user) {
+      // FIX #2: Use a single, locally scoped variable for the new socket instance.
       const socketIo = io(SERVER_URL, {
         query: { userId: user._id },
         transports: ["websocket"],
+        withCredentials: true,
       });
 
       dispatch(setSocket(socketIo));
 
+      // Attach all event listeners to the new 'socketIo' instance.
       socketIo.on("getOnlineUsers", (users) => {
         dispatch(setOnlineUsers(users));
       });
@@ -122,65 +119,42 @@ const App = () => {
           dispatch(upsertConversation(payload.updatedConversation));
         }
       });
+      
+      // FIX #3: Attach this listener to the 'socketIo' instance.
+      socketIo.on("newChannelMessage", (newMessage) => {
+        console.log("Global listener received channel message:", newMessage);
+      });
 
+      // Cleanup function to run when the user logs out or the component unmounts.
       return () => {
         socketIo.off("getOnlineUsers");
         socketIo.off("newMessage");
-        socketIo.close();
+        socketIo.off("newChannelMessage");
+        socketIo.disconnect();
         dispatch(clearSocket());
       };
-    } else {
-      if (socket) {
-        socket.close();
-        dispatch(clearSocket());
-      }
     }
-  }, [user, dispatch]);
+  }, [user, dispatch, navigate]);
 
   if (!authChecked) {
-    return null; 
+    return null; // Render nothing until the authentication check is complete.
   }
 
   return (
     <Routes>
-      {/* <Route
-        path="/"
-        element={user ? <Home /> : <SlackLogin />}
-      >
-        {user && (
-          <>
-            <Route index element={<Home />} />
-            <Route path="user/:id" element={
-              <div className="w-full h-full flex flex-row">
-                <HomeSidebar />   
-                <HomeRight />  
-              </div>
-            } />
-          </>
-        )}
-      </Route> */}
-
       <Route
         path="/"
         element={user ? <Home /> : <Navigate to="/login" replace />}
       >
-        {/* Children routes */}
+        {/* Children routes rendered inside Home's <Outlet> */}
         <Route index element={<WelcomeScreen />} />
         <Route path="dm/:id" element={<HomeRight />} />
-
-        {/* 👇 THIS IS THE CRITICAL LINE THAT MUST BE HERE 👇 */}
         <Route path="channel/:channelId" element={<Channel />} />
-
-        {/* ... other routes that use the main layout, like files, more, etc. ... */}
         <Route path="files" element={<Files />} />
-
+        {/* Add other nested routes here */}
       </Route>
 
-
-
-     <Route path="/home" element={<Navigate to="/" replace />} />
-
-      {/* Standalone Routes */}
+      {/* Standalone Routes (not using the Home layout) */}
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route path="/register" element={!user ? <Registration /> : <Navigate to="/" replace />} />
       <Route
@@ -191,38 +165,32 @@ const App = () => {
         path="/profilepage"
         element={user ? <ProfilePage /> : <Navigate to="/login" replace />}
       />
-      
       <Route
         path="/activity"
         element={user ? <Avtivity /> : <Navigate to="/login" replace />}
       />
-        <Route
-    path="/dms"
-    element={user ? <Dms /> : <Navigate to="/login" replace />}
-  />
-  <Route
-    path="/dms/:id"
-    element={user ? <Dms /> : <Navigate to="/login" replace />}
-  />
-        <Route
-        path="/files"
-        element={user ? <Files/> : <Navigate to="/login" replace />}
+      <Route
+        path="/dms"
+        element={user ? <Dms /> : <Navigate to="/login" replace />}
       />
-        <Route
+      <Route
+        path="/dms/:id"
+        element={user ? <Dms /> : <Navigate to="/login" replace />}
+      />
+      <Route
         path="/later"
         element={user ? <Later /> : <Navigate to="/login" replace />}
       />
-        <Route
+      <Route
         path="/more"
         element={user ? <More /> : <Navigate to="/login" replace />}
       />
-        <Route
+      <Route
         path="/homepage"
         element={user ? <HomePage /> : <Navigate to="/login" replace />}
       />
-     
-
-     
+      
+      {/* Slack-specific routes */}
       <Route path="/signin" element={<Signin />} />
       <Route path="/email" element={<ConfirmEmail />} />
       <Route path="/launchworkspace" element={<LaunchWorkspace />} />

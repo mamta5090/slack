@@ -7,6 +7,7 @@ import slackUserSlice from './slackUserSlice'
 import workspaceSlice from './workspaceSlice'
 import channelSlice from './channelSlice'
 import activitySlice from './activitySlice'
+import channelMessageSlice from './channelMessageSlice';
 
 const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ const store = configureStore({
     workspace:workspaceSlice,
     channel:channelSlice,
     activityData:activitySlice,
+    channelMessage: channelMessageSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

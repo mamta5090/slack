@@ -1,6 +1,8 @@
 import Channel from '../models/channel.model.js';
 import Message from '../models/message.model.js';
 import mongoose from 'mongoose';
+import {uploadOnCloudinary} from '../config/cloudinary.js';
+import { io } from '../socket.js';
 export const createChannel = async (req, res) => {
     try {
         const createdBy = req.userId;
@@ -146,26 +148,103 @@ console.log(channelId);
     }
 };
 
+// export const getChannelMessages = async (req, res) => {
+//     try {
+//         const { channelId } = req.params;
+//         const userId = req.userId;
+
+//         // Check if the user is a member of the channel first
+//         const channel = await Channel.findById(channelId);
+//         if (!channel || !channel.members.includes(userId)) {
+//             return res.status(403).json({ message: "You are not authorized to view these messages." });
+//         }
+
+//         // Find all messages where the receiverId is the channelId
+//         const messages = await Message.find({ receiverId: channelId })
+//             .populate('senderId', 'name profilePic') // Optional: get sender info
+//             .sort({ createdAt: 1 }); // Sort by creation time
+
+//         res.status(200).json(messages);
+
+//     } catch (error) {
+//         console.error('GET CHANNEL MESSAGES ERROR:', error);
+//         res.status(500).json({ message: 'Server error while fetching messages.' });
+//     }
+// };
+
+export const sendMessageToChannel = async (req, res) => {
+  try {
+    const senderId = req.userId;
+    const { channelId } = req.params;
+    const { message } = req.body;
+console.log("Received message to channel:", { senderId, channelId, message, file: req.file });
+    // 1. Authorization Check: Ensure the user is a member of the channel.
+    const channel = await Channel.findById(channelId);
+    if (!channel || !channel.members.includes(senderId)) {
+      return res.status(403).json({ message: "Forbidden: You are not a member of this channel and cannot send messages." });
+    }
+
+    // 2. Handle Image Upload (if any)
+    let imageUrl = null;
+    if (req.file) {
+      const uploadResult = await uploadOnCloudinary(req.file.path);
+      if (uploadResult && uploadResult.url) {
+        imageUrl = uploadResult.url;
+      }
+    }
+
+    // 3. Create and save the new message document.
+    const newMessage = new Message({
+      sender: senderId,
+      channel: channelId, // Link the message to the channel ID.
+      message: message || '',
+      image: imageUrl,
+    });
+    
+    await newMessage.save();
+
+    // 4. Populate the sender's details to send back to the clients.
+    const populatedMessage = await Message.findById(newMessage._id)
+                                    .populate("sender", "name email profileImage");
+
+    // 5. Emit a real-time event to all clients in the channel's room.
+    // The frontend should make users join a room named after the `channelId` upon opening a channel.
+    io.to(channelId).emit("newChannelMessage", populatedMessage);
+
+    return res.status(201).json(populatedMessage);
+
+  } catch (error) {
+    console.error("Error in sendMessageToChannel:", error);
+    return res.status(500).json({ message: `Server error: ${error.message}` });
+  }
+};
+
+
+/**
+ * [MODIFIED] Gets all messages for a specific channel.
+ * ROUTE: GET /api/channels/:channelId/messages
+ */
 export const getChannelMessages = async (req, res) => {
     try {
         const { channelId } = req.params;
         const userId = req.userId;
 
-        // Check if the user is a member of the channel first
+        // 1. Authorization Check: Ensure the user is a member of the channel.
         const channel = await Channel.findById(channelId);
         if (!channel || !channel.members.includes(userId)) {
             return res.status(403).json({ message: "You are not authorized to view these messages." });
         }
 
-        // Find all messages where the receiverId is the channelId
-        const messages = await Message.find({ receiverId: channelId })
-            .populate('senderId', 'name profilePic') // Optional: get sender info
-            .sort({ createdAt: 1 }); // Sort by creation time
+        // 2. Find all messages where the 'channel' field matches the channelId.
+        const messages = await Message.find({ channel: channelId })
+            .populate('sender', 'name profileImage email') // Populate sender details
+            .sort({ createdAt: 1 }); // Sort chronologically
 
         res.status(200).json(messages);
 
-    } catch (error) {
-        console.error('GET CHANNEL MESSAGES ERROR:', error);
+    } catch (error)
+        {
+        console.error('Error in getChannelMessages:', error);
         res.status(500).json({ message: 'Server error while fetching messages.' });
     }
 };

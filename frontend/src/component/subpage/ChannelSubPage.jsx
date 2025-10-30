@@ -30,6 +30,7 @@ import jira from '../../assets/jira.png';
 // --- Component Import ---
 // Verify this path points to your AddMember component.
 import AddMemberModal from "../subpage/AddMember";
+import { setChannelMessages } from '../../redux/channelMessageSlice';
 
 const InfoSection = ({ title, value, onEdit, children }) => (
     <div className="py-4 border-b border-gray-200 last:border-b-0">
@@ -55,6 +56,7 @@ const ChannelSubPage = ({ channel, onClose }) => {
 
     const allUsers = useSelector((state) => state.user.allUsers);
     const addMember = useSelector((state) => state.channel.addMember);
+    const channelMessgaes=useSelector((state)=>state.channel.channelMessgaes)
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
@@ -99,6 +101,15 @@ const ChannelSubPage = ({ channel, onClose }) => {
         alert("Channel ID copied to clipboard!");
     };
 
+    // const channelSendMessage=async()=>{
+    //   try{
+    //     const result=await axios.get(`http://localhost:5000/api/${channel_id}/messages`,{withCredentials:true})
+    //     dispatch(setChannelMessages(result.data))
+    //   }catch(error){
+    //     console.log(error)
+    //   }
+    // }
+
     const createdByName = getUserNameById(channel.createdBy);
     const createdDate = format(new Date(channel.createdAt), 'd MMMM yyyy');
 
@@ -117,7 +128,7 @@ const ChannelSubPage = ({ channel, onClose }) => {
                                 title="Topic"
                                 value={channel.topic || "Add a topic"}
                                 onEdit={() => {
-                                    setCurrentTopic(channel.topic || ''); // Reset text before opening
+                                    setCurrentTopic(channel.topic || ''); 
                                     setOpenEditTopic(true);
                                 }}
                             />

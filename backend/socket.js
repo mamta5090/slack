@@ -74,6 +74,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("joinChannel", (channelId) => {
+    socket.join(channelId);
+    console.log(`User ${socket.id} joined channel room: ${channelId}`);
+  });
+
+  socket.on("leaveChannel", (channelId) => {
+    socket.leave(channelId);
+    console.log(`User ${socket.id} left channel room: ${channelId}`);
+  });
+
   socket.on("disconnect", () => {
     if (userId && userSocketMap[userId]) {
       delete userSocketMap[userId];
