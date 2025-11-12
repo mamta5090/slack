@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* smooth behavior for browsers that respect this */
+.scroll-smooth {
+  scroll-behavior: smooth;
+}
+
+/* WebKit scrollbar styling (Chrome, Edge, Safari) */
+.w-full::-webkit-scrollbar,
+.scroll-smooth::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-smooth::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-smooth::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* Firefox thin scrollbar */
+.scroll-smooth {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;            /* Chrome, Safari, Opera */
+}
