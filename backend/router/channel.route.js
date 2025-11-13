@@ -2,7 +2,7 @@ import express from 'express'
 import {addMember, createChannel, leaveChannel,getAllChannels, getChannelById, getChannelMessages, sendMessageToChannel, deleteMessageFromChannel} from '../controller/channel.controller.js'
 import auth from '../middleware/auth.js'
 import User from '../models/User.js'
-import { uploadChannelImage } from '../config/s3.js'
+import { uploadImage } from '../config/s3.js'
 const channelRouter=express.Router()
 
 channelRouter.post('/create',auth, createChannel)
@@ -13,7 +13,7 @@ channelRouter.get('/:channelId', auth, getChannelById);
 channelRouter.get('/:channelId/messages', auth, getChannelMessages);
 channelRouter.post(
   '/:channelId/messages',auth,
-  uploadChannelImage.single('image'), // 'image' = form field name
+  uploadImage.single('image'), // 'image' = form field name
   sendMessageToChannel
 );
 channelRouter.delete(

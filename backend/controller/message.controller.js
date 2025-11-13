@@ -1,13 +1,14 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import { getSocketId, io } from "../socket.js";
+import { deleteFromS3 } from '../config/s3.js';
 // import {uploadOnCloudinary} from '../config/cloudinary.js';
 
 export const sendMessage = async (req, res) => {
   try {
     const senderId = req.userId;
     const receiverId = req.params.receiverId;
-    const { message ,imageKey} = req.body;
+    const { message } = req.body;
     // let imageUrl = null;
     // if (req.file) {
     //   const uploadResult = await uploadOnCloudinary(req.file.path);
@@ -17,12 +18,20 @@ export const sendMessage = async (req, res) => {
     //     console.error("Cloudinary upload failed, but proceeding without image.");
     //   }
     // }
+
+       // 3. S3 Image URL
+    const imageUrl = req.file
+      ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}`
+      : null;
+
     const messageData = {
       sender: senderId,
       receiver: receiverId,
       message: message || '',
+      image:imageUrl,
     };
-   if (imageKey) messageData.image = `${process.env.S3_PUBLIC_URL}/${imageKey}`;
+
+   //if (imageKey) messageData.image = `${process.env.S3_PUBLIC_URL}/${imageKey}`;
     let newMessage = await Message.create(messageData);
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
