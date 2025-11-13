@@ -4,8 +4,10 @@ import Avatar from "../component/Avatar";
 import axios from "axios";
 import { FaTrash } from "react-icons/fa";
 
-// CORRECT IMPORT
+// channel slice action (keeps existing behavior for channels)
 import { removeChannelMessage } from "../redux/channelMessageSlice";
+// NOTE: make sure you have a messageSlice with a removeMessage action for DMs
+import { removeMessage } from "../redux/messageSlice";
 
 const SenderMessage = ({ message, createdAt, image, messageId, channelId }) => {
   const user = useSelector((state) => state.user.user);
@@ -17,19 +19,30 @@ const SenderMessage = ({ message, createdAt, image, messageId, channelId }) => {
     : "";
 
   const handleDelete = async () => {
-    if (!messageId || !channelId) {
-      console.error("Missing messageId or channelId");
+    if (!messageId) {
+      console.error("Missing messageId");
       return;
     }
 
     if (!window.confirm("Delete this message?")) return;
 
     try {
-      await axios.delete(`/api/channel/${channelId}/messages/${messageId}`, {
-        withCredentials: true,
-      });
-
-      dispatch(removeChannelMessage(messageId));
+      if (channelId) {
+        // channel message delete (existing behavior)
+        await axios.delete(`/api/channel/${channelId}/messages/${messageId}`, {
+          withCredentials: true, // or use Authorization header if you use tokens
+        });
+        dispatch(removeChannelMessage(messageId));
+      } else {
+        // personal DM delete
+        // Use the message route you'll register on the backend (see below)
+        await axios.delete(`/api/message/delete/${messageId}`, {
+          withCredentials: true,
+        });
+        // dispatch action to remove message from messages slice
+        // Ensure removeMessage exists in your messageSlice
+        dispatch(removeMessage(messageId));
+      }
     } catch (error) {
       console.error("Delete failed:", error.response?.data || error.message);
       alert("Failed to delete message");

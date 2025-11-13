@@ -9,17 +9,6 @@ export const sendMessage = async (req, res) => {
     const senderId = req.userId;
     const receiverId = req.params.receiverId;
     const { message } = req.body;
-    // let imageUrl = null;
-    // if (req.file) {
-    //   const uploadResult = await uploadOnCloudinary(req.file.path);
-    //   if (uploadResult && uploadResult.url) {
-    //     imageUrl = uploadResult.url;
-    //   } else {
-    //     console.error("Cloudinary upload failed, but proceeding without image.");
-    //   }
-    // }
-
-       // 3. S3 Image URL
     const imageUrl = req.file
       ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}`
       : null;
@@ -30,8 +19,6 @@ export const sendMessage = async (req, res) => {
       message: message || '',
       image:imageUrl,
     };
-
-   //if (imageKey) messageData.image = `${process.env.S3_PUBLIC_URL}/${imageKey}`;
     let newMessage = await Message.create(messageData);
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
@@ -110,27 +97,69 @@ export const getPreviousChat = async (req, res) => {
   }
 };
 
-// controllers/message.controller.js
+
 export const deleteMessageController = async (req, res) => {
-  const { messageId } = req.params;
-  const userId = req.userId;
+  try {
+    const { messageId } = req.params;
+    const userId = req.userId;
 
-  const msg = await Message.findById(messageId);
-  if (!msg) return res.status(404).json({ message: "Not found" });
-  if (msg.sender.toString() !== userId)
-    return res.status(403).json({ message: "Not authorized" });
+    if (!messageId) {
+      return res.status(400).json({ message: "messageId is required" });
+    }
 
-  // Delete image from S3 if exists
-  if (msg.image) {
-    const key = msg.image.split(".com/")[1];
-    await deleteFromS3(key);
+    const msg = await Message.findById(messageId);
+    if (!msg) return res.status(404).json({ message: "Message not found" });
+
+    // Only sender can delete their message
+    if (msg.sender.toString() !== userId) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    // Delete image from S3 if it exists.
+    // Prefer stored imageKey (recommended). Fallback: parse URL if needed.
+    if (msg.imageKey) {
+      try {
+        await deleteFromS3(msg.imageKey);
+      } catch (err) {
+        console.error("Failed to delete S3 object (by imageKey):", err);
+        // continue — don't block message deletion for S3 errors
+      }
+    } else if (msg.image && typeof msg.image === "string" && msg.image.includes(".amazonaws.com/")) {
+      const parts = msg.image.split(".com/");
+      const key = parts[1];
+      if (key) {
+        try {
+          await deleteFromS3(key);
+        } catch (err) {
+          console.error("Failed to delete S3 object (parsed from image URL):", err);
+        }
+      }
+    }
+
+    // Delete the message document
+    await Message.findByIdAndDelete(messageId);
+
+    // Remove references to the message from any conversation documents
+    await Conversation.updateMany(
+      { messages: messageId },
+      { $pull: { messages: messageId } }
+    );
+
+    // Notify both users via sockets (use getSocketId to map userId -> socketId)
+    const payload = { messageId };
+    try {
+      const senderSocketId = getSocketId(msg.sender.toString());
+      const receiverSocketId = getSocketId(msg.receiver.toString());
+
+      if (senderSocketId) io.to(senderSocketId).emit("messageDeleted", payload);
+      if (receiverSocketId) io.to(receiverSocketId).emit("messageDeleted", payload);
+    } catch (emitErr) {
+      console.error("Socket emit error while deleting message:", emitErr);
+    }
+
+    return res.json({ success: true, message: "Message deleted" });
+  } catch (error) {
+    console.error("deleteMessageController error:", error);
+    return res.status(500).json({ message: "Failed to delete message", error: error.message });
   }
-
-  await Message.findByIdAndDelete(messageId);
-
-  // Emit to both users
-  io.to(msg.sender.toString()).emit("messageDeleted", { messageId });
-  io.to(msg.receiver.toString()).emit("messageDeleted", { messageId });
-
-  res.json({ success: true });
 };

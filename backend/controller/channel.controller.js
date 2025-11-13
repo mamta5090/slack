@@ -127,22 +127,16 @@ export const getChannelById = async (req, res) => {
     try {
         const { channelId } = req.params;
 console.log(channelId);
-        // Best practice: Validate the ID format before querying
         if (!mongoose.Types.ObjectId.isValid(channelId)) {
             return res.status(400).json({ message: 'Invalid channel ID format' });
         }
-
         const channel = await Channel.findById(channelId);
-
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
         }
-
-        // Also check if the user requesting is actually a member of the channel
         if (!channel.members.includes(req.userId)) {
             return res.status(403).json({ message: 'You are not a member of this channel' });
         }
-
         res.status(200).json(channel);
     } catch (error) {
         console.error('GET CHANNEL BY ID ERROR:', error);
@@ -150,54 +144,25 @@ console.log(channelId);
     }
 };
 
-// export const getChannelMessages = async (req, res) => {
-//     try {
-//         const { channelId } = req.params;
-//         const userId = req.userId;
-
-//         // Check if the user is a member of the channel first
-//         const channel = await Channel.findById(channelId);
-//         if (!channel || !channel.members.includes(userId)) {
-//             return res.status(403).json({ message: "You are not authorized to view these messages." });
-//         }
-
-//         // Find all messages where the receiverId is the channelId
-//         const messages = await Message.find({ receiverId: channelId })
-//             .populate('senderId', 'name profilePic') // Optional: get sender info
-//             .sort({ createdAt: 1 }); // Sort by creation time
-
-//         res.status(200).json(messages);
-
-//     } catch (error) {
-//         console.error('GET CHANNEL MESSAGES ERROR:', error);
-//         res.status(500).json({ message: 'Server error while fetching messages.' });
-//     }
-// };
-
-// controller/channel.controller.js
 export const sendMessageToChannel = async (req, res) => {
   try {
     const senderId = req.userId;
     const { channelId } = req.params;
     const { message } = req.body;
-
     console.log("Received message to channel:", {
       senderId,
       channelId,
       message,
       file: req.file ? req.file.key : null,
     });
-
     if (!senderId) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
-
     // 1. Find channel
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
-
     // 2. Check membership — AVOID .map() on null/undefined
     const memberIds = channel.members.map(m => m.toString());
     if (!memberIds.includes(senderId)) {

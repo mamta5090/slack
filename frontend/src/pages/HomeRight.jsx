@@ -495,6 +495,7 @@ const HomeRight = () => {
       createdAt={msg.createdAt}
       image={msg.image}
       messageId={msg._id}
+       
     />
   ) : (
     <ReceiverMessage
