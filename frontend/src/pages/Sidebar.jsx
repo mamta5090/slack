@@ -40,6 +40,7 @@ const Sidebar = () => {
 
     const messages=useSelector((state)=>state.message.messages)
 const user=useSelector((state)=>state.user.user)
+  const { allUsers = [] } = useSelector((state) => state.user);
   const { onlineUsers = [] } = useSelector((s) => s.socket) || {};
 
   const isOnline = (userId) => onlineUsers.some((id) => String(id) === String(userId));
@@ -48,28 +49,64 @@ const user=useSelector((state)=>state.user.user)
   const moreButtonRef = useRef(null);
 
 const lastMessagesByConversation = useMemo(() => {
-    if (!messages || !user) {
+    if (!messages || !user?._id) {
       return [];
     }
 
-    const conversations = {};
+    const conversations = new Map();
+    const userCache = new Map();
 
-    messages.forEach(msg => {
-      // Determine the other user in the conversation
-      const otherUser = String(msg.sender._id) === String(user._id) ? msg.receiver : msg.sender;
+    // 1. Build a reliable cache from the allUsers array
+    if (allUsers) {
+      allUsers.forEach(u => userCache.set(u._id.toString(), u));
+    }
 
-      // If we don't have a message for this conversation yet, or if the current message is newer, update it
-      if (!conversations[otherUser._id] || new Date(msg.createdAt) > new Date(conversations[otherUser._id].createdAt)) {
-        conversations[otherUser._id] = {
-          ...msg,
-          otherUser // Keep track of the other user's details
-        };
+    // 2. Ensure the logged-in user is also in the cache
+    if (user?._id) {
+        userCache.set(user._id.toString(), user);
+    }
+    
+    // 3. Fallback: find user data within message objects if not in allUsers yet
+    for (const msg of messages) {
+      if (msg.sender?._id && msg.sender?.name && !userCache.has(msg.sender._id.toString())) {
+        userCache.set(msg.sender._id.toString(), msg.sender);
       }
-    });
+      if (msg.receiver?._id && msg.receiver?.name && !userCache.has(msg.receiver._id.toString())) {
+        userCache.set(msg.receiver._id.toString(), msg.receiver);
+      }
+    }
 
-    // Return an array of the latest messages
-    return Object.values(conversations);
-  }, [messages, user]);
+    // 4. Process all messages to find the latest for each conversation
+    for (const msg of messages) {
+      const senderId = msg.sender?._id?.toString() || msg.sender?.toString();
+      const receiverId = msg.receiver?._id?.toString() || msg.receiver?.toString();
+
+      if (!senderId || !receiverId) {
+        continue; // Skip malformed messages
+      }
+
+      const otherUserId = senderId === user._id.toString() ? receiverId : senderId;
+
+      const existingMessage = conversations.get(otherUserId);
+      if (!existingMessage || new Date(msg.createdAt) > new Date(existingMessage.createdAt)) {
+        let otherUserDetails = userCache.get(otherUserId);
+        
+        // Create a placeholder if a user is not found in the cache
+        if (!otherUserDetails) {
+          otherUserDetails = { _id: otherUserId, name: 'Unknown User' }; 
+        }
+
+        conversations.set(otherUserId, {
+          ...msg,
+          otherUser: otherUserDetails,
+        });
+      }
+    }
+
+    const latestMessages = Array.from(conversations.values());
+    latestMessages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return latestMessages;
+  }, [messages, user, allUsers]);
 
 
 
@@ -83,9 +120,7 @@ const lastMessagesByConversation = useMemo(() => {
     { title: "External connection", desc: "Connect external tools" },
   ];
 
-    // const formattedTime = user
-    // ? new Date(user).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    // : "";
+   
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -146,8 +181,7 @@ const lastMessagesByConversation = useMemo(() => {
                 </label>
               </div>
              <div className="p-2">
-               {lastMessagesByConversation.length > 0 ? (
-                  // Display the latest message for each conversation
+             {lastMessagesByConversation.length > 0 ? (
                   lastMessagesByConversation.map((latestMessage) => {
                     const otherUser = latestMessage.otherUser;
                     return (
@@ -177,6 +211,8 @@ const lastMessagesByConversation = useMemo(() => {
             </div>
           )}
         </div>
+
+
 
         {/* Activity */}
         <div className="relative" onMouseLeave={() => setActivityOpen(false)}>

@@ -1,33 +1,46 @@
-// models/activity.model.js
+// models/activity.model.js (Improved Version)
 
 import mongoose from 'mongoose';
 
 const activitySchema = new mongoose.Schema({
-    // The user who should SEE this notification (The recipient)
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    
-    // The workspace where the activity happened
     workSpace: { type: mongoose.Schema.Types.ObjectId, ref: 'WorkSpace', required: true },
-
-    // The user who PERFORMED the action (e.g., who sent the message)
     actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     
-    // The type of action performed (e.g., 'MENTION', 'THREAD_REPLY', 'REACTION_ADDED')
-    action: { type: String, required: true },
+    // Using an enum provides better data integrity
+    action: { 
+        type: String, 
+        required: true,
+        enum: [
+            'mentioned_you', 
+            'replied_to_thread', 
+            'reacted_to_message', 
+            'joined_channel',
+            // ... add more as you need them
+        ]
+    },
 
-    // A snippet of the message content for preview
     contentSnippet: { type: String },
 
-    // The channel or DM where the activity occurred
-    context: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },
-    
-    // The specific message that was replied to or mentioned in
-    target: { type: mongoose.Schema.Types.ObjectId, ref: 'Message' },
+    // --- Dynamic Reference for Context ---
+    context: {
+        id: { type: mongoose.Schema.Types.ObjectId, required: true },
+        model: { type: String, required: true, enum: ['Conversation', 'Channel'] } // Add other models here
+    },
 
-    // Flag to see if the user has viewed this activity
+    // --- Dynamic Reference for Target ---
+    target: {
+        id: { type: mongoose.Schema.Types.ObjectId },
+        model: { type: String, enum: ['Message', 'File', 'Poll'] } // Add other models here
+    },
+
     isRead: { type: Boolean, default: false, index: true }
+}, { timestamps: true });
 
-}, { timestamps: true }); // timestamps adds createdAt and updatedAt automatically
+// To use this, when you query, you would populate it dynamically.
+// Example:
+// const activity = await Activity.findById(someId);
+// await activity.populate({ path: 'context.id', model: activity.context.model });
 
 const Activity = mongoose.model('Activity', activitySchema);
 export default Activity;

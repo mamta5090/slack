@@ -4,7 +4,7 @@ import Sidebar from '../../pages/Sidebar';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchActivitiesForUser } from '../../redux/activitySlice';
 
-// A simple presentational component (no changes needed here)
+
 const ActivityItem = ({ activity }) => {
   const renderActivityText = () => {
     switch (activity.action) {
