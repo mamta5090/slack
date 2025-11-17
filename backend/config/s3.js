@@ -16,11 +16,7 @@ const __dirname = dirname(__filename);
 // ----------------------------------------------
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-// Debugging to ensure env vars are loaded
-console.log("🧩 AWS REGION:", process.env.AWS_REGION);
-console.log("🧩 AWS ACCESS KEY:", process.env.AWS_ACCESS_KEY_ID ? "Loaded ✅" : "❌ Missing");
-console.log("🧩 AWS SECRET KEY:", process.env.AWS_SECRET_ACCESS_KEY ? "Loaded ✅" : "❌ Missing");
-console.log("🧩 S3 BUCKET:", process.env.S3_BUCKET_NAME);
+
 
 // ----------------------------------------------
 // Validate critical environment variables

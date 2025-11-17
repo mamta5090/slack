@@ -92,7 +92,7 @@ const DmsLeft = () => {
   };
 
   return (
-    <div className="w-[360px] pl-[54px] flex-shrink-0 h-full bg-[#5a2a5c] flex flex-col border-r border-gray-700">
+    <div className="lg:w-[640px]  lg:pl-[75px]  pt-[50px] pl-[54px] flex-shrink-0 h-full bg-[#5a2a5c] flex flex-col border-r border-gray-700">
       <div className="p-3 border-b border-purple-900 flex justify-between items-center flex-shrink-0">
         <h3 className="font-bold text-lg text-white">Direct messages</h3>
         <FaEdit className="text-xl text-white cursor-pointer" />

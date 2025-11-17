@@ -1,6 +1,4 @@
-// src/components/Sidebar.jsx
-
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect,useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { RiHome4Fill } from "react-icons/ri";
 import { LuMessagesSquare, LuPencilRuler } from "react-icons/lu";
@@ -11,15 +9,9 @@ import { BsArrowUpRightCircleFill } from "react-icons/bs";
 import { HiDocumentDuplicate } from "react-icons/hi";
 import { GoFileDirectory } from "react-icons/go"; // Icon for Files
 import Sidebarprofile from "../component/profile/Sidebarprofile";
+import { useSelector } from "react-redux";
+import Avatar from "../component/Avatar";
 
-// Mock Data Definitions
-const dmsData = [
-  { name: "Nitish Khanna", message: "You: hmm sir kr rhi hu", time: "4:41 PM", avatar: "N" },
-  { name: "Vijay Laxmi Singh", message: "good", time: "Thursday", avatar: "V" },
-  { name: "Anish", message: "ok", time: "17 September", avatar: "A" },
-  { name: "Shubham Agrawal", message: "You: app jb free ho tb bataiyega", time: "12 September", avatar: "S" },
-  { name: "Baldeep Singh", message: "You: Ok sir", time: "10 September", avatar: "B" },
-];
 
 const activityData = [
   { type: 'thread', people: 'Priyanka Pandey, Ankur Singh and 19 others', channel: '#hr-activities', message: "replied to: @here...", time: 'Thursday' },
@@ -32,7 +24,7 @@ const laterData = [
   { type: 'Template', title: 'Weekly 1:1', updated: 'Updated 1 month ago' },
 ];
 
-// Added missing filesData
+
 const filesData = [
   { title: 'Untitled', updated: 'Updated 5 days ago', isTemplate: false },
   { title: 'Weekly 1:1', updated: 'Updated 1 month ago', isTemplate: true },
@@ -46,8 +38,40 @@ const Sidebar = () => {
   const [dmsOpen, setDmsOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
 
+    const messages=useSelector((state)=>state.message.messages)
+const user=useSelector((state)=>state.user.user)
+  const { onlineUsers = [] } = useSelector((s) => s.socket) || {};
+
+  const isOnline = (userId) => onlineUsers.some((id) => String(id) === String(userId));
+    
   const moreMenuRef = useRef(null);
   const moreButtonRef = useRef(null);
+
+const lastMessagesByConversation = useMemo(() => {
+    if (!messages || !user) {
+      return [];
+    }
+
+    const conversations = {};
+
+    messages.forEach(msg => {
+      // Determine the other user in the conversation
+      const otherUser = String(msg.sender._id) === String(user._id) ? msg.receiver : msg.sender;
+
+      // If we don't have a message for this conversation yet, or if the current message is newer, update it
+      if (!conversations[otherUser._id] || new Date(msg.createdAt) > new Date(conversations[otherUser._id].createdAt)) {
+        conversations[otherUser._id] = {
+          ...msg,
+          otherUser // Keep track of the other user's details
+        };
+      }
+    });
+
+    // Return an array of the latest messages
+    return Object.values(conversations);
+  }, [messages, user]);
+
+
 
   const moreItems = [
     { title: "Authentication", desc: "Authentication helpers & examples" },
@@ -58,6 +82,10 @@ const Sidebar = () => {
     { title: "People", desc: "Manage people & profiles", action: () => navigate(`/profilepage`) },
     { title: "External connection", desc: "Connect external tools" },
   ];
+
+    // const formattedTime = user
+    // ? new Date(user).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    // : "";
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -105,7 +133,7 @@ const Sidebar = () => {
             <span className="text-xs mt-1">DMs</span>
           </button>
           {dmsOpen && (
-            <div className="absolute left-full  -translate-y-1/2 ml-2 w-[350px] min-h-[500px] rounded-lg bg-white shadow-lg border border-gray-200 z-50 text-black">
+            <div className="absolute mt-[90px] left-full  -translate-y-1/2 ml-2 w-[350px] min-h-[500px] rounded-lg bg-white shadow-lg border border-gray-200 z-50 text-black">
               <div className="p-3 border-b flex justify-between items-center">
                 <h3 className="font-bold">Direct messages</h3>
                 <label className="flex items-center text-xs cursor-pointer">
@@ -117,19 +145,34 @@ const Sidebar = () => {
                   </div>
                 </label>
               </div>
-              <div className="p-2">
-                {dmsData.map((dm, index) => (
-                  <div key={index} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
-                    <div className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center font-bold text-gray-600 mr-3">{dm.avatar}</div>
-                    <div className="flex-grow">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-sm">{dm.name}</span>
-                        <span className="text-xs text-gray-500">{dm.time}</span>
+             <div className="p-2">
+               {lastMessagesByConversation.length > 0 ? (
+                  // Display the latest message for each conversation
+                  lastMessagesByConversation.map((latestMessage) => {
+                    const otherUser = latestMessage.otherUser;
+                    return (
+                      <div key={otherUser._id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
+                        <div className="relative">
+                          <Avatar user={otherUser} size="md" />
+                          {isOnline(otherUser._id) && (
+                            <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
+                          )}
+                        </div>
+                        <div className="flex-grow ml-[10px]">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-m">{otherUser?.name || "Unknown User"}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(latestMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="pt-[5px] text-xs truncate">{latestMessage.message}</p>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600 truncate">{dm.message}</p>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                ) : (
+                  <p className="p-2 text-sm text-gray-500">No direct messages yet.</p>
+                )}
               </div>
             </div>
           )}

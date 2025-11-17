@@ -139,7 +139,7 @@ export const deleteMessageController = async (req, res) => {
     // Delete the message document
     await Message.findByIdAndDelete(messageId);
 
-    // Remove references to the message from any conversation documents
+    //     references to the message from any conversation documents
     await Conversation.updateMany(
       { messages: messageId },
       { $pull: { messages: messageId } }
