@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react'; // ✅ FIX: Added useMemo
+import React, { useState, useEffect, useMemo } from 'react';
 import Topbar from '../../pages/Topbar';
 import Sidebar from '../../pages/Sidebar';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchActivitiesForUser } from '../../redux/activitySlice';
-import Avatar from '../Avatar'; // ✅ NOTE: Assuming you have an Avatar component. Adjust the import path.
+import Avatar from '../Avatar'; // Make sure this import path is correct
 
 // No changes needed for ActivityItem component
 const ActivityItem = ({ activity }) => {
@@ -62,12 +62,11 @@ const Activity = () => {
 
     // --- Redux State Selection ---
     const user = useSelector((state) => state.user.user);
-    const { allUsers = [] } = useSelector((state) => state.user);
     const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
     const { currentWorkspace } = useSelector((state) => state.workspace);
     const { items: activities, status, error } = useSelector((state) => state.activityData);
     const { messages } = useSelector((state) => state.message);
-    const { allChannels = [] } = useSelector((state) => state.channel); // ✅ FIX: Get all channels
+    const { allChannels = [] } = useSelector((state) => state.channel);
 
     const isOnline = (userId) => onlineUsers.some((id) => String(id) === String(userId));
 
@@ -85,25 +84,20 @@ const Activity = () => {
         return Array.from(conversations.values());
     }, [messages, user]);
 
-    // ✅ NEW: Memoized logic to combine and sort DMs and Channels
+    // ✅ Memoized logic to combine and sort DMs and Channels
     const latestConversationsAndChannels = useMemo(() => {
-        // 1. Format Direct Messages
         const formattedDms = lastMessagesByConversation.map(message => {
             const otherUser = message.sender._id === user._id ? message.receiver : message.sender;
             return {
                 type: 'dm',
                 id: otherUser._id,
-                data: {
-                    ...message,
-                    otherUser: otherUser
-                },
+                data: { ...message, otherUser: otherUser },
                 timestamp: new Date(message.createdAt).getTime(),
             };
         });
 
-        // 2. Format Channels (assuming channels have a lastMessage property)
         const formattedChannels = allChannels
-            .filter(channel => channel.lastMessage) // Only include channels with messages
+            .filter(channel => channel.lastMessage)
             .map(channel => ({
                 type: 'channel',
                 id: channel._id,
@@ -111,9 +105,8 @@ const Activity = () => {
                 timestamp: new Date(channel.lastMessage.createdAt).getTime(),
             }));
             
-        // 3. Combine, Sort, and Return
         const combined = [...formattedDms, ...formattedChannels];
-        combined.sort((a, b) => b.timestamp - a.timestamp); // Sort by most recent
+        combined.sort((a, b) => b.timestamp - a.timestamp);
         return combined;
 
     }, [lastMessagesByConversation, allChannels, user]);
@@ -130,23 +123,23 @@ const Activity = () => {
         }
     }, [dispatch, user?._id, currentWorkspace?._id, showUnread]);
 
-    // --- Filtering and Rendering for Left Panel ---
-    const filteredActivities = activities.filter(activity => {
-        if (activeTab === 'All') return true;
-        if (activeTab === 'Mentions' && activity.action === 'MENTION') return true;
-        if (activeTab === 'Threads' && activity.action === 'THREAD_REPLY') return true;
-        if (activeTab === 'Reactions' && activity.action === 'REACTION_ADDED') return true;
-        return false;
-    });
+    // --- Rendering for Activity Feed ---
+    const renderActivities = () => {
+        const filteredActivities = activities.filter(activity => {
+            if (activeTab === 'All') return true;
+            if (activeTab === 'Mentions' && activity.action === 'MENTION') return true;
+            if (activeTab === 'Threads' && activity.action === 'THREAD_REPLY') return true;
+            if (activeTab === 'Reactions' && activity.action === 'REACTION_ADDED') return true;
+            return false;
+        });
 
-    const renderContent = () => {
         if (status === 'loading') return <p className="p-4 text-gray-400">Loading activities...</p>;
         if (status === 'failed') return <p className="p-4 text-red-400">Error: {error}</p>;
         if (!user || !currentWorkspace) return <p className="p-4 text-gray-400">Please log in and select a workspace.</p>;
         if (filteredActivities.length > 0) {
             return filteredActivities.map(activity => <ActivityItem key={activity._id} activity={activity} />);
         }
-        return <p className="p-4 text-gray-400">No activities to show.</p>;
+        return <p className="p-4 text-gray-400">No activities to show for this tab.</p>;
     };
 
     const Tab = ({ label }) => (
@@ -160,12 +153,13 @@ const Activity = () => {
             <Topbar />
             <div className="flex flex-1 overflow-hidden">
                 <Sidebar />
-                {/* Left Panel: Activity Feed */}
-                <div className="w-[460px] ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col border-l border-r border-gray-700">
-                    <div className="p-4 flex justify-between items-center border-b border-gray-700">
-                        <h3 className="font-bold text-xl">Activity</h3>
+                {/* Left Panel: Contains all content */}
+                <div className="w-full lg:w-[460px] ml-0 lg:ml-[72px] mt-12 h-[calc(100vh-3rem)] bg-[#5a2a5c] text-gray-200 flex flex-col border-l border-r border-gray-700">
+                    
+                    <div className="p-4 flex justify-between items-center border-b border-gray-700 flex-shrink-0">
+                        <h3 className="font-bold text-xl">Activity & Messages</h3>
                         <label className="flex items-center text-xs cursor-pointer">
-                            <span className="mr-2 text-gray-300">Unread messages</span>
+                            <span className="mr-2 text-gray-300">Unread only</span>
                             <div className="relative">
                                 <input type="checkbox" className="sr-only peer" checked={showUnread} onChange={() => setShowUnread(!showUnread)} />
                                 <div className="block bg-gray-600 w-8 h-4 rounded-full peer-checked:bg-green-500"></div>
@@ -173,122 +167,81 @@ const Activity = () => {
                             </div>
                         </label>
                     </div>
-                    <div className="flex gap-4 p-4 border-b border-gray-700">
-                        <Tab label="All" /> <Tab label="Mentions" /> <Tab label="Threads" /> <Tab label="Reactions" /> <Tab label="Invitations" />
-                    </div>
-                    <div className="flex-1 overflow-y-auto">{renderContent()}</div>
-                    <div className="flex-1 bg-white">
-                    <div className="p-2">
-                        {latestConversationsAndChannels.length > 0 ? (
-                            latestConversationsAndChannels.map((item) => {
-                                // --- RENDER DIRECT MESSAGE ---
-                                if (item.type === 'dm') {
-                                    const otherUser = item.data.otherUser;
-                                    return (
-                                        <div key={item.id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
-                                            <div className="relative">
-                                                <Avatar user={otherUser} size="md" />
-                                                {isOnline(otherUser._id) && (
-                                                    <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
-                                                )}
-                                            </div>
-                                            <div className="flex-grow ml-3">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold text-m">{otherUser?.name || "Unknown User"}</span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {new Date(item.data.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                    </span>
+
+                    {/* ✅ FIX: Single scrollable container for all content */}
+                    <div className="flex-1 overflow-y-auto">
+                        
+                        <div className="flex gap-4 p-4 border-b border-gray-700 sticky top-0 bg-[#5a2a5c]">
+                            <Tab label="All" /> <Tab label="Mentions" /> <Tab label="Threads" /> <Tab label="Reactions" /> <Tab label="Invitations" />
+                        </div>
+                        
+                        <div>
+                            {renderActivities()}
+                        </div>
+                        
+                        <div className="p-4 border-t border-b border-gray-700 sticky top-[65px] bg-[#5a2a5c]">
+                            <h3 className="font-bold text-xl">Conversations</h3>
+                        </div>
+
+                        {/* ✅ FIX: Messages list rendered here with dark-theme styles */}
+                        <div className="p-2">
+                            {latestConversationsAndChannels.length > 0 ? (
+                                latestConversationsAndChannels.map((item) => {
+                                    if (item.type === 'dm') {
+                                        const otherUser = item.data.otherUser;
+                                        return (
+                                            <div key={item.id} className="flex items-center p-2 hover:bg-[#6a3a6c] rounded-md cursor-pointer">
+                                                <div className="relative">
+                                                    <Avatar user={otherUser} size="md" />
+                                                    {isOnline(otherUser._id) && (
+                                                        <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#5a2a5c] bg-green-500" />
+                                                    )}
                                                 </div>
-                                                <p className="pt-1 text-xs truncate text-gray-600">{item.data.message}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                // --- RENDER CHANNEL MESSAGE ---
-                                } else if (item.type === 'channel') {
-                                    return (
-                                         <div key={item.id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
-                                            <div className="w-10 h-10 flex-shrink-0 bg-gray-200 rounded-md flex items-center justify-center font-bold text-gray-600">
-                                                #
-                                            </div>
-                                            <div className="flex-grow ml-3">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold text-m">{item.data.name}</span>
-                                                     <span className="text-xs text-gray-500">
-                                                        {new Date(item.data.lastMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                    </span>
+                                                <div className="flex-grow ml-3">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-semibold text-gray-100">{otherUser?.name || "Unknown User"}</span>
+                                                        <span className="text-xs text-gray-400">
+                                                            {new Date(item.data.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="pt-1 text-sm truncate text-gray-300">{item.data.message}</p>
                                                 </div>
-                                                <p className="pt-1 text-xs truncate text-gray-600">
-                                                    <span className="font-medium">{item.data.lastMessage.sender.name}: </span>
-                                                    {item.data.lastMessage.content}
-                                                </p>
                                             </div>
-                                        </div>
-                                    )
-                                }
-                                return null;
-                            })
-                        ) : (
-                            <p className="p-2 text-sm text-gray-500">No messages yet.</p>
-                        )}
+                                        );
+                                    }
+                                    if (item.type === 'channel') {
+                                        return (
+                                             <div key={item.id} className="flex items-center p-2 hover:bg-[#6a3a6c] rounded-md cursor-pointer">
+                                                <div className="w-10 h-10 flex-shrink-0 bg-gray-700 rounded-md flex items-center justify-center font-bold text-gray-400">
+                                                    #
+                                                </div>
+                                                <div className="flex-grow ml-3">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="font-semibold text-gray-100">{item.data.name}</span>
+                                                         <span className="text-xs text-gray-400">
+                                                            {new Date(item.data.lastMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="pt-1 text-sm truncate text-gray-300">
+                                                        <span className="font-medium text-gray-200">{item.data.lastMessage.sender.name}: </span>
+                                                        {item.data.lastMessage.content}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+                                    return null;
+                                })
+                            ) : (
+                                <p className="p-2 text-sm text-gray-400">No conversations yet.</p>
+                            )}
+                        </div>
                     </div>
-                </div>
                 </div>
 
-                {/* ✅ FIX: Right Panel now renders the combined list */}
-                <div className="flex-1 bg-white">
-                    {/* <div className="p-2">
-                        {latestConversationsAndChannels.length > 0 ? (
-                            latestConversationsAndChannels.map((item) => {
-                                // --- RENDER DIRECT MESSAGE ---
-                                if (item.type === 'dm') {
-                                    const otherUser = item.data.otherUser;
-                                    return (
-                                        <div key={item.id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
-                                            <div className="relative">
-                                                <Avatar user={otherUser} size="md" />
-                                                {isOnline(otherUser._id) && (
-                                                    <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
-                                                )}
-                                            </div>
-                                            <div className="flex-grow ml-3">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold text-m">{otherUser?.name || "Unknown User"}</span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {new Date(item.data.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                    </span>
-                                                </div>
-                                                <p className="pt-1 text-xs truncate text-gray-600">{item.data.message}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                // --- RENDER CHANNEL MESSAGE ---
-                                } else if (item.type === 'channel') {
-                                    return (
-                                         <div key={item.id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
-                                            <div className="w-10 h-10 flex-shrink-0 bg-gray-200 rounded-md flex items-center justify-center font-bold text-gray-600">
-                                                #
-                                            </div>
-                                            <div className="flex-grow ml-3">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold text-m">{item.data.name}</span>
-                                                     <span className="text-xs text-gray-500">
-                                                        {new Date(item.data.lastMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                                    </span>
-                                                </div>
-                                                <p className="pt-1 text-xs truncate text-gray-600">
-                                                    <span className="font-medium">{item.data.lastMessage.sender.name}: </span>
-                                                    {item.data.lastMessage.content}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )
-                                }
-                                return null;
-                            })
-                        ) : (
-                            <p className="p-2 text-sm text-gray-500">No messages yet.</p>
-                        )}
-                    </div> */}
+                {/* ✅ FIX: Right panel is now empty with a white background */}
+                <div className="flex-1 bg-white mt-12 h-[calc(100vh-3rem)]">
+                    {/* This space is intentionally left blank */}
                 </div>
             </div>
         </div>

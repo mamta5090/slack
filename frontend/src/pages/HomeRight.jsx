@@ -20,7 +20,7 @@ import ReceiverMessage from "./ReceiverMessage";
 import Avatar from "../component/Avatar";
 import useClickOutside from "../hook/useClickOutside";
 import VideoCallUI from "../component/VideoCallUI.jsx";
-import {useWebRTC} from '../hook/useWebRTC.js'
+import {useWebRTC} from '../hook/useWebRTC.jsx'
 
 // Icons
 import { CiHeadphones, CiStar, CiClock2 } from "react-icons/ci";
@@ -99,6 +99,23 @@ const HomeRight = () => {
   const allMessages = useSelector((state) => state.message.messages);
   const { socket, onlineUsers = [] } = useSelector((state) => state.socket);
 
+  const { 
+    callState, 
+    localStream, 
+    remoteStream, 
+    startCall, 
+    acceptCall, 
+    hangUp, 
+    incomingCallFrom,
+    isLocalAudioMuted,
+    isLocalVideoMuted,
+    toggleAudio,
+    toggleVideo
+  } = useWebRTC(socket, singleUser);
+
+  // 🔹 Determine who the other user in the call is
+  const otherUserForCall = callState === 'receiving' ? incomingCallFrom : singleUser;
+
   // Memoized values
   const isOnline = useMemo(() => {
     if (!singleUser?._id) return false;
@@ -149,9 +166,7 @@ const HomeRight = () => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const { callState, localStream, remoteStream, startCall, acceptCall, hangUp, incomingCallFrom, isLocalAudioMuted, isLocalVideoMuted, toggleAudio, toggleVideo } = useWebRTC(socket, singleUser);
-
-  const otherUserForCall = callState === 'receiving' ? incomingCallFrom : singleUser;
+  
 
   const authHeaders = () => {
     const token = localStorage.getItem("token");
@@ -422,7 +437,7 @@ const HomeRight = () => {
 
   return (
     <>
-      {callState !== 'idle' && (
+       {callState !== 'idle' && (
         <VideoCallUI
           callState={callState}
           localStream={localStream}
@@ -437,7 +452,7 @@ const HomeRight = () => {
         />
       )}
 
-      <div className="pt-[58px] w-full h-full flex flex-col bg-white">
+    <div className={`pt-[58px] w-full h-full flex flex-col bg-white ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 h-[49px] flex-shrink-0">
           <div onClick={() => setOpenEdit(true)} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md -ml-1">
@@ -455,11 +470,11 @@ const HomeRight = () => {
           <div className="flex items-center gap-1 text-gray-600">
             <div className="flex flex-row border rounded-md items-center">
              // In your call button:
-<div
-  onClick={startCall}
-  className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center"
-  title="Start a call"
->
+ <div
+                onClick={startCall} // ⬅️ THIS IS THE TRIGGER
+                className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center"
+                title="Start a huddle"
+              >
   <CiHeadphones className="text-xl" />
 </div>
               <div className="h-5 w-[1px] bg-gray-300"></div>
