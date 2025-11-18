@@ -225,7 +225,7 @@ const lastMessagesByConversation = useMemo(() => {
               <div className="p-3 border-b flex justify-between items-center">
                 <h3 className="font-bold">Activity</h3> {/* Corrected header */}
               </div>
-              {activityData.map((item, index) => (
+              {/* {activityData.map((item, index) => (
                 <div key={index} className="p-3 hover:bg-gray-100 border-b cursor-pointer">
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
                     <span>Thread in {item.channel}</span>
@@ -243,7 +243,34 @@ const lastMessagesByConversation = useMemo(() => {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))} */}
+
+                {lastMessagesByConversation.length > 0 ? (
+                  lastMessagesByConversation.map((latestMessage) => {
+                    const otherUser = latestMessage.otherUser;
+                    return (
+                      <div key={otherUser._id} className="flex items-center p-2 hover:bg-gray-100 rounded-md cursor-pointer">
+                        <div className="relative">
+                          <Avatar user={otherUser} size="md" />
+                          {isOnline(otherUser._id) && (
+                            <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white bg-green-500" />
+                          )}
+                        </div>
+                        <div className="flex-grow ml-[10px]">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-m">{otherUser?.name || "Unknown User"}</span>
+                            <span className="text-xs text-gray-500">
+                              {new Date(latestMessage.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <p className="pt-[5px] text-xs truncate">{latestMessage.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="p-2 text-sm text-gray-500">No direct messages yet.</p>
+                )}
             </div>
           )}
         </div>

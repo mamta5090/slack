@@ -1,8 +1,9 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
+import User from "../models/User.js"; // ✅ FIX 1: Import the User model to find mentioned users
 import { getSocketId, io } from "../socket.js";
 import { deleteFromS3 } from '../config/s3.js';
-// import {uploadOnCloudinary} from '../config/cloudinary.js';
+import { createActivity } from './activity.controller.js'; // ✅ FIX 2: Import the activity helper
 
 export const sendMessage = async (req, res) => {
   try {
@@ -13,13 +14,34 @@ export const sendMessage = async (req, res) => {
       ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}`
       : null;
 
+    // ✅ FIX 3: Implement Mention Detection Logic
+    let mentionedUserId = null;
+    if (message) {
+      // Use a regular expression to find mentions like @username
+      const mentionRegex = /@(\w+)/; 
+      const match = message.match(mentionRegex);
+
+      if (match) {
+        const mentionedUsername = match[1]; // Get the username from the regex match
+        // Find the user in the database by their username
+        const mentionedUser = await User.findOne({ name: mentionedUsername });
+        if (mentionedUser) {
+          mentionedUserId = mentionedUser._id;
+        }
+      }
+    }
+    // Note: A more advanced version could handle multiple mentions with `/g` flag and a loop.
+
+    // First, save the message so we have an ID for it
     const messageData = {
       sender: senderId,
       receiver: receiverId,
       message: message || '',
-      image:imageUrl,
+      image: imageUrl,
     };
     let newMessage = await Message.create(messageData);
+
+    // Find or create the conversation
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
     });
@@ -30,6 +52,28 @@ export const sendMessage = async (req, res) => {
     }
     conversation.messages.push(newMessage._id);
     await conversation.save();
+
+    // ✅ FIX 4: Create the activity AFTER the message and conversation exist
+    // This ensures we have all the necessary IDs.
+    if (mentionedUserId) {
+        await createActivity({
+            userId: mentionedUserId,         // The user who gets the notification
+            // workSpace: conversation.workspaceId, // You need to add workspaceId to your Conversation model
+            actor: senderId,                 // The user who performed the action
+            action: 'mentioned_you',
+            contentSnippet: newMessage.message.substring(0, 100),
+            context: {
+                id: conversation._id,
+                model: 'Conversation'
+            },
+            target: {
+                id: newMessage._id,
+                model: 'Message'
+            }
+        });
+    }
+    
+    // Continue with the rest of the logic
     const populatedMessage = await Message.findById(newMessage._id).populate("sender", "name email");
     const receiverSocketId = getSocketId(receiverId);
     if (receiverSocketId) {
@@ -46,6 +90,7 @@ export const sendMessage = async (req, res) => {
   }
 };
 
+// ... (the rest of your file is likely correct, no changes needed there)
 export const getAllMessages = async (req, res) => {
   try {
     const senderId = req.userId;

@@ -163,8 +163,11 @@ export const sendMessageToChannel = async (req, res) => {
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
-    // 2. Check membership — AVOID .map() on null/undefined
-    const memberIds = channel.members.map(m => m.toString());
+
+    // 2. [FIX] Check membership — Filter out null/undefined members before mapping
+    // This prevents the 'Cannot read properties of null' error.
+    const memberIds = channel.members.filter(m => m).map(m => m.toString());
+    
     if (!memberIds.includes(senderId)) {
       return res.status(403).json({ message: "You are not a member of this channel." });
     }
@@ -188,7 +191,7 @@ export const sendMessageToChannel = async (req, res) => {
     const populatedMessage = await Message.findById(newMessage._id)
       .populate("sender", "name profileImage");
 
-    // 6. Emit
+    // 6. Emit to the channel room
     io.to(channelId).emit("newChannelMessage", populatedMessage);
 
     return res.status(201).json(populatedMessage);
