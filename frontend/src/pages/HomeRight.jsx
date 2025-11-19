@@ -10,17 +10,17 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 
 // Redux Actions
-import { setSingleUser } from "../redux/userSlice";
-import { setMessages, clearMessages } from "../redux/messageSlice";
-import { fetchConversations } from "../redux/conversationSlice";
+import { setSingleUser } from "../redux/userSlice.js";
+import { setMessages, clearMessages } from "../redux/messageSlice.js";
+import { fetchConversations } from "../redux/conversationSlice.js";
 
 // Components
-import SenderMessage from "./SenderMessage";
-import ReceiverMessage from "./ReceiverMessage";
-import Avatar from "../component/Avatar";
-import useClickOutside from "../hook/useClickOutside";
+import SenderMessage from "./SenderMessage.jsx";
+import ReceiverMessage from "./ReceiverMessage.jsx";
+import Avatar from "../component/Avatar.jsx";
+import useClickOutside from "../hook/useClickOutside.js";
 import VideoCallUI from "../component/VideoCallUI.jsx";
-import {useWebRTC} from '../hook/useWebRTC.jsx'
+import {useWebRTC} from '../hook/useWebRTC.js'
 
 // Icons
 import { CiHeadphones, CiStar, CiClock2 } from "react-icons/ci";
@@ -469,7 +469,7 @@ const HomeRight = () => {
 
           <div className="flex items-center gap-1 text-gray-600">
             <div className="flex flex-row border rounded-md items-center">
-             // In your call button:
+           
  <div
                 onClick={startCall} // ⬅️ THIS IS THE TRIGGER
                 className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center"

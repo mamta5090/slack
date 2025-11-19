@@ -93,6 +93,7 @@ const ConfirmEmail = () => {
       console.log("verifyotp success response:", result.data);
 
       if (result.data?.success) {
+         localStorage.setItem("token", result.data.token);
         dispatch(setSlackUser(result.data.user));
         setInfoMsg("Verified! Redirecting...");
         navigate("/launchworkspace");

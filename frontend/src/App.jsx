@@ -55,7 +55,7 @@ const App = () => {
       if (token) {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         try {
-          const res = await axios.get(`${SERVER_URL}/api/user/me`);
+          const res = await axios.get(`${SERVER_URL}/api/slack/me`);
           if (res.data?.user) {
             dispatch(setUser(res.data.user));
           } else {
@@ -88,6 +88,11 @@ const App = () => {
         dispatch(setOnlineUsers(users));
       });
 
+       socketIo.on("call-error", (payload) => {
+      console.warn("call-error", payload);
+      // show toast or UI notification
+    });
+
       socketIo.on("newMessage", (payload) => {
         if (payload.newMessage) {
           dispatch(addMessage(payload.newMessage));
@@ -106,7 +111,7 @@ const App = () => {
       return () => {
         socketIo.off("getOnlineUsers");
         socketIo.off("newMessage");
-          socketIo.off("incomingCall");
+         socketIo.off("call-error");
         socketIo.off("newChannelMessage");
         socketIo.disconnect();
         dispatch(clearSocket());
@@ -125,15 +130,14 @@ const App = () => {
         path="/"
         element={user ? <Home /> : <Navigate to="/login" replace />}
       >
-        {/* Children routes rendered inside Home's <Outlet> */}
+       
         <Route index element={<WelcomeScreen />} />
         <Route path="dm/:id" element={<HomeRight />} />
         <Route path="channel/:channelId" element={<Channel />} />
         <Route path="files" element={<Files />} />
-        {/* Add other nested routes here */}
       </Route>
 
-      {/* Standalone Routes (not using the Home layout) */}
+  
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route path="/register" element={!user ? <Registration /> : <Navigate to="/" replace />} />
       <Route
@@ -168,8 +172,7 @@ const App = () => {
         path="/homepage"
         element={user ? <HomePage /> : <Navigate to="/login" replace />}
       />
-      
-      {/* Slack-specific routes */}
+      <Route path="/slacklogin" element={<SlackLogin />} />
       <Route path="/signin" element={<Signin />} />
       <Route path="/email" element={<ConfirmEmail />} />
       <Route path="/launchworkspace" element={<LaunchWorkspace />} />
