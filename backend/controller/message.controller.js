@@ -2,7 +2,7 @@ import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/User.js"; // ✅ FIX 1: Import the User model to find mentioned users
 import { getSocketId, io } from "../socket.js";
-import { deleteFromS3 } from '../config/s3.js';
+//import { deleteFromS3 } from '../config/s3.js';
 import { createActivity } from './activity.controller.js'; // ✅ FIX 2: Import the activity helper
 
 export const sendMessage = async (req, res) => {

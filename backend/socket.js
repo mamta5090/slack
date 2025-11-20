@@ -17,6 +17,17 @@ const userSocketMap = {};
 
 export const getSocketId = (userId) => userSocketMap[userId];
 
+export const sendNotificationToUserSocket = (userId, payload) => {
+  const sockets = connected.get(String(userId));
+  if (sockets && sockets.size) {
+    for (const sid of sockets) {
+      io.to(sid).emit("notification", payload);
+    }
+    return true;
+  }
+  return false;
+};
+
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
   if (userId !== undefined) {
@@ -112,6 +123,7 @@ io.on("connection", (socket) => {
       io.to(recipientSocketId).emit('webrtc:hang-up');
     }
   });
+
 
 
   socket.on("disconnect", () => {

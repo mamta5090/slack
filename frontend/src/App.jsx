@@ -47,6 +47,7 @@ const App = () => {
   const { user } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [authChecked, setAuthChecked] = useState(false);
+  const [notification,setNotification]=useState(null);
 
   // 🔹 Auth check
   useEffect(() => {

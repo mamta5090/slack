@@ -9,6 +9,7 @@ import channelSlice from './channelSlice'
 import activitySlice from './activitySlice'
 import channelMessageSlice from './channelMessageSlice';
 import callReducer from './callSlice'
+import notificationSlice from './notification'
 
 const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ const store = configureStore({
     activityData:activitySlice,
     channelMessage: channelMessageSlice,
     call: callReducer,
+    notification:notificationSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
