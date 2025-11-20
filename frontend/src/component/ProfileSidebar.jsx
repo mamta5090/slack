@@ -1,15 +1,12 @@
-// src/components/ProfileSidebar.jsx
-
 import React, { useState, useEffect } from 'react';
-// --- THIS IS THE CORRECTED LINE ---
 import { useSelector, useDispatch } from 'react-redux'; 
-// ------------------------------------
 import axios from 'axios';
 import { format, formatDistanceToNow } from "date-fns";
 import { setSingleUser } from '../redux/userSlice';
-import dp from "../assets/dp.webp"; // Default profile picture
+import dp from "../assets/dp.webp"; 
+import {serverURL} from '../main'
 
-// Import all necessary icons
+
 import { CiClock2, CiHeadphones } from "react-icons/ci";
 import { IoMailOutline, IoAddSharp } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
@@ -18,7 +15,7 @@ import { IoMdMore } from "react-icons/io";
 import { CgProfile } from "react-icons/cg";
 import { AiOutlineAudio } from "react-icons/ai";
 
-const SERVER_URL = "http://localhost:5000";
+
 
 const ProfileSidebar = ({ user, onClose }) => {
     const dispatch = useDispatch();
@@ -57,7 +54,7 @@ const ProfileSidebar = ({ user, onClose }) => {
     const getImageUrl = (path) => {
         if (!path) return dp;
         if (path.startsWith('http') || path.startsWith('blob:')) return path;
-        return `${SERVER_URL}/${path.replace(/\\/g, '/')}`;
+        return `${serverURL}/${path.replace(/\\/g, '/')}`;
     };
 
     const handleFormChange = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));

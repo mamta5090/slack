@@ -6,6 +6,7 @@ import { CiSaveDown2 } from "react-icons/ci";
 import { useDispatch, useSelector } from "react-redux";
 import { setWorkspace } from "../redux/workspaceSlice";
 import axios from "axios";
+import {serverURL} from '../main.jsx'
 
 const Company = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const Company = () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const res = await axios.get("http://localhost:5000/api/workspace/me", {
+        const res = await axios.get(`${serverURL}/api/workspace/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res?.data?.workspace) {
@@ -91,7 +92,7 @@ const handleSaveCompany = async () => {
         name: owners && owners.trim() ? `${owners.trim()}'s workspace` : "My Workspace",
       };
       const createRes = await axios.post(
-        "http://localhost:5000/api/workspace/createworkspace",
+       `${serverURL}/api/workspace/createworkspace`,
         createBody,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -116,7 +117,7 @@ const handleSaveCompany = async () => {
     }
 
     const patchRes = await axios.patch(
-      `http://localhost:5000/api/workspace/${ws._id}`,
+      `${serverURL}/api/workspace/${ws._id}`,
       fd,
       {
         headers: {

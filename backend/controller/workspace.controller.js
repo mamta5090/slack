@@ -128,7 +128,6 @@ export const updateWorkspace = async (req, res) => {
         const filename = req.file.filename || path.basename(filePath || "");
         imageUrl = `${process.env.SERVER_URL || "http://localhost:5000"}/uploads/${filename}`;
       }
-
       updates.profileImage = imageUrl;
     }
 

@@ -7,6 +7,7 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setSlackUser } from "../redux/slackUserSlice";
 import ReCAPTCHA from "react-google-recaptcha";
+import {serverURL} from '../main.jsx'
 
 const SlackLogin = () => {
   const [email, setEmail] = useState("");
@@ -47,7 +48,7 @@ const SlackLogin = () => {
       console.log("Submitting:", { email, captchaValue });
 
      // inside SlackLogin.handleSubmit after axios response
-const res = await axios.post("http://localhost:5000/api/slack/slacklogin", {
+const res = await axios.post(`${serverURL}/api/slack/slacklogin`, {
   email,
   captcha: captchaValue,
 });

@@ -11,6 +11,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { setWorkspace } from "../redux/workspaceSlice";
 import axios from "axios";
 
+
 // ✅ Environment variables safe for CRA and Vite
 const SERVER_URL =
   (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||

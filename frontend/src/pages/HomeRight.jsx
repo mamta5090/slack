@@ -8,6 +8,7 @@ import axios from "axios";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import {serverURL} from '../main.jsx'
 
 // Redux Actions
 import { setSingleUser } from "../redux/userSlice.js";
@@ -20,7 +21,7 @@ import ReceiverMessage from "./ReceiverMessage.jsx";
 import Avatar from "../component/Avatar.jsx";
 import useClickOutside from "../hook/useClickOutside.js";
 import VideoCallUI from "../component/VideoCallUI.jsx";
-import {useWebRTC} from '../hook/useWebRTC.js'
+import { useWebRTC } from '../hook/useWebRTC.js'
 
 // Icons
 import { CiHeadphones, CiStar, CiClock2 } from "react-icons/ci";
@@ -99,13 +100,13 @@ const HomeRight = () => {
   const allMessages = useSelector((state) => state.message.messages);
   const { socket, onlineUsers = [] } = useSelector((state) => state.socket);
 
-  const { 
-    callState, 
-    localStream, 
-    remoteStream, 
-    startCall, 
-    acceptCall, 
-    hangUp, 
+  const {
+    callState,
+    localStream,
+    remoteStream,
+    startCall,
+    acceptCall,
+    hangUp,
     incomingCallFrom,
     isLocalAudioMuted,
     isLocalVideoMuted,
@@ -166,7 +167,7 @@ const HomeRight = () => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  
+
 
   const authHeaders = () => {
     const token = localStorage.getItem("token");
@@ -176,18 +177,18 @@ const HomeRight = () => {
   const fetchUser = async () => {
     if (!id) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/user/${id}`, authHeaders());
+      const res = await axios.get(`${serverURL}/api/user/${id}`, authHeaders());
       dispatch(setSingleUser(res.data));
     } catch (error) {
       console.error("Error fetching single user:", error);
-      dispatch(setSingleUser(null)); 
+      dispatch(setSingleUser(null));
     }
   };
 
   const fetchMessages = async () => {
     if (!id) return;
     try {
-      const res = await axios.get(`http://localhost:5000/api/message/getAll/${id}`, authHeaders());
+      const res = await axios.get(`${serverURL}/api/message/getAll/${id}`, authHeaders());
       dispatch(setMessages(Array.isArray(res.data) ? res.data : []));
     } catch (error) {
       console.error("Error fetching messages", error);
@@ -197,7 +198,7 @@ const HomeRight = () => {
   const markThreadAsRead = async () => {
     if (!id) return;
     try {
-      await axios.post(`http://localhost:5000/api/conversation/read/${id}`, {}, authHeaders());
+      await axios.post(`${serverURL}/api/conversation/read/${id}`, {}, authHeaders());
       dispatch(fetchConversations());
     } catch (error) {
       console.error("Failed to mark thread as read", error);
@@ -214,7 +215,7 @@ const HomeRight = () => {
       if (backendImage) {
         formData.append("image", backendImage);
       }
-      await axios.post(`http://localhost:5000/api/message/send/${singleUser._id}`, formData, authHeaders());
+      await axios.post(`${serverURL}/api/message/send/${singleUser._id}`, formData, authHeaders());
       setNewMsg("");
       cancelImage();
       setFrontendImage(null);
@@ -437,7 +438,7 @@ const HomeRight = () => {
 
   return (
     <>
-       {callState !== 'idle' && (
+      {callState !== 'idle' && (
         <VideoCallUI
           callState={callState}
           localStream={localStream}
@@ -452,16 +453,15 @@ const HomeRight = () => {
         />
       )}
 
-    <div className={`pt-[58px] w-full h-full flex flex-col bg-white ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
+      <div className={`pt-[58px] w-full h-full flex flex-col bg-white ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 h-[49px] flex-shrink-0">
           <div onClick={() => setOpenEdit(true)} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md -ml-1">
             <div className="relative">
               <Avatar user={singleUser} size="sm" />
               <div
-                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                  isOnline ? "bg-[#2bac76]" : "hidden"
-                }`}
+                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${isOnline ? "bg-[#2bac76]" : "hidden"
+                  }`}
               />
             </div>
             <p className="font-bold text-lg">{singleUser.name}</p>
@@ -469,14 +469,14 @@ const HomeRight = () => {
 
           <div className="flex items-center gap-1 text-gray-600">
             <div className="flex flex-row border rounded-md items-center">
-           
- <div
+
+              <div
                 onClick={startCall} // ⬅️ THIS IS THE TRIGGER
                 className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center"
                 title="Start a huddle"
               >
-  <CiHeadphones className="text-xl" />
-</div>
+                <CiHeadphones className="text-xl" />
+              </div>
               <div className="h-5 w-[1px] bg-gray-300"></div>
               <div className="hover:bg-gray-100 rounded-r-md p-1 cursor-pointer h-8 flex items-center justify-center">
                 <RiArrowDropDownLine className="text-xl" />
@@ -505,21 +505,21 @@ const HomeRight = () => {
             const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
             return isMine ? (
               <SenderMessage
-      key={key}
-      message={msg.message}
-      createdAt={msg.createdAt}
-      image={msg.image}
-      messageId={msg._id}
-       
-    />
-  ) : (
-    <ReceiverMessage
-      key={key}
-      message={msg.message}
-      createdAt={msg.createdAt}
-      image={msg.image}
-      isDeleted={msg.isDeleted}
-    />
+                key={key}
+                message={msg.message}
+                createdAt={msg.createdAt}
+                image={msg.image}
+                messageId={msg._id}
+
+              />
+            ) : (
+              <ReceiverMessage
+                key={key}
+                message={msg.message}
+                createdAt={msg.createdAt}
+                image={msg.image}
+                isDeleted={msg.isDeleted}
+              />
             );
           })}
           <div ref={listEndRef} />

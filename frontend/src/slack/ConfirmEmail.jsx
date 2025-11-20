@@ -5,6 +5,7 @@ import axios from "axios";
 import { setSlackUser } from "../redux/slackUserSlice";
 import mail from "../assets/mail.png";
 import outlook from "../assets/outlook.png";
+import {serverURL} from '../main.jsx'
 
 const ConfirmEmail = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -21,7 +22,7 @@ const ConfirmEmail = () => {
       if (!slackUser?.email) return;
       try {
         setInfoMsg("Sending code...");
-        const result = await axios.post("http://localhost:5000/api/slack/sendotp", {
+        const result = await axios.post(`${serverURL}/api/slack/sendotp`, {
           email: slackUser.email,
         });
         setInfoMsg("Code sent. Check your inbox (or spam).");
@@ -85,7 +86,7 @@ const ConfirmEmail = () => {
     setInfoMsg("Verifying code...");
 
     try {
-      const result = await axios.post("http://localhost:5000/api/slack/verifyotp", {
+      const result = await axios.post(`${serverURL}/api/slack/verifyotp`, {
         email: slackUser.email,
         otp: code,
       });
@@ -133,7 +134,7 @@ const ConfirmEmail = () => {
     setErrorMsg("");
     setInfoMsg("Requesting new code...");
     try {
-      const res = await axios.post("http://localhost:5000/api/slack/sendotp", {
+      const res = await axios.post(`${serverURL}/api/slack/sendotp`, {
         email: slackUser.email,
       });
       console.log("resend response:", res.data);

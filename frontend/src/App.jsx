@@ -38,9 +38,9 @@ import Left from "./pages/Left";
 import HomeSidebar from "./component/sidebar/HomePageSidebar";
 import HomeRight from "./pages/HomeRight";
 import { setIncomingCall } from "./redux/callSlice";
+import {serverURL} from './main.jsx'
 
 
-const SERVER_URL = "http://localhost:5000";
 
 const App = () => {
   const navigate = useNavigate();
@@ -56,7 +56,7 @@ const App = () => {
       if (token) {
         axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
         try {
-          const res = await axios.get(`${SERVER_URL}/api/slack/me`);
+          const res = await axios.get(`${serverURL}/api/slack/me`);
           if (res.data?.user) {
             dispatch(setUser(res.data.user));
           } else {
@@ -78,7 +78,7 @@ const App = () => {
   // 🔹 Socket setup
   useEffect(() => {
     if (user?._id) {
-      const socketIo = io(SERVER_URL, {
+      const socketIo = io(serverURL, {
         query: { userId: user._id },
         transports: ["websocket"],
       });

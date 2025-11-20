@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAllChannels, setChannel } from '../../redux/channelSlice.js'
 import {setUser} from '../../redux/userSlice.js'
+
 const NewChannel = ({ isVisible, onClose }) => {
    
      const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ const fetchAllChannels = async () => {
             return; 
         }
 
-        const result = await axios.get('http://localhost:5000/api/channel/getAllChannel', {
+        const result = await axios.get(`${serverURL}/api/channel/getAllChannel`, {
             headers: {
                 // Ensure the token is sent correctly in the header
                 Authorization: `Bearer ${token}`
@@ -79,7 +80,7 @@ const fetchAllChannels = async () => {
         }
 
         const result = await axios.post(
-            'http://localhost:5000/api/channel/create',
+            `${serverURL}/api/channel/create`,
             { name: channelName, visibility: visibility },
             { 
                 // --- FIX: Add the Authorization header ---

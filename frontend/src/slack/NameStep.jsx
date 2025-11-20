@@ -5,6 +5,7 @@ import { CiSaveDown2 } from "react-icons/ci";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setWorkspace } from "../redux/workspaceSlice";
+import {serverURL} from '../main.jsx'
 
 const NameStep = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const handleNext = async () => {
     }
 
     const result = await axios.post(
-      'http://localhost:5000/api/workspace/createworkspace',
+      `${serverURL}/api/workspace/createworkspace`,
       { name },
       {
         headers: { Authorization: `Bearer ${token}` },

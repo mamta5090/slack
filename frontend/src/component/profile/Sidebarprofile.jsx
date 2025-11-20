@@ -3,7 +3,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { setUser } from "../../redux/userSlice";
-import Avatar from "../Avatar"; // Make sure to import your Avatar component
+import Avatar from "../Avatar"; 
+import {serverURL} from '../../main'
 
 const Sidebarprofile = () => {
   const [open, setOpen] = useState(false);
@@ -22,7 +23,7 @@ const Sidebarprofile = () => {
   // --- Handle Logout ---
   const handleLogout = async () => {
     try {
-      await axios.post("http://localhost:5000/api/user/logout");
+      await axios.post(`${serverURL}/api/user/logout`);
       localStorage.removeItem("token");
       delete axios.defaults.headers.common["Authorization"];
       dispatch(setUser(null));

@@ -15,9 +15,10 @@ import { CgProfile } from "react-icons/cg";
 import axios from "axios";
 import { AiOutlineAudio } from "react-icons/ai";
 import { format, formatDistanceToNow } from "date-fns"; 
+import { serverURL } from "../main";
 
 
-const SERVER_URL = "http://localhost:5000"; 
+ 
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
@@ -55,7 +56,7 @@ const ProfilePage = () => {
   const getImageUrl = (path) => {
     if (!path) return dp;
     if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    return `${SERVER_URL}/${path.replace(/\\/g, '/')}`; // Ensure forward slashes
+    return `${serverURL}/path.replace(/\\/g, '/')}`; // Ensure forward slashes
   };
 
   const filtered = useMemo(() => {

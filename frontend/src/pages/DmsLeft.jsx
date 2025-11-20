@@ -7,6 +7,7 @@ import { FaEdit } from "react-icons/fa";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
 import { setAllUsers } from "../redux/userSlice";
 import Avatar from "../component/Avatar";
+import {serverURL} from '../main'
 
 const DmsLeft = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ const DmsLeft = () => {
       const fetchAllUsers = async () => {
         try {
           const token = localStorage.getItem("token");
-          const res = await axios.get("http://localhost:5000/api/user/get", {
+          const res = await axios.get(`${serverURL}/api/user/get`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           dispatch(setAllUsers(res.data));

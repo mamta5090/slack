@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
 //import { setMessages, addMessage } from "../redux/messageSlice";
-import { socket } from "../socket";
+// import { socket } from "../socket";
 
 // --- Icon Imports (All necessary icons are now included) ---
 import { LiaFile } from "react-icons/lia";

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import axios from "axios";
+import {serverURL} from '../main'
 
 // Helper to get auth headers
 const getAuthHeaders = () => {
@@ -12,7 +13,7 @@ export const fetchConversations = createAsyncThunk(
   "conversations/fetchConversations",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get("http://localhost:5000/api/conversation/my", {
+      const response = await axios.get(`${serverURL}/api/conversation/my`, {
         headers: getAuthHeaders(),
       });
       return response.data;

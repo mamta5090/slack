@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { IoClose } from "react-icons/io5";
 import { useDispatch, useSelector } from 'react-redux';
 import axios from 'axios';
+import {serverURL} from '../../main'
 
 
 
@@ -64,7 +65,7 @@ const LeaveInactiveChannelsModal = ({ isVisible, onClose }) => {
 
     try {
         const leaveRequests = selectedChannels.map(channelId => {
-            return axios.delete(`http://localhost:5000/api/channel/${channelId}/members/me`, { withCredentials: true });
+            return axios.delete(`${serverURL}/api/channel/${channelId}/members/me`, { withCredentials: true });
         });
         await Promise.all(leaveRequests);
         dispatch(allChannels());
