@@ -85,7 +85,7 @@ io.on("connection", (socket) => {
     console.log(`User ${socket.id} left channel room: ${channelId}`);
   });
 
-   socket.on('webrtc:start-call', ({ to, from, offer }) => {
+  socket.on('webrtc:start-call', ({ to, from, offer }) => {
     console.log(`[Socket] Received webrtc:start-call from ${from.name} to user ${to}`);
     const calleeSocketId = getSocketId(to);
     if (calleeSocketId) {
@@ -93,10 +93,11 @@ io.on("connection", (socket) => {
       io.to(calleeSocketId).emit('webrtc:incoming-call', { from, offer });
     } else {
       console.log(`[Socket] ERROR: User ${to} is not online. Cannot start call.`);
+      io.to(socket.id).emit('webrtc:user-offline', { userId: to });
     }
   });
 
-  socket.on('webrtc:answer-call', ({ to, from, answer }) => {
+ socket.on('webrtc:answer-call', ({ to, from, answer }) => {
     console.log(`[Socket] Received webrtc:answer-call from ${from.name} to user ${to}`);
     const callerSocketId = getSocketId(to);
     if (callerSocketId) {
@@ -116,7 +117,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on('webrtc:hang-up', ({ to }) => {
+   socket.on('webrtc:hang-up', ({ to }) => {
     console.log(`[Socket] Received webrtc:hang-up for user ${to}`);
     const recipientSocketId = getSocketId(to);
     if (recipientSocketId) {

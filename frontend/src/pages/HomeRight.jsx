@@ -505,7 +505,7 @@ const HomeRight = () => {
             const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
             return isMine ? (
               <SenderMessage
-      key={msg._id}
+      key={key}
       message={msg.message}
       createdAt={msg.createdAt}
       image={msg.image}
@@ -514,7 +514,7 @@ const HomeRight = () => {
     />
   ) : (
     <ReceiverMessage
-      key={msg._id}
+      key={key}
       message={msg.message}
       createdAt={msg.createdAt}
       image={msg.image}

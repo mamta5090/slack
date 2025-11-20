@@ -2,7 +2,7 @@ import Channel from '../models/channel.model.js';
 import Message from '../models/message.model.js';
 import mongoose from 'mongoose';
 import {io,getSocketId} from '../socket.js'
-//import { deleteFromS3 } from '../config/s3.js';
+import { deleteFromS3 } from '../config/s3.js';
 //import {uploadOnCloudinary} from '../config/cloudinary.js';
 //import { io } from '../socket.js';
 export const createChannel = async (req, res) => {
