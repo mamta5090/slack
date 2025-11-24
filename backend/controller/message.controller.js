@@ -5,85 +5,74 @@ import { getSocketId, io } from "../socket.js";
 import { deleteFromS3 } from '../config/s3.js';
 import { createActivity } from './activity.controller.js'; // ✅ FIX 2: Import the activity helper
 
+const NOTIFICATION_COOLDOWN_MS = 1 * 60 * 1000;
+
 export const sendMessage = async (req, res) => {
   try {
     const senderId = req.userId;
-    const receiverId = req.params.receiverId;
+    const { receiverId } = req.params;
     const { message } = req.body;
-    const imageUrl = req.file
-      ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}`
-      : null;
+    // Assuming you handle file uploads with middleware like multer
+    const image = req.file ? req.file.location : null; // Example for S3
+    const imageKey = req.file ? req.file.key : null; // Example for S3
 
-    // ✅ FIX 3: Implement Mention Detection Logic
-    let mentionedUserId = null;
-    if (message) {
-      // Use a regular expression to find mentions like @username
-      const mentionRegex = /@(\w+)/; 
-      const match = message.match(mentionRegex);
-
-      if (match) {
-        const mentionedUsername = match[1]; // Get the username from the regex match
-        // Find the user in the database by their username
-        const mentionedUser = await User.findOne({ name: mentionedUsername });
-        if (mentionedUser) {
-          mentionedUserId = mentionedUser._id;
-        }
-      }
+    if (!message && !image) {
+      return res.status(400).json({ message: "Message content cannot be empty." });
     }
-    // Note: A more advanced version could handle multiple mentions with `/g` flag and a loop.
 
-    // First, save the message so we have an ID for it
-    const messageData = {
+    // --- Step 1: Create the new message document ---
+    const newMessage = await Message.create({
       sender: senderId,
       receiver: receiverId,
       message: message || '',
-      image: imageUrl,
-    };
-    let newMessage = await Message.create(messageData);
-
-    // Find or create the conversation
-    let conversation = await Conversation.findOne({
-      participants: { $all: [senderId, receiverId] },
+      image: image,
+      imageKey: imageKey,
     });
-    if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [senderId, receiverId],
+
+    // --- Step 2: Atomically find or create the conversation and update it ---
+    // This single operation replaces the multiple separate steps you had before.
+    const updatedConversation = await Conversation.findOneAndUpdate(
+      { participants: { $all: [senderId, receiverId] } }, // Find the conversation
+      {
+        $push: { messages: newMessage._id }, // Add the new message's ID
+        $inc: { [`unreadCounts.${receiverId}`]: 1 }, // Increment unread count for the receiver
+        lastNotificationSentAt: new Date(), // Update timestamp
+        updatedAt: new Date(),
+      },
+      { 
+        upsert: true, // If conversation doesn't exist, create it
+        new: true, // Return the updated document
+      }
+    ).populate("participants", "name email profilePic"); // Populate for the socket payload
+
+    if (!updatedConversation) {
+        // This should theoretically not be hit due to upsert: true, but it's good practice
+        return res.status(500).json({ message: "Failed to find or create conversation." });
+    }
+
+    // --- Step 3: Populate the new message for the socket payload ---
+    const populatedNewMessage = await Message.findById(newMessage._id)
+      .populate("sender", "name email profilePic");
+
+    // --- Step 4: Emit socket events to both users ---
+    const receiverSocketId = getSocketId(receiverId);
+    
+    // The sender's own client will optimistically update, but we send the final
+    // data back to ensure consistency.
+    io.to(getSocketId(senderId)).emit("newMessage", {
+        newMessage: populatedNewMessage,
+        updatedConversation: updatedConversation
+    });
+
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", {
+        newMessage: populatedNewMessage,
+        updatedConversation: updatedConversation
       });
     }
-    conversation.messages.push(newMessage._id);
-    await conversation.save();
-
-    // ✅ FIX 4: Create the activity AFTER the message and conversation exist
-    // This ensures we have all the necessary IDs.
-    if (mentionedUserId) {
-        await createActivity({
-            userId: mentionedUserId,         // The user who gets the notification
-            // workSpace: conversation.workspaceId, // You need to add workspaceId to your Conversation model
-            actor: senderId,                 // The user who performed the action
-            action: 'mentioned_you',
-            contentSnippet: newMessage.message.substring(0, 100),
-            context: {
-                id: conversation._id,
-                model: 'Conversation'
-            },
-            target: {
-                id: newMessage._id,
-                model: 'Message'
-            }
-        });
-    }
     
-    // Continue with the rest of the logic
-    const populatedMessage = await Message.findById(newMessage._id).populate("sender", "name email");
-    const receiverSocketId = getSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", { newMessage: populatedMessage });
-    }
-    const senderSocketId = getSocketId(senderId);
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("newMessage", { newMessage: populatedMessage });
-    }
-    return res.status(201).json(populatedMessage);
+    return res.status(201).json(populatedNewMessage);
+
   } catch (error) {
     console.error("sendMessage error:", error);
     return res.status(500).json({ message: `Send Message error: ${error.message}` });

@@ -13,14 +13,14 @@ const Sidebarprofile = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // --- Selectors for User and Online Status ---
-  const user = useSelector((state) => state.user.user); // Correctly access the nested user object
+ 
+  const user = useSelector((state) => state.user.user); 
   const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
  console.log("User object passed to Avatar:", user);
-  // --- Determine if the user is online ---
   const isOnline = user && onlineUsers.includes(user._id);
+  const {notification}=useSelector((state)=>state.notification)
 
-  // --- Handle Logout ---
+
   const handleLogout = async () => {
     try {
       await axios.post(`${serverURL}/api/user/logout`);

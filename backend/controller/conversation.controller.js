@@ -1,11 +1,10 @@
-// controller/conversation.controller.js
 import Conversation from "../models/conversation.model.js";
 export const getMyConversations = async (req, res) => {
   try {
     const me = req.userId;
     const convos = await Conversation.find({ participants: me })
       .sort({ updatedAt: -1 })
-      .populate("participants", "name email");
+      .populate("participants", "name email profilePic");
 
     const data = convos.map((c) => {
       const other = c.participants.find((p) => String(p._id) !== String(me));
@@ -202,4 +201,25 @@ export const createGroupConversation = async (req, res) => {
     console.error("Error Message:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
+};
+
+export const markConversationAsRead = async (req, res) => {
+    try {
+        const currentUserId = req.userId;
+        const otherUserId = req.params.id; // The other user's ID from the URL
+
+      const conversation = await Conversation.findOne({
+        participants: { $all: [currentUserId, otherUserId] },
+    });
+
+        if (conversation) {
+             conversation.setUnreadCount(String(currentUserId), 0);
+        await conversation.save();
+        }
+
+        res.status(200).json({ message: "Conversation marked as read" });
+    } catch (error) {
+        console.error("markConversationAsRead error:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 };

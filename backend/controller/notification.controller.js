@@ -1,7 +1,7 @@
 import Message from '../models/message.model.js';
 import Channel from '../models/channel.model.js';
 import Notification from '../models/notification.model.js';
-import User from '../models/user.model.js';
+import User from '../models/User.js';
 import {sendNotificationToUserSocket} from '../socket.js';
 import { createAndSendNotification } from '../config/notification.service.js';
 
@@ -28,6 +28,7 @@ export const personalNotifyHandler = async (req, res) => {
       data: { messageId: message._id },
     });
 
+    
     return res.json({ success: true, notification: notif });
   } catch (err) {
     console.error("personalNotifyHandler error:", err);

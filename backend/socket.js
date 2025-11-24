@@ -36,38 +36,6 @@ io.on("connection", (socket) => {
 
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-  // socket.on("call-user", (payload) => {
-  //   try {
-  //     const { to, from, roomID } = payload;
-  //     const calleeSocketId = getSocketId(to);
-  //     if (calleeSocketId) {
-  //       io.to(calleeSocketId).emit("incoming-call", { from, roomID });
-  //     } else {
-  //       io.to(socket.id).emit("call-error", { message: "User is offline or unreachable" });
-  //     }
-  //   } catch (err) {
-  //     console.error("call-user error:", err);
-  //     io.to(socket.id).emit("call-error", { message: "Server error" });
-  //   }
-  // });
-
-  // socket.on("answer-call", (payload) => {
-  //   try {
-  //     const { to, accepted, roomID } = payload;
-  //     const callerSocketId = getSocketId(to);
-  //     if (callerSocketId) {
-  //       io.to(callerSocketId).emit("call-answered", {
-  //         accepted,
-  //         roomID,
-  //         from: socket.handshake.query.userId,
-  //       });
-  //     } else {
-  //       io.to(socket.id).emit("call-error", { message: "Caller is offline" });
-  //     }
-  //   } catch (err) {
-  //     console.error("answer-call error:", err);
-  //   }
-  // });
   socket.on("sendMessage", (payload) => {
     const receiverSocketId = getSocketId(payload.receiverId);
     if (receiverSocketId) {
@@ -86,43 +54,43 @@ io.on("connection", (socket) => {
   });
 
 socket.on("webrtc:start-call", ({ to, from, offer }) => {
-    console.log(
-      `[Socket] Received webrtc:start-call from ${from.name} to user ${to}`
-    );
+    // console.log(
+    //   `[Socket] Received webrtc:start-call from ${from.name} to user ${to}`
+    // );
     const calleeSocketId = getSocketId(to);
     if (calleeSocketId) {
-      console.log(
-        `[Socket] Forwarding webrtc:incoming-call to socket ${calleeSocketId}`
-      );
+      // console.log(
+      //   `[Socket] Forwarding webrtc:incoming-call to socket ${calleeSocketId}`
+      // );
       io.to(calleeSocketId).emit("webrtc:incoming-call", { from, offer });
     } else {
-      console.log(
-        `[Socket] ERROR: User ${to} is not online. Cannot start call.`
-      );
+      // console.log(
+      //   `[Socket] ERROR: User ${to} is not online. Cannot start call.`
+      // );
       io.to(socket.id).emit("webrtc:user-offline", { userId: to });
     }
   });
 
   socket.on("webrtc:answer-call", ({ to, from, answer }) => {
-    console.log(
-      `[Socket] Received webrtc:answer-call from ${from.name} to user ${to}`
-    );
+    // console.log(
+    //   `[Socket] Received webrtc:answer-call from ${from.name} to user ${to}`
+    // );
     const callerSocketId = getSocketId(to);
     if (callerSocketId) {
-      console.log(
-        `[Socket] Forwarding webrtc:call-answered to socket ${callerSocketId}`
-      );
+      // console.log(
+      //   `[Socket] Forwarding webrtc:call-answered to socket ${callerSocketId}`
+      // );
       io.to(callerSocketId).emit("webrtc:call-answered", { from, answer });
     } else {
-      console.log(
-        `[Socket] ERROR: Original caller ${to} is not online. Cannot answer call.`
-      );
+      // console.log(
+      //   `[Socket] ERROR: Original caller ${to} is not online. Cannot answer call.`
+      // );
+      io.to(socket.id).emit("webrtc:user-offline", { userId: to });
     }
   });
 
   socket.on("webrtc:ice-candidate", ({ to, candidate }) => {
-    // This will be very noisy, but it's essential for debugging
-    console.log(`[Socket] Received webrtc:ice-candidate for user ${to}`);
+   // console.log(`[Socket] Received webrtc:ice-candidate for user ${to}`);
     const recipientSocketId = getSocketId(to);
     if (recipientSocketId) {
       io.to(recipientSocketId).emit("webrtc:ice-candidate", { candidate });
@@ -130,7 +98,7 @@ socket.on("webrtc:start-call", ({ to, from, offer }) => {
   });
 
   socket.on("webrtc:hang-up", ({ to }) => {
-    console.log(`[Socket] Received webrtc:hang-up for user ${to}`);
+   // console.log(`[Socket] Received webrtc:hang-up for user ${to}`);
     const recipientSocketId = getSocketId(to);
     if (recipientSocketId) {
       io.to(recipientSocketId).emit("webrtc:hang-up");

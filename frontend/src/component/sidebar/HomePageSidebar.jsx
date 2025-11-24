@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 
-// Component Imports
 import Koalaliving from '../koalaliving/Koalaliving';
 import Avatar from '../Avatar';
 import LeaveInactiveChannelsModal from '../subpage/LeaveInactiveChannelsModal';
@@ -11,12 +10,11 @@ import NewChannel from '../subpage/NewChannel';
 import useClickOutside from '../../hook/useClickOutside'; 
 import Channel from '../../pages/Channel';
 
-// Asset and Redux Imports
 import slackbot from '../../assets/slackbot.png';
 import { setAllUsers, setSingleUser } from '../../redux/userSlice';
-import { fetchConversations } from '../../redux/conversationSlice';
+import { fetchConversations,selectAllConversations  } from '../../redux/conversationSlice';
 
-// Icon Imports
+
 import { CiSettings, CiHeadphones, CiStar } from "react-icons/ci";
 import { FaRegEdit, FaFileArchive } from "react-icons/fa";
 import { RiChatThreadLine } from "react-icons/ri";
@@ -55,6 +53,7 @@ const { id: activeChatId, channelId: activeChannelId } = useParams();
     const singleUser=useSelector((state)=>state.user.singleUser)
 const channel=useSelector((state)=>state.channel.channel)
 const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
+    const conversations = useSelector(selectAllConversations);
 
     const channelOptionsRef = useRef(null); 
     const addChannelBoxRef = useRef(null); 
@@ -86,6 +85,8 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
             fetchAllUsers();
         }
     }, [dispatch, allUsers.length]);
+
+   
 
       const openChat = async (otherId) => {
         if (!me?._id) return;
@@ -224,40 +225,61 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                 </div>
 
                 {/* Direct Messages Section */}
-               {/* Direct Messages Section */}
-                <div className='mt-4 px-2'>
-                    <div className="flex text-[#d8c5dd] items-center gap-1 cursor-pointer hover:bg-[#350d36] px-2 py-1 rounded-md" onClick={() => setDirectMessageOpen(p => !p)}>
-                        <IoMdArrowDropdown className={`transition-transform duration-200 text-lg ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
-                        <p className='font-semibold text-sm'>Direct messages</p>
-                    </div>
-                    {directMessageOpen && (
-                        <div className="mt-1 space-y-0.5">
-                            {allUsers.filter(u => u._id !== me?._id).map((user) => {
-                                const isOnline = onlineUsers.includes(user._id);
-                                const isActive = user._id === activeChatId;
-                                return (
-                                    // FIX: Call openChat(user._id) here
-                                    <div 
-                                        key={user._id} 
-                                        onClick={() => openChat(user._id)} 
-                                        className={`flex items-center gap-2 px-2 py-1 rounded-md cursor-pointer pl-6 ${isActive ? "bg-[#1164a3] text-white" : "hover:bg-[#350d36] text-[#d8c5dd]"}`}
-                                    >
-                                        <div className="relative flex-shrink-0">
-                                            <Avatar user={user} size="sm" />
-                                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] ${isOnline ? "bg-[#2bac76]" : "border-none"}`} />
-                                        </div>
-                                        <p className="text-sm truncate">{user.name}</p>
-                                    </div>
-                                );
-                            })}
-                             <div className='flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#350d36] cursor-pointer pl-6 text-[#d8c5dd]' onClick={() => setInvite(true)}>
-                                <div className='bg-[#4c1d4e] w-5 h-5 flex items-center justify-center rounded text-sm'>+</div>
-                                <p className='text-sm'>Add coworkers</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
+              <div className='mt-4 px-2'>
+    <div className="flex text-[#d8c5dd] items-center gap-1 cursor-pointer hover:bg-[#350d36] px-2 py-1 rounded-md" onClick={() => setDirectMessageOpen(p => !p)}>
+        <IoMdArrowDropdown className={`transition-transform duration-200 text-lg ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
+        <p className='font-semibold text-sm'>Direct messages</p>
+    </div>
+    {directMessageOpen && (
+        <div className="mt-1 space-y-0.5">
+            {allUsers.filter(u => u._id !== me?._id).map((user) => {
+                // [FIX #1] Define isOnline for the current user in the loop
+                const isOnline = onlineUsers.includes(user._id);
+                
+                // [FIX #2] Define isActive for the current user in the loop
+                const isActive = user._id === activeChatId;
 
+                const conversation = conversations.find(c =>
+                    c.participants?.length === 2 && c.participants.some(p => p._id === user._id)
+                );
+
+                const unreadCount = conversation?.unreadCounts?.[String(me?._id)] || 0;
+                const hasUnread = unreadCount > 0;
+
+                let userClasses = `flex items-center justify-between gap-2 px-2 py-1 rounded-md cursor-pointer pl-6`;
+                if (isActive) { // Now this will work
+                    userClasses += " bg-[#1164a3] text-white";
+                } else if (hasUnread) {
+                    userClasses += " hover:bg-[#350d36] font-bold text-white";
+                } else {
+                    userClasses += " hover:bg-[#350d36] text-[#d8c5dd]";
+                }
+
+                return (
+                    <div key={user._id} onClick={() => openChat(user._id)} className={userClasses}>
+                        <div className='flex items-center gap-2 truncate'>
+                            <div className="relative flex-shrink-0">
+                                <Avatar user={user} size="sm" />
+                                {/* And now this will work */}
+                                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] ${isOnline ? "bg-[#2bac76]" : "border-none"}`} />
+                            </div>
+                            <p className="text-sm truncate">{user.name}</p>
+                        </div>
+                        {hasUnread && (
+                            <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center mr-2'>
+                                {unreadCount}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+            <div className='flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#350d36] cursor-pointer pl-6 text-[#d8c5dd]' onClick={() => setInvite(true)}>
+                <div className='bg-[#4c1d4e] w-5 h-5 flex items-center justify-center rounded text-sm'>+</div>
+                <p className='text-sm'>Add coworkers</p>
+            </div>
+        </div>
+    )}
+</div>
 
  <div className='flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-[#683c6a] rounded-md'
  onClick={()=>setInvite(true)}>

@@ -21,9 +21,18 @@ const conversationSchema = new mongoose.Schema(
     topic: {
         type: String,
         default: "",
+    },
+    unreadCounts: {
+        type: Map,
+        of: Number,
+        default: {}
     }
+
   },
   { timestamps: true }
 );
+conversationSchema.methods.setUnreadCount = function(userId, count) {
+    this.unreadCounts.set(String(userId), count);
+};
 
 export default mongoose.model("Conversation", conversationSchema);

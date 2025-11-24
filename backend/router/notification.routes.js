@@ -4,7 +4,7 @@ import {
   channelNotifyHandler,
   getUserNotifications,
   markNotificationAsRead,
-} from "../controllers/notification.controller.js";
+} from "../controller/notification.controller.js";
 
 const router = express.Router();
 

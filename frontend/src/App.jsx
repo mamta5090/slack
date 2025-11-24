@@ -14,7 +14,7 @@ import Home from "./component/Home";
 import Right from "./pages/Right";
 import Channel from "./pages/Channel";
 import WelcomeScreen from "./pages/WelcomeScreen";
-import VideoRoom from "./pages/VideoRoom";
+//import VideoRoom from "./pages/VideoRoom";
 import "./index.css";
 import Signin from "./slack/Signin";
 import ProfilePage from "./ismore/ProfilePage";
@@ -39,7 +39,8 @@ import HomeSidebar from "./component/sidebar/HomePageSidebar";
 import HomeRight from "./pages/HomeRight";
 import { setIncomingCall } from "./redux/callSlice";
 import {serverURL} from './main.jsx'
-
+import {addNotification} from './redux/notification.js'
+//import {setNotification} from './redux/notification.js'
 
 
 const App = () => {
@@ -89,6 +90,8 @@ const App = () => {
         dispatch(setOnlineUsers(users));
       });
 
+   
+
        socketIo.on("call-error", (payload) => {
       console.warn("call-error", payload);
       // show toast or UI notification
@@ -101,6 +104,10 @@ const App = () => {
         if (payload.updatedConversation) {
           dispatch(upsertConversation(payload.updatedConversation));
         }
+      });
+
+        socketIo.on("notification", (notificationPayload) => {
+        dispatch(addNotification(notificationPayload));
       });
       
       // FIX #3: Attach this listener to the 'socketIo' instance.
@@ -141,10 +148,10 @@ const App = () => {
   
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" replace />} />
       <Route path="/register" element={!user ? <Registration /> : <Navigate to="/" replace />} />
-      <Route
+      {/* <Route
         path="/room/:roomID"
         element={user ? <VideoRoom /> : <Navigate to="/login" replace />}
-      />
+      /> */}
       <Route
         path="/profilepage"
         element={user ? <ProfilePage /> : <Navigate to="/login" replace />}

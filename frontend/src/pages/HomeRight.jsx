@@ -1,19 +1,14 @@
-// Your updated src/pages/HomeRight.jsx
-// Minimal changes: It's already set up to use the hook and component.
-// I added some fixes like removing duplicate useEffects, cleaning up unused vars, and ensuring the video UI renders over the chat.
-// Also, moved the VideoCallUI render to be always checked, but only show when not idle.
-// Removed the duplicated if (callState !== 'idle') block and placed it correctly.
-
 import axios from "axios";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {serverURL} from '../main.jsx'
 
-// Redux Actions
+
 import { setSingleUser } from "../redux/userSlice.js";
 import { setMessages, clearMessages } from "../redux/messageSlice.js";
 import { fetchConversations } from "../redux/conversationSlice.js";
+import { setNotifications } from "../redux/notification.js";
 
 // Components
 import SenderMessage from "./SenderMessage.jsx";
@@ -46,15 +41,16 @@ import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
 
+
 const HomeRight = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
   const imageRef = useRef();
-  const plusMenuRef = useRef(null); // Added ref for click outside
+  const plusMenuRef = useRef(null); 
 
-  // State management
+ 
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [openEdit, setOpenEdit] = useState(false);
@@ -99,6 +95,7 @@ const HomeRight = () => {
   const user = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.message.messages);
   const { socket, onlineUsers = [] } = useSelector((state) => state.socket);
+  const {notification}=useSelector((state)=>state.notification)
 
   const {
     callState,
@@ -114,7 +111,7 @@ const HomeRight = () => {
     toggleVideo
   } = useWebRTC(socket, singleUser);
 
-  // 🔹 Determine who the other user in the call is
+
   const otherUserForCall = callState === 'receiving' ? incomingCallFrom : singleUser;
 
   // Memoized values
@@ -195,10 +192,12 @@ const HomeRight = () => {
     }
   };
 
-  const markThreadAsRead = async () => {
+   const markThreadAsRead = async () => {
     if (!id) return;
     try {
+      // This endpoint must be handled by your new backend controller
       await axios.post(`${serverURL}/api/conversation/read/${id}`, {}, authHeaders());
+      // This re-fetches the conversation list with the updated (zero) unread count
       dispatch(fetchConversations());
     } catch (error) {
       console.error("Failed to mark thread as read", error);
@@ -268,6 +267,25 @@ const HomeRight = () => {
     setSearchQuery("");
   };
 
+ const handleNotificationClick = async () => {
+    try {
+      const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
+      dispatch(setNotifications(result.data));
+    } catch (err) { // Now the catch block correctly follows the try block.
+      console.error("Notification click error:", err);
+    }
+  };
+
+  const handleMarkNotification=async()=>{
+    try{
+      const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
+      dispatch(setNotifications(result.data));
+    }catch(error){
+      console.error("Error marking notification as read:", error);
+    }
+  }
+
+  
   const handleCreateGroupConversation = async () => {
     // Implement group creation if needed
   };
