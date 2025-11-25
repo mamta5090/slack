@@ -145,22 +145,19 @@ export const sendMessageToChannel = async (req, res) => {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
 
-    // 1. Find channel
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // 2. Check membership safely
     const memberIds = channel.members
-        .filter(m => m) // Remove nulls
+        .filter(m => m) 
         .map(m => m.toString()); 
 
     if (!memberIds.includes(senderId)) {
       return res.status(403).json({ message: "You are not a member of this channel." });
     }
 
-    // 3. Create the message
     const newMessage = await Message.create({
         sender: senderId,
         channel: channelId,
@@ -170,7 +167,6 @@ export const sendMessageToChannel = async (req, res) => {
        // image: req.file ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}` : ""
     });
 
-    // 4. Update Channel (Unread counts & Message list)
     const updateQuery = { $push: { messages: newMessage._id } };
     const incUpdate = {};
     
@@ -184,15 +180,12 @@ export const sendMessageToChannel = async (req, res) => {
         updateQuery.$inc = incUpdate;
     }
 
-    // 🛑 CORRECTED: Removed .populate("sender") because Channel model doesn't have a sender field
     const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
         .populate("members", "name profilePic profileImage");
 
-    // 5. Populate the Message object for the socket broadcast
     const populatedMessage = await Message.findById(newMessage._id)
         .populate("sender", "name profilePic profileImage");
         
-    // 6. Broadcast
     updatedChannel.members.forEach(member => {
         if(member && member._id) {
             const memberSocketId = getSocketId(member._id.toString());
@@ -204,6 +197,10 @@ export const sendMessageToChannel = async (req, res) => {
             }
         }
     });
+    io.to(channelId.toString()).emit("newChannelMessage", {
+  message: populatedMessage,
+  channel: updatedChannel
+});
 
     res.status(201).json(populatedMessage);
 
@@ -246,7 +243,6 @@ export const deleteMessageFromChannel = async (req, res) => {
     if (message.sender.toString() !== userId)
       return res.status(403).json({ message: 'Not your message' });
 
-    // Delete image from S3 if it exists
     if (message.image && message.image.includes('.com/')) {
       const key = message.image.split('.com/')[1]; 
       await deleteFromS3(key); 

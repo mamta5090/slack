@@ -7,6 +7,7 @@ import { fetchConversations } from '../redux/conversationSlice';
 //import { setMessages, addMessage } from "../redux/messageSlice";
 //import { socket } from "../socket";
 
+
 // --- Icon Imports (All necessary icons are now included) ---
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
@@ -65,11 +66,14 @@ useEffect(() => {
 
   const handler = (payload) => {
     const message = payload?.message || payload;
-    const incomingChannel = payload?.channel?._id || payload?.channel;
+    const incomingChannelId = payload?.channel?._id || payload?.channel;
 
-    if (!incomingChannel || String(incomingChannel) !== String(channelId)) return;
+    // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it.
+    if (String(incomingChannelId) !== String(channelId)) {
+        return; 
+    }
 
-    // dedupe: don't add if message already exists
+    // Dedupe logic
     const exists = allMessages.some(m => String(m._id) === String(message._id));
     if (exists) return;
 
@@ -91,13 +95,9 @@ useEffect(() => {
   };
 }, [socket, channelId]);
 
-
-
-// auto-scroll when messages change
-// useEffect(() => {
-// listEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-// }, [allMessages]);
-
+useEffect(() => {
+    dispatch(clearChannelMessages());
+}, [channelId, dispatch]);
 
 // handlers
   const onEmojiClick = (emojiData) => {
@@ -178,6 +178,33 @@ const sendMessage = async (e) => {
       sendMessage(e);
     }
   };
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. Clear previous channel's messages so we don't see them while loading
+        dispatch(clearChannelMessages());
+
+        // 2. Call the API to get history
+        const res = await axios.get(`/api/channel/${channelId}/messages`, {
+           withCredentials: true // Ensure cookies/tokens are sent if needed
+        });
+
+        // 3. Save to Redux
+        dispatch(setChannelMessages(res.data));
+      } catch (error) {
+        console.error("Error fetching channel messages:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (channelId) {
+      fetchMessages();
+    }
+  }, [channelId, dispatch]);
 
   const handleSaveTopic = async () => {
     setSaving(true);

@@ -9,7 +9,7 @@ const ReceiverMessage = ({ message, createdAt, image, isDeleted,user }) => {
     : "";
 
   const singleUser = useSelector((state) => state.user.singleUser);
-  //const user = useSelector((state) => state.user.user);
+
   const displayUser = singleUser || user;
 
   if (isDeleted) {
