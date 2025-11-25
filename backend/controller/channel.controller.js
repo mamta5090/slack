@@ -134,80 +134,82 @@ export const getChannelById = async (req, res) => {
 };
 
 export const sendMessageToChannel = async (req, res) => {
-  try {
-    const senderId = req.userId;
-    const { channelId } = req.params;
-    const { message } = req.body;
-      const image = req.file ? req.file.location : null; 
-    const imageKey = req.file ? req.file.key : null; 
+    try {
+        const senderId = req.userId;
+        const { channelId } = req.params;
+        const { message } = req.body;
+        const image = req.file ? req.file.location : null;
+        const imageKey = req.file ? req.file.key : null;
 
-    if (!senderId) {
-      return res.status(401).json({ message: "Unauthorized: User not authenticated" });
-    }
-
-    const channel = await Channel.findById(channelId);
-    if (!channel) {
-      return res.status(404).json({ message: "Channel not found" });
-    }
-
-    const memberIds = channel.members
-        .filter(m => m) 
-        .map(m => m.toString()); 
-
-    if (!memberIds.includes(senderId)) {
-      return res.status(403).json({ message: "You are not a member of this channel." });
-    }
-
-    const newMessage = await Message.create({
-        sender: senderId,
-        channel: channelId,
-        message: message || '',
-          image: image,
-      imageKey: imageKey,
-       // image: req.file ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}` : ""
-    });
-
-    const updateQuery = { $push: { messages: newMessage._id } };
-    const incUpdate = {};
-    
-    channel.members.forEach(memberId => {
-        if (memberId && memberId.toString() !== senderId.toString()) {
-            incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
+        if (!senderId) {
+            return res.status(401).json({ message: "Unauthorized: User not authenticated" });
         }
-    });
 
-    if (Object.keys(incUpdate).length > 0) {
-        updateQuery.$inc = incUpdate;
-    }
+        // 1. Find channel
+        const channel = await Channel.findById(channelId);
+        if (!channel) {
+            return res.status(404).json({ message: "Channel not found" });
+        }
 
-    const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
-        .populate("members", "name profilePic profileImage");
+        // 2. Check membership
+        const memberIds = channel.members
+            .filter(m => m)
+            .map(m => m.toString());
 
-    const populatedMessage = await Message.findById(newMessage._id)
-        .populate("sender", "name profilePic profileImage");
+        if (!memberIds.includes(senderId)) {
+            return res.status(403).json({ message: "You are not a member of this channel." });
+        }
+
+        // 3. Create the message
+        const newMessage = await Message.create({
+            sender: senderId,
+            channel: channelId,
+            message: message || '',
+            image: image,
+            imageKey: imageKey,
+        });
+
+        // ---------------------------------------------------------
+        // ✅ CORRECTED LOGIC: Update Channel (NOT Conversation)
+        // ---------------------------------------------------------
         
-    updatedChannel.members.forEach(member => {
-        if(member && member._id) {
-            const memberSocketId = getSocketId(member._id.toString());
-            if (memberSocketId) {
-                io.to(channelId.toString()).emit("newChannelMessage", {
-                    message: populatedMessage,
-                    channel: updatedChannel
-                });
+        const updateQuery = { $push: { messages: newMessage._id } };
+        const incUpdate = {};
+
+        // Increment unread count for everyone except the sender
+        channel.members.forEach(memberId => {
+            if (memberId && memberId.toString() !== senderId.toString()) {
+                incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
             }
+        });
+
+        if (Object.keys(incUpdate).length > 0) {
+            updateQuery.$inc = incUpdate;
         }
-    });
-    io.to(channelId.toString()).emit("newChannelMessage", {
-  message: populatedMessage,
-  channel: updatedChannel
-});
 
-    res.status(201).json(populatedMessage);
+        // Update the Channel model
+        const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
+            .populate("members", "name profilePic profileImage");
 
-  } catch (error) {
-    console.error("Error in sendMessageToChannel:", error);
-    return res.status(500).json({ message: `Server error: ${error.message}` });
-  }
+        // ---------------------------------------------------------
+
+        // 4. Populate the message for the socket
+        const populatedMessage = await Message.findById(newMessage._id)
+            .populate("sender", "name profilePic profileImage");
+
+        // 5. Broadcast via Socket.io
+        // Only emit ONE event to the room. The frontend handles logic for active/inactive tabs.
+        io.to(channelId.toString()).emit("newChannelMessage", {
+            message: populatedMessage,
+            channel: updatedChannel
+        });
+
+        res.status(201).json(populatedMessage);
+
+    } catch (error) {
+        console.error("Error in sendMessageToChannel:", error);
+        return res.status(500).json({ message: `Server error: ${error.message}` });
+    }
 };
 
 export const getChannelMessages = async (req, res) => {

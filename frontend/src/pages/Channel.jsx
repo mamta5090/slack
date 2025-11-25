@@ -84,7 +84,32 @@ useEffect(() => {
   return () => socket.off('newChannelMessage', handler);
 }, [socket, channelId, dispatch, allMessages]);
 
+ useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        if (!channelId) return;
 
+        setLoading(true);
+        
+        // 1. Clear the chat immediately so we don't see messages from the previous channel
+        dispatch(clearChannelMessages());
+
+        // 2. Call the backend API to get message history
+        const res = await axios.get(`/api/channel/${channelId}/messages`, {
+           withCredentials: true 
+        });
+
+        // 3. Save the history to Redux
+        dispatch(setChannelMessages(res.data));
+      } catch (error) {
+        console.error("Error fetching channel messages:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMessages();
+  }, [channelId, dispatch]);
 
 // listen for incoming channel messages via socket (safe guard + payload handling)
 useEffect(() => {
@@ -178,33 +203,6 @@ const sendMessage = async (e) => {
       sendMessage(e);
     }
   };
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        setLoading(true);
-        
-        // 1. Clear previous channel's messages so we don't see them while loading
-        dispatch(clearChannelMessages());
-
-        // 2. Call the API to get history
-        const res = await axios.get(`/api/channel/${channelId}/messages`, {
-           withCredentials: true // Ensure cookies/tokens are sent if needed
-        });
-
-        // 3. Save to Redux
-        dispatch(setChannelMessages(res.data));
-      } catch (error) {
-        console.error("Error fetching channel messages:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (channelId) {
-      fetchMessages();
-    }
-  }, [channelId, dispatch]);
 
   const handleSaveTopic = async () => {
     setSaving(true);
