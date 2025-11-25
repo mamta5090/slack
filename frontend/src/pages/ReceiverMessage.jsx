@@ -3,13 +3,13 @@ import dp from "../assets/dp.webp";
 import { useSelector } from "react-redux";
 import Avatar from "../component/Avatar";
 
-const ReceiverMessage = ({ message, createdAt, image, isDeleted }) => {
+const ReceiverMessage = ({ message, createdAt, image, isDeleted,user }) => {
   const formattedTime = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
   const singleUser = useSelector((state) => state.user.singleUser);
-  const user = useSelector((state) => state.user.user);
+  //const user = useSelector((state) => state.user.user);
   const displayUser = singleUser || user;
 
   if (isDeleted) {
@@ -24,7 +24,7 @@ const ReceiverMessage = ({ message, createdAt, image, isDeleted }) => {
     <div className="flex mb-2 ">
       <div className="flex flex-row gap-2 py-3 items-start">
         {singleUser && <Avatar user={singleUser} size="md" />}
-
+ {/* <Avatar user={singleUser} size="md" /> */}
         <div className="flex flex-1 flex-col px-3 rounded-lg max-w-[80%]">
           <div className="flex items-center justify-between gap-4">
             <h1 className="font-bold text-[18px]">{displayUser?.name || "Unknown"}</h1>

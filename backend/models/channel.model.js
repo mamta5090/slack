@@ -7,6 +7,16 @@ const channelSchema = new mongoose.Schema({
     trim: true,
     unique: true,
   },
+//   sender:{
+// type: mongoose.Schema.Types.ObjectId,
+// ref: 'User',
+// required: true,
+//   },
+//   receiver:{
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: 'User',
+//     required: false,
+//       },
   visibility: {
     type: String,
     enum: ['public', 'private'],

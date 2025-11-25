@@ -1,10 +1,9 @@
 import Channel from '../models/channel.model.js';
 import Message from '../models/message.model.js';
 import mongoose from 'mongoose';
-import {io,getSocketId} from '../socket.js'
+import { io, getSocketId } from '../socket.js';
 import { deleteFromS3 } from '../config/s3.js';
-//import {uploadOnCloudinary} from '../config/cloudinary.js';
-//import { io } from '../socket.js';
+
 export const createChannel = async (req, res) => {
     try {
         const createdBy = req.userId;
@@ -38,11 +37,9 @@ export const createChannel = async (req, res) => {
 export const addMember = async (req, res) => {
     try {
         const { channelId } = req.params;
-        // 1. Expect an array of members from the request body
         const { members } = req.body;
-        const currentUserId = req.userId; // User performing the action
+        const currentUserId = req.userId; 
 
-        // 2. Add validation for the incoming data
         if (!members || !Array.isArray(members) || members.length === 0) {
             return res.status(400).json({ message: 'Member IDs must be provided as a non-empty array.' });
         }
@@ -52,12 +49,10 @@ export const addMember = async (req, res) => {
             return res.status(404).json({ message: 'Channel not found' });
         }
 
-        // Check for permission (optional but good practice)
         if (!channel.managedBy.includes(currentUserId)) {
             return res.status(403).json({ message: 'You do not have permission to add members to this channel' });
         }
 
-        // 3. Filter out users who are already in the channel
         const newMemberIds = members.filter(
             memberId => !channel.members.includes(memberId)
         );
@@ -66,14 +61,10 @@ export const addMember = async (req, res) => {
             return res.status(400).json({ message: 'All specified users are already members of this channel.' });
         }
 
-        // 4. Add all the new, unique members to the channel at once
         channel.members.push(...newMemberIds);
-        
         await channel.save();
         
-        // Return the updated channel
         res.status(200).json(channel);
-
     } catch (error) {
         console.error('ADD MEMBER ERROR:', error);
         res.status(500).json({ message: 'Server error while adding members', error });
@@ -83,9 +74,8 @@ export const addMember = async (req, res) => {
 export const leaveChannel = async (req, res) => {
     try {
         const { channelId } = req.params;
-
         const userId = req.userId;
-console.log(`[Backend] Received request to leave channel with ID: ${channelId}`);
+
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ message: 'Channel not found' });
@@ -108,15 +98,14 @@ console.log(`[Backend] Received request to leave channel with ID: ${channelId}`)
     }
 };
 
-
 export const getAllChannels = async (req, res) => {
   try {
-    const userId=req.userId;
+    const userId = req.userId;
     if(!userId){
       return res.status(401).json({msg:'Authentication error. User ID not found.'})
     }
-    const channels=await Channel.find({members:userId}).sort({name:1})
-    res.status(200).json(channels)
+    const channels = await Channel.find({members: userId}).sort({name: 1});
+    res.status(200).json(channels);
   } catch (error) {
     console.error('GET ALL CHANNELS ERROR:', error);
     res.status(500).json({ msg: 'Server error occurred while fetching channels.' });
@@ -126,7 +115,7 @@ export const getAllChannels = async (req, res) => {
 export const getChannelById = async (req, res) => {
     try {
         const { channelId } = req.params;
-console.log(channelId);
+        
         if (!mongoose.Types.ObjectId.isValid(channelId)) {
             return res.status(400).json({ message: 'Invalid channel ID format' });
         }
@@ -149,52 +138,74 @@ export const sendMessageToChannel = async (req, res) => {
     const senderId = req.userId;
     const { channelId } = req.params;
     const { message } = req.body;
-    console.log("Received message to channel:", {
-      senderId,
-      channelId,
-      message,
-      file: req.file ? req.file.key : null,
-    });
+      const image = req.file ? req.file.location : null; 
+    const imageKey = req.file ? req.file.key : null; 
+
     if (!senderId) {
       return res.status(401).json({ message: "Unauthorized: User not authenticated" });
     }
+
     // 1. Find channel
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // 2. [FIX] Check membership — Filter out null/undefined members before mapping
-    // This prevents the 'Cannot read properties of null' error.
-    const memberIds = channel.members.filter(m => m).map(m => m.toString());
-    
+    // 2. Check membership safely
+    const memberIds = channel.members
+        .filter(m => m) // Remove nulls
+        .map(m => m.toString()); 
+
     if (!memberIds.includes(senderId)) {
       return res.status(403).json({ message: "You are not a member of this channel." });
     }
 
-    // 3. S3 Image URL
-    const imageUrl = req.file
-      ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}`
-      : null;
-
-    // 4. Save message
-    const newMessage = new Message({
-      sender: senderId,
-      channel: channelId,
-      message: message || '',
-      image: imageUrl,
+    // 3. Create the message
+    const newMessage = await Message.create({
+        sender: senderId,
+        channel: channelId,
+        message: message || '',
+          image: image,
+      imageKey: imageKey,
+       // image: req.file ? `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${req.file.key}` : ""
     });
 
-    await newMessage.save();
+    // 4. Update Channel (Unread counts & Message list)
+    const updateQuery = { $push: { messages: newMessage._id } };
+    const incUpdate = {};
+    
+    channel.members.forEach(memberId => {
+        if (memberId && memberId.toString() !== senderId.toString()) {
+            incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
+        }
+    });
 
-    // 5. Populate
+    if (Object.keys(incUpdate).length > 0) {
+        updateQuery.$inc = incUpdate;
+    }
+
+    // 🛑 CORRECTED: Removed .populate("sender") because Channel model doesn't have a sender field
+    const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
+        .populate("members", "name profilePic profileImage");
+
+    // 5. Populate the Message object for the socket broadcast
     const populatedMessage = await Message.findById(newMessage._id)
-      .populate("sender", "name profileImage");
+        .populate("sender", "name profilePic profileImage");
+        
+    // 6. Broadcast
+    updatedChannel.members.forEach(member => {
+        if(member && member._id) {
+            const memberSocketId = getSocketId(member._id.toString());
+            if (memberSocketId) {
+                io.to(channelId.toString()).emit("newChannelMessage", {
+                    message: populatedMessage,
+                    channel: updatedChannel
+                });
+            }
+        }
+    });
 
-    // 6. Emit to the channel room
-    io.to(channelId).emit("newChannelMessage", populatedMessage);
-
-    return res.status(201).json(populatedMessage);
+    res.status(201).json(populatedMessage);
 
   } catch (error) {
     console.error("Error in sendMessageToChannel:", error);
@@ -202,31 +213,22 @@ export const sendMessageToChannel = async (req, res) => {
   }
 };
 
-
-/**
- * [MODIFIED] Gets all messages for a specific channel.
- * ROUTE: GET /api/channels/:channelId/messages
- */
 export const getChannelMessages = async (req, res) => {
     try {
         const { channelId } = req.params;
         const userId = req.userId;
 
-        // 1. Authorization Check: Ensure the user is a member of the channel.
         const channel = await Channel.findById(channelId);
         if (!channel || !channel.members.includes(userId)) {
-            return res.status(403).json({ message: "You are not authorized to view these messages." });
+            return res.status(403).json({ message: "Not authorized" });
         }
 
-        // 2. Find all messages where the 'channel' field matches the channelId.
         const messages = await Message.find({ channel: channelId })
-            .populate('sender', 'name profileImage email') // Populate sender details
-            .sort({ createdAt: 1 }); // Sort chronologically
+            .populate('sender', 'name profilePic profileImage  email')
+            .sort({ createdAt: 1 });
 
         res.status(200).json(messages);
-
-    } catch (error)
-        {
+    } catch (error) {
         console.error('Error in getChannelMessages:', error);
         res.status(500).json({ message: 'Server error while fetching messages.' });
     }
@@ -234,19 +236,20 @@ export const getChannelMessages = async (req, res) => {
 
 export const deleteMessageFromChannel = async (req, res) => {
   try {
-    const { messageId,channelId } = req.params;
+    const { messageId, channelId } = req.params;
     const userId = req.userId;
+
     if (!messageId) return console.error("messageId missing");
-console.log("Delete request:", { messageId, channelId, userId: req.userId });
+
     const message = await Message.findById(messageId);
     if (!message) return res.status(404).json({ message: 'Message not found' });
     if (message.sender.toString() !== userId)
       return res.status(403).json({ message: 'Not your message' });
 
     // Delete image from S3 if it exists
-    if (message.image) {
-      const key = message.image.split('.com/')[1]; // extract key from URL
-      await deleteFromS3(key); // <-- uses the helper
+    if (message.image && message.image.includes('.com/')) {
+      const key = message.image.split('.com/')[1]; 
+      await deleteFromS3(key); 
     }
 
     await Message.findByIdAndDelete(messageId);
@@ -258,4 +261,20 @@ console.log("Delete request:", { messageId, channelId, userId: req.userId });
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
+};
+
+export const markChannelAsRead = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { channelId } = req.params;
+
+        await Channel.findByIdAndUpdate(channelId, {
+            $set: { [`unreadCounts.${userId}`]: 0 }
+        });
+
+        res.status(200).json({ success: true, message: "Channel marked as read." });
+    } catch (error) {
+        console.error("Error marking channel as read:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
 };

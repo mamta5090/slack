@@ -125,6 +125,8 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
         setManageOpen(false);
     };
 
+    
+
     return (
  <div className="fixed top-12 left-[5%] md:w-[25%] w-[25%] h-full bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 ">
             {/* Header */}
@@ -157,23 +159,44 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                     </div>
                 </div>
 
-                  {openChannel && (
-                    <div className="p-2 text-white">
-                        <ul>
-                            {allChannels && allChannels.map((ch) => (
-                                <li 
-                                    key={ch._id} 
-                                    // Highlighting the active channel will now work correctly
-                                    className={`p-1 px-2 rounded cursor-pointer truncate ${activeChannelId === ch._id ? 'bg-[#1164a3]' : 'hover:bg-[#350d36]'}`}
-                                    // Call the new navigation function that changes the URL
-                                    onClick={() => openChannelPage(ch)}
-                                >
-                                    # {ch.name}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+               {openChannel && (
+    <div className="p-2 text-white">
+        {/* ✅ UI IMPROVEMENT: Add loading/empty states */}
+        {!allChannels && <p className="text-gray-400 text-sm px-2">Loading channels...</p>}
+        {allChannels && allChannels.length === 0 && <p className="text-gray-400 text-sm px-2">No channels joined.</p>}
+        
+        <ul>
+            {allChannels && allChannels.map((ch) => {
+                // ✅ --- LOGIC TO READ UNREAD COUNT ---
+                const unreadCount = ch.unreadCounts?.[String(me?._id)] || 0;
+                const isActive = activeChannelId === ch._id;
+                const hasUnread = unreadCount > 0 && !isActive;
+
+                let channelClasses = `flex justify-between items-center w-full text-left p-1 px-2 rounded cursor-pointer truncate`;
+                if (isActive) {
+                    channelClasses += ' bg-[#1164a3] text-white';
+                } else if (hasUnread) {
+                    channelClasses += ' hover:bg-[#350d36] font-bold text-white';
+                } else {
+                    channelClasses += ' hover:bg-[#350d36] text-[#d8c5dd]';
+                }
+
+                return (
+                    <li key={ch._id}>
+                        <button onClick={() => openChannelPage(ch)} className={channelClasses}>
+                            <span className="truncate"># {ch.name}</span>
+                            {hasUnread && (
+                                <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0'>
+                                    {unreadCount}
+                                </span>
+                            )}
+                        </button>
+                    </li>
+                );
+            })}
+        </ul>
+    </div>
+)}
                 
                 <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white' onClick={() => setOpenBox(prev => !prev)}>
                     <div className='bg-gray-700 px-2 rounded'>+</div>
@@ -225,7 +248,7 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                 </div>
 
                 {/* Direct Messages Section */}
-              <div className='mt-4 px-2'>
+       <div className='mt-4 px-2'>
     <div className="flex text-[#d8c5dd] items-center gap-1 cursor-pointer hover:bg-[#350d36] px-2 py-1 rounded-md" onClick={() => setDirectMessageOpen(p => !p)}>
         <IoMdArrowDropdown className={`transition-transform duration-200 text-lg ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
         <p className='font-semibold text-sm'>Direct messages</p>
@@ -233,10 +256,7 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
     {directMessageOpen && (
         <div className="mt-1 space-y-0.5">
             {allUsers.filter(u => u._id !== me?._id).map((user) => {
-                // [FIX #1] Define isOnline for the current user in the loop
                 const isOnline = onlineUsers.includes(user._id);
-                
-                // [FIX #2] Define isActive for the current user in the loop
                 const isActive = user._id === activeChatId;
 
                 const conversation = conversations.find(c =>
@@ -244,10 +264,14 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                 );
 
                 const unreadCount = conversation?.unreadCounts?.[String(me?._id)] || 0;
-                const hasUnread = unreadCount > 0;
+
+                // --- [THIS IS THE FIX] ---
+                // Only show the badge and bold style if the chat is NOT active.
+                const hasUnread = unreadCount > 0 && !isActive;
+                // --- END OF FIX ---
 
                 let userClasses = `flex items-center justify-between gap-2 px-2 py-1 rounded-md cursor-pointer pl-6`;
-                if (isActive) { // Now this will work
+                if (isActive) {
                     userClasses += " bg-[#1164a3] text-white";
                 } else if (hasUnread) {
                     userClasses += " hover:bg-[#350d36] font-bold text-white";
@@ -260,12 +284,11 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                         <div className='flex items-center gap-2 truncate'>
                             <div className="relative flex-shrink-0">
                                 <Avatar user={user} size="sm" />
-                                {/* And now this will work */}
                                 <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] ${isOnline ? "bg-[#2bac76]" : "border-none"}`} />
                             </div>
                             <p className="text-sm truncate">{user.name}</p>
                         </div>
-                        {hasUnread && (
+                        {hasUnread && ( // This condition now correctly respects the active state
                             <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center mr-2'>
                                 {unreadCount}
                             </span>

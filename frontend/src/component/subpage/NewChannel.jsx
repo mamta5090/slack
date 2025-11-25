@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAllChannels, setChannel } from '../../redux/channelSlice.js'
 import {setUser} from '../../redux/userSlice.js'
+import {serverURL} from '../../main.jsx'
 
 const NewChannel = ({ isVisible, onClose }) => {
    

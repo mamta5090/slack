@@ -3,8 +3,9 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
+import { fetchConversations } from '../redux/conversationSlice';
 //import { setMessages, addMessage } from "../redux/messageSlice";
-// import { socket } from "../socket";
+//import { socket } from "../socket";
 
 // --- Icon Imports (All necessary icons are now included) ---
 import { LiaFile } from "react-icons/lia";
@@ -27,6 +28,11 @@ import { setSelectedChannelId } from "../redux/channelSlice";
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
 import ChannelSubPage from "../component/subpage/ChannelSubPage";
+
+const authHeaders = () => {
+const token = localStorage.getItem("token");
+return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+};
 
 const Channel = () => {
   // --- Hooks Initialization ---
@@ -52,43 +58,48 @@ const Channel = () => {
   const user = useSelector((state) => state.user.user);
 const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
 const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
+ const socket = useSelector((state) => state.socket?.socket);
 
-  // --- Effect for Fetching Channel Data and Messages ---
-  useEffect(() => {
-    dispatch(clearChannelMessages());
-    const shouldFetchChannel = !selectedChannel || String(selectedChannel._id) !== String(channelId);
-    if (shouldFetchChannel) {
-      const fetchChannelDetails = async () => {
-        try {
-          const res = await axios.get(`/api/channel/${channelId}`,{withCredentials:true });
-          dispatch(setSelectedChannelId(res.data));
-        } catch (error) {
-          console.error("Error fetching channel details:", error);
-        }
-      };
-      fetchChannelDetails();
-    }
+useEffect(() => {
+  if (!socket) return;
 
-   
+  const handler = (payload) => {
+    const message = payload?.message || payload;
+    const incomingChannel = payload?.channel?._id || payload?.channel;
 
-    const fetchChannelMessages = async () => {
-      try {
-        const res = await axios.get(`/api/channel/${channelId}/messages`,{withCredentials:true});
-        dispatch(setChannelMessages(Array.isArray(res.data) ? res.data : []));
-      } catch (error) {
-        console.error("Error fetching channel messages:", error);
-      }
-    };
+    if (!incomingChannel || String(incomingChannel) !== String(channelId)) return;
 
-    fetchChannelMessages();
-  }, [channelId, dispatch, selectedChannel]);
+    // dedupe: don't add if message already exists
+    const exists = allMessages.some(m => String(m._id) === String(message._id));
+    if (exists) return;
 
-  // --- Effect for Auto-scrolling to the Latest Message ---
-  useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [allMessages]);
+    dispatch(addChannelMessage(message));
+  };
 
-  // --- Event Handlers ---
+  socket.on('newChannelMessage', handler);
+  return () => socket.off('newChannelMessage', handler);
+}, [socket, channelId, dispatch, allMessages]);
+
+
+
+// listen for incoming channel messages via socket (safe guard + payload handling)
+useEffect(() => {
+  if (!socket || !channelId) return;
+  socket.emit('joinChannel', channelId);
+  return () => {
+    socket.emit('leaveChannel', channelId);
+  };
+}, [socket, channelId]);
+
+
+
+// auto-scroll when messages change
+// useEffect(() => {
+// listEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+// }, [allMessages]);
+
+
+// handlers
   const onEmojiClick = (emojiData) => {
     setNewMsg(prevNewMsg => prevNewMsg + emojiData.emoji);
     setShowPicker(false);
@@ -138,20 +149,20 @@ const sendMessage = async (e) => {
   }
 };
 
-  useEffect(() => {
-    const handleNewMessage = (newMessage) => {
-      // Add the message to the Redux store
-      dispatch(addChannelMessage(newMessage));
-    };
+  // useEffect(() => {
+  //   const handleNewMessage = (newMessage) => {
+  //     // Add the message to the Redux store
+  //     dispatch(addChannelMessage(newMessage));
+  //   };
 
-    // Listen for the 'newChannelMessage' event
-    socket.on("newChannelMessage", handleNewMessage);
+  //   // Listen for the 'newChannelMessage' event
+  //   socket.on("newChannelMessage", handleNewMessage);
 
-    // Cleanup function to run when the component unmounts
-    return () => {
-      socket.off("newChannelMessage", handleNewMessage);
-    };
-  }, [dispatch]); // Dependency array ensures this only runs once per component instance
+  //   // Cleanup function to run when the component unmounts
+  //   return () => {
+  //     socket.off("newChannelMessage", handleNewMessage);
+  //   };
+  // }, [dispatch]); // Dependency array ensures this only runs once per component instance
 
   // --- Effect for Auto-scrolling to the Latest Message ---
   useEffect(() => {
@@ -194,6 +205,19 @@ const sendMessage = async (e) => {
       </div>
     );
   }
+
+//   useEffect(() => {
+//   if (!socket || !channelId) return;
+
+//   // ask server to add this socket to the channel room
+//   socket.emit("joinChannel", channelId);
+
+//   return () => {
+//     socket.emit("leaveChannel", channelId);
+//   };
+// }, [socket, channelId]);
+
+
 
   // --- Main Component Render ---
   return (
@@ -270,7 +294,7 @@ const sendMessage = async (e) => {
     ) : (
       allMessages.map((msg, idx) => {
         const isMine = String(msg.sender?._id) === String(user?._id);
-        const key = msg._id || `msg-${idx}`;
+            const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
         return isMine ? (
           <SenderMessage
             key={key}
