@@ -23,12 +23,13 @@ import { HiOutlineDotsVertical } from "react-icons/hi";
 import { IoMdArrowDropdown } from "react-icons/io";
 import { MdKeyboardArrowRight } from "react-icons/md";
 import Invite from '../koalaliving/Invite';
-import { setChannel, setSelectedChannelId } from '../../redux/channelSlice';
+import { setChannel, setSelectedChannelId, setAllChannels } from '../../redux/channelSlice';
 
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-const { id: activeChatId, channelId: activeChannelId } = useParams();
+ const { id: activeChatId, channelId: activeChannelId } = useParams(); 
+
 
     // State for accordions (inline content that pushes other content down)
     const [startOpen, setStartOpen] = useState(false);
@@ -44,6 +45,9 @@ const { id: activeChatId, channelId: activeChannelId } = useParams();
     const [manageOpen, setManageOpen] = useState(false);
     const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+    // const [notifications,setNotifications]=useState([]);
+    // const [unreadCpunt,setUnreadCpunt]=useState(0);
+
 
     // Redux Selectors
     const me = useSelector((state) => state.user.user);
@@ -54,6 +58,7 @@ const { id: activeChatId, channelId: activeChannelId } = useParams();
 const channel=useSelector((state)=>state.channel.channel)
 const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
     const conversations = useSelector(selectAllConversations);
+ const socket = useSelector((state) => state.socket.socket);
 
     const channelOptionsRef = useRef(null); 
     const addChannelBoxRef = useRef(null); 
@@ -86,7 +91,29 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
         }
     }, [dispatch, allUsers.length]);
 
-   
+useEffect(() => {
+  if (!socket) return;
+
+  const handleNewChannelMessage = ({ channel: updatedChannel }) => {
+    console.log("🔥 Socket received channel update:", updatedChannel);
+    if (!updatedChannel) return;
+
+    // Merge update into channel list (non-destructive)
+    const updatedList = (allChannels || []).map(ch =>
+      ch._id === updatedChannel._id ? { ...ch, ...updatedChannel } : ch
+    );
+
+    // If not present, prepend
+    const exists = updatedList.some(c => c._id === updatedChannel._id);
+    const finalList = exists ? updatedList : [updatedChannel, ...updatedList];
+
+    dispatch(setAllChannels(finalList));
+  };
+
+  socket.on('newChannelMessage', handleNewChannelMessage);
+  return () => socket.off('newChannelMessage', handleNewChannelMessage);
+}, [socket, allChannels, dispatch]);
+
 
       const openChat = async (otherId) => {
         if (!me?._id) return;
@@ -100,6 +127,24 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
         }
     };
     
+// useEffect(() => {
+//         if (!socket) return;
+
+//         socket.on("loadingNotification", (data) => {
+//             setNotifications(data);
+//             setUnreadCount(data.length);
+//         });
+
+//         socket.on("receiveNotification", (notification) => {
+//             setNotifications(prev => [notification, ...prev]);
+//             setUnreadCount(prev => prev + 1);
+//         });
+
+//         return () => {
+//             socket.off("loadingNotification");
+//             socket.off("receiveNotification");
+//         };
+//     }, [socket]);
 
    const openChannelPage = (channel) => {
     try {
@@ -159,44 +204,51 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
                     </div>
                 </div>
 
+           <ul>
                {openChannel && (
-    <div className="p-2 text-white">
-        {/* ✅ UI IMPROVEMENT: Add loading/empty states */}
-        {!allChannels && <p className="text-gray-400 text-sm px-2">Loading channels...</p>}
-        {allChannels && allChannels.length === 0 && <p className="text-gray-400 text-sm px-2">No channels joined.</p>}
-        
-        <ul>
-            {allChannels && allChannels.map((ch) => {
-                // ✅ --- LOGIC TO READ UNREAD COUNT ---
-                const unreadCount = ch.unreadCounts?.[String(me?._id)] || 0;
-                const isActive = activeChannelId === ch._id;
-                const hasUnread = unreadCount > 0 && !isActive;
+                    <div className="p-2 text-white">
+                        {!allChannels && <p className="text-gray-400 text-sm px-2">Loading channels...</p>}
+                        
+                        <ul>
+                          {allChannels && allChannels.map((ch) => {
+  const myId = String(me?._id ?? "");
+ const unreadCount = Number(ch.unreadCounts?.[myId] ?? 0);
+const hasUnread = unreadCount > 0;
 
-                let channelClasses = `flex justify-between items-center w-full text-left p-1 px-2 rounded cursor-pointer truncate`;
-                if (isActive) {
-                    channelClasses += ' bg-[#1164a3] text-white';
-                } else if (hasUnread) {
-                    channelClasses += ' hover:bg-[#350d36] font-bold text-white';
-                } else {
-                    channelClasses += ' hover:bg-[#350d36] text-[#d8c5dd]';
-                }
+  const baseClasses = [
+    "flex justify-between items-center w-full text-left p-2 rounded cursor-pointer transition-all duration-200",
+    hasUnread ? "hover:bg-[#350d36] text-white font-extrabold" : "hover:bg-[#350d36] text-[#d8c5dd] font-normal"
+  ].join(" ");
 
-                return (
-                    <li key={ch._id}>
-                        <button onClick={() => openChannelPage(ch)} className={channelClasses}>
-                            <span className="truncate"># {ch.name}</span>
-                            {hasUnread && (
-                                <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center flex-shrink-0'>
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </button>
-                    </li>
-                );
-            })}
-        </ul>
-    </div>
-)}
+  return (
+    <li key={ch._id} className="mb-0.5">
+      <button
+        type="button"
+        onClick={() => openChannelPage(ch)}
+        className={baseClasses}
+        title={`${ch.name}${unreadCount ? ` — ${unreadCount} unread` : ""}`}
+      >
+        <div className="flex items-center gap-1 truncate max-w-[80%]">
+          <span className="text-lg opacity-70">#</span>
+          <span className="truncate">{ch.name}</span>
+        </div>
+
+        {hasUnread && (
+          <span className="bg-[#eabdfc] text-[#3f0c41] text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-sm">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+})}
+
+                        </ul>
+                    </div>
+                )}
+
+</ul>
+                
                 
                 <div className='flex p-2 gap-2 hover:bg-[#350d36] hover:rounded cursor-pointer text-white' onClick={() => setOpenBox(prev => !prev)}>
                     <div className='bg-gray-700 px-2 rounded'>+</div>

@@ -1,6 +1,7 @@
 import http from "http";
 import express from "express";
 import { Server } from "socket.io";
+import Notification from "./models/notification.model.js"; // adjust path if needed
 
 const app = express();
 const server = http.createServer(app);
@@ -13,104 +14,136 @@ const io = new Server(server, {
   },
 });
 
-const userSocketMap = {}; 
+/**
+ * userSocketMap: Map<userIdString, Set<socketIdString>>
+ * - supports multiple tabs/devices per user
+ */
+const userSocketMap = new Map();
 
-export const getSocketId = (userId) => userSocketMap[userId];
-
-export const sendNotificationToUserSocket = (userId, payload) => {
-  const sockets = connected.get(String(userId));
-  if (sockets && sockets.size) {
-    for (const sid of sockets) {
-      io.to(sid).emit("notification", payload);
-    }
-    return true;
-  }
-  return false;
+export const addSocketForUser = (userId, socketId) => {
+  const key = String(userId);
+  const set = userSocketMap.get(key) || new Set();
+  set.add(socketId);
+  userSocketMap.set(key, set);
 };
 
+export const removeSocketForUser = (userId, socketId) => {
+  const key = String(userId);
+  const set = userSocketMap.get(key);
+  if (!set) return;
+  set.delete(socketId);
+  if (set.size === 0) userSocketMap.delete(key);
+  else userSocketMap.set(key, set);
+};
+
+export const getSocketIdsForUser = (userId) => {
+  return Array.from(userSocketMap.get(String(userId)) || []);
+};
+
+export const getSocketId = (userId) => {
+  // legacy helper: return first socket id if any
+  const ids = getSocketIdsForUser(userId);
+  return ids.length ? ids[0] : undefined;
+};
+
+// Emit notifications to all sockets for a user
+export const sendNotificationToUserSocket = (userId, eventName, payload) => {
+  const socketIds = getSocketIdsForUser(userId);
+  if (!socketIds.length) return false;
+  for (const sid of socketIds) {
+    io.to(sid).emit(eventName, payload);
+  }
+  return true;
+};
+
+// When a socket connects
 io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId;
-  if (userId !== undefined) {
-    userSocketMap[userId] = socket.id;
+  // allow registration by query or explicit register event
+  const userIdFromQuery = socket.handshake.query?.userId;
+  if (userIdFromQuery) {
+    addSocketForUser(userIdFromQuery, socket.id);
   }
 
-  io.emit("getOnlineUsers", Object.keys(userSocketMap));
+  // notify all clients of online users (optional)
+  io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
 
-  socket.on("sendMessage", (payload) => {
-    const receiverSocketId = getSocketId(payload.receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", payload);
+  // allow client to explicitly register after auth
+  socket.on("register", async (userId) => {
+    if (!userId) return;
+    addSocketForUser(userId, socket.id);
+    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
+
+    // flush queued (undelivered) notifications for this user
+    try {
+      const pending = await Notification.find({ userId, delivered: false }).sort({ createdAt: 1 }).lean();
+      if (pending && pending.length) {
+        // send each pending notification to this socket (or better: to all sockets)
+        for (const notif of pending) {
+          // send same event your client expects
+          io.to(socket.id).emit("notification", notif);
+        }
+        // mark delivered
+        await Notification.updateMany({ userId, delivered: false }, { delivered: true });
+      }
+    } catch (err) {
+      console.error("Error flushing pending notifications for user", userId, err);
     }
   });
 
- socket.on("joinChannel", (channelId) => {
-  socket.join(channelId);
-});
+  // message sending example
+  socket.on("sendMessage", (payload) => {
+    const receiverSocketId = getSocketId(payload.receiverId);
+    if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", payload);
+  });
 
-socket.on("leaveChannel", (channelId) => {
-  socket.leave(channelId);
-});
+  socket.on("joinChannel", (channelId) => {
+    socket.join(channelId);
+  });
 
-socket.on("webrtc:start-call", ({ to, from, offer }) => {
-    // console.log(
-    //   `[Socket] Received webrtc:start-call from ${from.name} to user ${to}`
-    // );
-    const calleeSocketId = getSocketId(to);
-    if (calleeSocketId) {
-      // console.log(
-      //   `[Socket] Forwarding webrtc:incoming-call to socket ${calleeSocketId}`
-      // );
-      io.to(calleeSocketId).emit("webrtc:incoming-call", { from, offer });
+  socket.on("leaveChannel", (channelId) => {
+    socket.leave(channelId);
+  });
+
+  // WebRTC signaling passthroughs
+  socket.on("webrtc:start-call", ({ to, from, offer }) => {
+    const calleeSockets = getSocketIdsForUser(to);
+    if (calleeSockets.length) {
+      for (const sid of calleeSockets) io.to(sid).emit("webrtc:incoming-call", { from, offer });
     } else {
-      // console.log(
-      //   `[Socket] ERROR: User ${to} is not online. Cannot start call.`
-      // );
       io.to(socket.id).emit("webrtc:user-offline", { userId: to });
     }
   });
 
   socket.on("webrtc:answer-call", ({ to, from, answer }) => {
-    // console.log(
-    //   `[Socket] Received webrtc:answer-call from ${from.name} to user ${to}`
-    // );
-    const callerSocketId = getSocketId(to);
-    if (callerSocketId) {
-      // console.log(
-      //   `[Socket] Forwarding webrtc:call-answered to socket ${callerSocketId}`
-      // );
-      io.to(callerSocketId).emit("webrtc:call-answered", { from, answer });
+    const callerSockets = getSocketIdsForUser(to);
+    if (callerSockets.length) {
+      for (const sid of callerSockets) io.to(sid).emit("webrtc:call-answered", { from, answer });
     } else {
-      // console.log(
-      //   `[Socket] ERROR: Original caller ${to} is not online. Cannot answer call.`
-      // );
       io.to(socket.id).emit("webrtc:user-offline", { userId: to });
     }
   });
 
   socket.on("webrtc:ice-candidate", ({ to, candidate }) => {
-   // console.log(`[Socket] Received webrtc:ice-candidate for user ${to}`);
-    const recipientSocketId = getSocketId(to);
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit("webrtc:ice-candidate", { candidate });
-    }
+    const recips = getSocketIdsForUser(to);
+    for (const sid of recips) io.to(sid).emit("webrtc:ice-candidate", { candidate });
   });
 
   socket.on("webrtc:hang-up", ({ to }) => {
-   // console.log(`[Socket] Received webrtc:hang-up for user ${to}`);
-    const recipientSocketId = getSocketId(to);
-    if (recipientSocketId) {
-      io.to(recipientSocketId).emit("webrtc:hang-up");
-    }
+    const recips = getSocketIdsForUser(to);
+    for (const sid of recips) io.to(sid).emit("webrtc:hang-up");
   });
 
-
+  // cleanup on disconnect
   socket.on("disconnect", () => {
-    if (userId && userSocketMap[userId]) {
-      delete userSocketMap[userId];
+    // remove this socket from any user that had it
+    // simpler: iterate map (acceptable for moderate size); for large scale maintain reverse map
+    for (const [uid, set] of userSocketMap.entries()) {
+      if (set.has(socket.id)) {
+        removeSocketForUser(uid, socket.id);
+      }
     }
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
   });
 });
-
 
 export { app, io, server };

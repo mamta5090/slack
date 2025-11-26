@@ -41,6 +41,9 @@ import { setIncomingCall } from "./redux/callSlice";
 import {serverURL} from './main.jsx'
 import {addNotification} from './redux/notification.js'
 //import {setNotification} from './redux/notification.js'
+//import Notification from "./component/Notification";
+import { setNotifications as setNotificationsAction, addNotification as addNotificationAction } from "./redux/notification.js";
+import NotificationToast from "./component/NotificationToast";
 
 
 const App = () => {
@@ -48,10 +51,14 @@ const App = () => {
   const { user } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [authChecked, setAuthChecked] = useState(false);
-  const [notification,setNotification]=useState(null);
+const [notifications, setNotifications] = useState([]);
+
+   const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
 
   // 🔹 Auth check
-  useEffect(() => {
+useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -77,55 +84,133 @@ const App = () => {
 
 
   // 🔹 Socket setup
-  useEffect(() => {
-    if (user?._id) {
-      const socketIo = io(serverURL, {
-        query: { userId: user._id },
-        transports: ["websocket"],
-      });
-
-      dispatch(setSocket(socketIo));
-
-      socketIo.on("getOnlineUsers", (users) => {
-        dispatch(setOnlineUsers(users));
-      });
-
-   
-
-       socketIo.on("call-error", (payload) => {
-      console.warn("call-error", payload);
-      // show toast or UI notification
+useEffect(() => {
+  if (user?._id) {
+    const socketIo = io(serverURL, {
+      query: { userId: user._id },
+      transports: ["websocket"],
     });
 
-      socketIo.on("newMessage", (payload) => {
-        if (payload.newMessage) {
-          dispatch(addMessage(payload.newMessage));
-        }
-        if (payload.updatedConversation) {
-          dispatch(upsertConversation(payload.updatedConversation));
-        }
-      });
+    dispatch(setSocket(socketIo));
 
-        socketIo.on("notification", (notificationPayload) => {
-        dispatch(addNotification(notificationPayload));
-      });
-      
-      // FIX #3: Attach this listener to the 'socketIo' instance.
-      socketIo.on("newChannelMessage", (newMessage) => {
-        console.log("Global listener received channel message:", newMessage);
-      });
+    const fetchAndStoreNotifications = async () => {
+      try {
+        const res = await axios.get(`${serverURL}/api/notification/user/notifications`, {
+          withCredentials: true,
+        });
+        // backend returns { success: true, notifications: [...] }
+        const notifications = res.data?.notifications ?? res.data?.notifications ?? [];
+        // Normalize shape to your slice (ensure id, isRead)
+        const normalized = notifications.map(n => ({
+          id: n._id || n.id,
+          type: n.type,
+          title: n.title,
+          text: n.body || n.text || "",
+          data: n.data || {},
+          createdAt: n.createdAt || n.created_at,
+          isRead: !!n.isRead,
+          actor: n.actorId || n.actor,
+        }));
+        dispatch(setNotificationsAction(normalized));
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      }
+    };
 
-      // Cleanup function to run when the user logs out or the component unmounts.
-      return () => {
-        socketIo.off("getOnlineUsers");
-        socketIo.off("newMessage");
-         socketIo.off("call-error");
-        socketIo.off("newChannelMessage");
-        socketIo.disconnect();
-        dispatch(clearSocket());
+    socketIo.on("connect", () => {
+      console.log("socket connected:", socketIo.id);
+      fetchAndStoreNotifications();
+    });
+
+    // also on reconnect (socket.io sometimes emits 'reconnect')
+    socketIo.on("reconnect", () => {
+      console.log("socket reconnected");
+      fetchAndStoreNotifications();
+    });
+
+    socketIo.on("getOnlineUsers", (users) => {
+      dispatch(setOnlineUsers(users));
+    });
+
+    // Incoming popup for channels
+    socketIo.on("channelNotification", (data) => {
+      console.log("🔔 Popup Event Received:", data);
+
+      // convert to notification slice shape
+      const note = {
+        id: data.notificationId || Date.now(),
+        title: `New message in #${data.channelName}`,
+        text: data.message,
+        data: { channelId: data.channelId, ...data.data },
+        createdAt: data.timestamp || new Date().toISOString(),
+        isRead: false,
+        actor: { name: data.sender }
       };
-    }
-  }, [user, dispatch, navigate]);
+
+      // always add to redux list (this covers online & queued notifications in UI)
+      dispatch(addNotificationAction(note));
+
+      // show toast only if not currently on that channel route
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes(data.channelId)) {
+        setNotifications(prev => {
+          // local state used for the <NotificationToast /> popup
+          const newNote = { id: note.id, sender: data.sender, channelName: data.channelName, message: data.message };
+          return [newNote, ...prev];
+        });
+        // auto-remove local toast after 5s (you already had this behavior)
+        setTimeout(() => removeNotification(note.id), 5000);
+      }
+    });
+
+    // Generic notifications (personal or other channels) — push to redux
+    socketIo.on("notification", (notificationPayload) => {
+      // backend may send the full notification document
+      const note = {
+        id: notificationPayload._id || notificationPayload.id || Date.now(),
+        title: notificationPayload.title || notificationPayload.text,
+        text: notificationPayload.body || notificationPayload.text || "",
+        data: notificationPayload.data || {},
+        isRead: !!notificationPayload.isRead,
+        createdAt: notificationPayload.createdAt || new Date().toISOString(),
+        actor: notificationPayload.actorId || notificationPayload.actor,
+      };
+      dispatch(addNotificationAction(note));
+    });
+
+    // existing listeners
+    socketIo.on("call-error", (payload) => {
+      console.warn("call-error", payload);
+    });
+
+    socketIo.on("newMessage", (payload) => {
+      if (payload.newMessage) {
+        dispatch(addMessage(payload.newMessage));
+      }
+      if (payload.updatedConversation) {
+        dispatch(upsertConversation(payload.updatedConversation));
+      }
+    });
+
+    socketIo.on("newChannelMessage", (newMessage) => {
+      console.log("Global listener received channel message:", newMessage);
+    });
+
+    // cleanup
+    return () => {
+      socketIo.off("connect");
+      socketIo.off("reconnect");
+      socketIo.off("getOnlineUsers");
+      socketIo.off("newMessage");
+      socketIo.off("call-error");
+      socketIo.off("newChannelMessage");
+      socketIo.off("channelNotification");
+      socketIo.off("notification");
+      socketIo.disconnect();
+      dispatch(clearSocket());
+    };
+  }
+}, [user, dispatch, navigate]);
 
    if (!authChecked) {
     // Render a simple loading state to avoid flashes of content
@@ -133,6 +218,13 @@ const App = () => {
   }
 
   return (
+    <>
+     {notifications.length > 0 && (
+        <NotificationToast 
+          notifications={notifications} 
+          removeNotification={removeNotification} 
+        />
+      )}
     <Routes>
       <Route
         path="/"
@@ -191,6 +283,7 @@ const App = () => {
       <Route path="/welcome" element={<Welcome />} />
       <Route path="/workspace" element={<Workspace />} />
     </Routes>
+    </>
   );
 };
 

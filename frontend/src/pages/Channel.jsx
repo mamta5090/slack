@@ -3,12 +3,18 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
+
+// --- Redux Actions ---
 import { fetchConversations } from '../redux/conversationSlice';
-//import { setMessages, addMessage } from "../redux/messageSlice";
-//import { socket } from "../socket";
+import { setChannelMessages, addChannelMessage, clearChannelMessages } from "../redux/channelMessageSlice";
+import { setSelectedChannelId, setAllChannels } from "../redux/channelSlice";
 
+// --- Component Imports ---
+import SenderMessage from "./SenderMessage";
+import ReceiverMessage from "./ReceiverMessage";
+import ChannelSubPage from "../component/subpage/ChannelSubPage";
 
-// --- Icon Imports (All necessary icons are now included) ---
+// --- Icon Imports ---
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
@@ -23,21 +29,9 @@ import { AiOutlineOrderedList } from "react-icons/ai";
 import { RiCodeBlock } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
 
-// --- Component Imports ---
-import { setChannelMessages, addChannelMessage, clearChannelMessages } from "../redux/channelMessageSlice";
-import { setSelectedChannelId } from "../redux/channelSlice";
-import SenderMessage from "./SenderMessage";
-import ReceiverMessage from "./ReceiverMessage";
-import ChannelSubPage from "../component/subpage/ChannelSubPage";
-
-const authHeaders = () => {
-const token = localStorage.getItem("token");
-return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-};
-
 const Channel = () => {
   // --- Hooks Initialization ---
-  const { channelId } = useParams();
+  const { channelId } = useParams(); // ✅ Corrected: No alias, so channelId is available
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
   const imageRef = useRef(null);
@@ -57,34 +51,99 @@ const Channel = () => {
     
   // --- Redux State Selection ---
   const user = useSelector((state) => state.user.user);
-const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
-const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
- const socket = useSelector((state) => state.socket?.socket);
+  const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
+  const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
+  const allChannels = useSelector((state) => state.channel.allChannels);
+  const socket = useSelector((state) => state.socket?.socket);
 
+  // --- 1. Mark Channel as Read (Clears Sidebar Notification) ---
 useEffect(() => {
-  if (!socket) return;
+  const markAsRead = async () => {
+    if (!channelId || !me?._id) return;
 
-  const handler = (payload) => {
-    const message = payload?.message || payload;
-    const incomingChannelId = payload?.channel?._id || payload?.channel;
+    try {
+      // 1. Mark channel unreadCounts = 0 in backend
+      await axios.post(`${serverURL}/api/channel/${channelId}/read`, {}, { withCredentials: true });
 
-    // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it.
-    if (String(incomingChannelId) !== String(channelId)) {
-        return; 
+      // 2. Update Redux allChannels unreadCounts
+      const updatedChannels = allChannels.map((ch) =>
+        ch._id === channelId
+          ? { ...ch, unreadCounts: { ...ch.unreadCounts, [me._id]: 0 } }
+          : ch
+      );
+
+      dispatch(setAllChannels(updatedChannels));
+
+      // ⬇️⬇️ YOU PASTE THE SNIPPET HERE ⬇️⬇️
+      // After updating channel unreadCounts in Redux:
+      try {
+        // Fetch user's notifications and mark channel-specific ones as read
+        const res = await axios.get(`/api/notification/user/notifications`, {
+          withCredentials: true,
+        });
+        const notifications = res.data?.notifications || [];
+
+        // find notifications related to this channel that are not read
+        const toMark = notifications.filter(
+          (n) =>
+            !n.isRead &&
+            (n.data?.channelId === channelId || n.channelId === channelId)
+        );
+
+        // mark each as read
+        await Promise.all(
+          toMark.map((n) =>
+            axios.put(
+              `${serverURL}/api/notification/${n._id || n.id}/read`,
+              {},
+              { withCredentials: true }
+            )
+          )
+        );
+
+        // update redux store
+        toMark.forEach((n) => dispatch(markAsRead(n._id || n.id)));
+      } catch (err) {
+        console.error("Failed to mark channel notifications as read:", err);
+      }
+      // ⬆️⬆️ END OF SNIPPET ⬆️⬆️
+
+    } catch (error) {
+      console.log("Error marking channel read:", error);
     }
-
-    // Dedupe logic
-    const exists = allMessages.some(m => String(m._id) === String(message._id));
-    if (exists) return;
-
-    dispatch(addChannelMessage(message));
   };
 
-  socket.on('newChannelMessage', handler);
-  return () => socket.off('newChannelMessage', handler);
-}, [socket, channelId, dispatch, allMessages]);
+  markAsRead();
+}, [channelId, user]);
+// Removed allChannels from dependency to prevent infinite loop if reference changes
 
- useEffect(() => {
+  
+  // --- 2. Socket Listener for New Messages ---
+  useEffect(() => {
+    if (!socket) return;
+
+    const handler = (payload) => {
+      const message = payload?.message || payload;
+      const incomingChannelId = payload?.channel?._id || payload?.channel;
+
+      // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it.
+      if (String(incomingChannelId) !== String(channelId)) {
+          return; 
+      }
+
+      // Dedupe logic
+      const exists = allMessages.some(m => String(m._id) === String(message._id));
+      if (exists) return;
+
+      dispatch(addChannelMessage(message));
+    };
+
+    socket.on('newChannelMessage', handler);
+    return () => socket.off('newChannelMessage', handler);
+  }, [socket, channelId, dispatch, allMessages]);
+
+  // --- 3. Fetch Messages History on Load ---
+  useEffect(() => {
     const fetchMessages = async () => {
       try {
         if (!channelId) return;
@@ -111,20 +170,22 @@ useEffect(() => {
     fetchMessages();
   }, [channelId, dispatch]);
 
-// listen for incoming channel messages via socket (safe guard + payload handling)
-useEffect(() => {
-  if (!socket || !channelId) return;
-  socket.emit('joinChannel', channelId);
-  return () => {
-    socket.emit('leaveChannel', channelId);
-  };
-}, [socket, channelId]);
+  // --- 4. Socket Join/Leave Room Logic ---
+  useEffect(() => {
+    if (!socket || !channelId) return;
+    socket.emit('joinChannel', channelId);
+    return () => {
+      socket.emit('leaveChannel', channelId);
+    };
+  }, [socket, channelId]);
 
-useEffect(() => {
-    dispatch(clearChannelMessages());
-}, [channelId, dispatch]);
+  // --- 5. Auto Scroll to Bottom ---
+  useEffect(() => {
+    listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [allMessages]);
 
-// handlers
+
+  // --- Handlers ---
   const onEmojiClick = (emojiData) => {
     setNewMsg(prevNewMsg => prevNewMsg + emojiData.emoji);
     setShowPicker(false);
@@ -146,55 +207,32 @@ useEffect(() => {
     }
   };
 
-  // Channel.jsx
-const sendMessage = async (e) => {
-  e.preventDefault();
-  if (!newMsg.trim() && !backendImage) return;
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMsg.trim() && !backendImage) return;
 
-  setLoading(true);
-  const formData = new FormData();
-  formData.append("message", newMsg);
-  if (backendImage) {
-    formData.append("image", backendImage); // File object
-  }
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("message", newMsg);
+    if (backendImage) {
+      formData.append("image", backendImage); // File object
+    }
 
-  try {
-    await axios.post(`/api/channel/${channelId}/messages`, formData, {
-      withCredentials: true,
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    try {
+      await axios.post(`/api/channel/${channelId}/messages`, formData, {
+        withCredentials: true,
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-    setNewMsg("");
-    cancelImage();
-  } catch (error) {
-    console.error("Error sending message:", error);
-    alert("Failed to send message");
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // useEffect(() => {
-  //   const handleNewMessage = (newMessage) => {
-  //     // Add the message to the Redux store
-  //     dispatch(addChannelMessage(newMessage));
-  //   };
-
-  //   // Listen for the 'newChannelMessage' event
-  //   socket.on("newChannelMessage", handleNewMessage);
-
-  //   // Cleanup function to run when the component unmounts
-  //   return () => {
-  //     socket.off("newChannelMessage", handleNewMessage);
-  //   };
-  // }, [dispatch]); // Dependency array ensures this only runs once per component instance
-
-  // --- Effect for Auto-scrolling to the Latest Message ---
-  useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [allMessages]);
-
- sendMessage
+      setNewMsg("");
+      cancelImage();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      alert("Failed to send message");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleKeyDown = (e) => {
     // Send on Enter (but not Shift+Enter)
@@ -223,26 +261,14 @@ const sendMessage = async (e) => {
   const handleCancel = () => { setOpenEditTopic(false); };
 
   // --- Loading State UI ---
-  if (!selectedChannel || String(selectedChannel._id) !== String(channelId)) {
+  // Note: We check selectedChannel to ensure we have channel details (name, members) to display in header
+  if (!selectedChannel) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <p>Loading Channel...</p>
       </div>
     );
   }
-
-//   useEffect(() => {
-//   if (!socket || !channelId) return;
-
-//   // ask server to add this socket to the channel room
-//   socket.emit("joinChannel", channelId);
-
-//   return () => {
-//     socket.emit("leaveChannel", channelId);
-//   };
-// }, [socket, channelId]);
-
-
 
   // --- Main Component Render ---
   return (
@@ -311,64 +337,38 @@ const sendMessage = async (e) => {
 
       {/* Messages area */}
      <main className="flex-1 overflow-y-auto p-4 bg-gray-50">
-  <div className="max-w-[900px] mx-auto w-full">
-    {allMessages.length === 0 ? (
-      <div className="py-12 text-center text-sm text-gray-500">
-        No messages yet — say hello
-      </div>
-    ) : (
-      allMessages.map((msg, idx) => {
-        const isMine = String(msg.sender?._id) === String(user?._id);
-            const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-        return isMine ? (
-          <SenderMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            image={msg.image}
-            messageId={msg._id}
-            channelId={channelId}
-          />
+      <div className="max-w-[900px] mx-auto w-full">
+        {allMessages.length === 0 ? (
+          <div className="py-12 text-center text-sm text-gray-500">
+            No messages yet — say hello
+          </div>
         ) : (
-          <ReceiverMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            user={msg.sender}
-            image={msg.image}
-          />
-        );
-      })
-    )}
-    <div ref={listEndRef} />
-  </div>
-</main>
-
-        {/* <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">
-        {allMessages.map((msg, idx) => {
-          const isMine = String(msg.sender?._id) === String(user._id);
-          const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-          
-          // --- FIX: Pass the msg.image property to your components ---
-          return isMine ? (
-            <SenderMessage 
-              key={key} 
-              message={msg.message} 
-              createdAt={msg.createdAt} 
-              image={msg.image}
-            />
-          ) : (
-            <ReceiverMessage 
-              key={key} 
-              message={msg.message} 
-              createdAt={msg.createdAt} 
-              user={msg.sender}
-              image={msg.image} 
-            />
-          );
-        })}
+          allMessages.map((msg, idx) => {
+            const isMine = String(msg.sender?._id) === String(user?._id);
+            const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+            return isMine ? (
+              <SenderMessage
+                key={key}
+                message={msg.message}
+                createdAt={msg.createdAt}
+                image={msg.image}
+                messageId={msg._id}
+                channelId={channelId}
+              />
+            ) : (
+              <ReceiverMessage
+                key={key}
+                message={msg.message}
+                createdAt={msg.createdAt}
+                user={msg.sender}
+                image={msg.image}
+              />
+            );
+          })
+        )}
         <div ref={listEndRef} />
-      </div> */}
+      </div>
+    </main>
 
       {openEditTopic && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
@@ -409,7 +409,7 @@ const sendMessage = async (e) => {
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Message #${selectedChannel.name}`} // <<< CORRECTED
+              placeholder={`Message #${selectedChannel.name}`} 
               className="w-full p-3 min-h-[60px] outline-none resize-none"
               disabled={loading}
             />

@@ -108,6 +108,7 @@ export const getAllChannels = async (req, res) => {
     res.status(200).json(channels);
   } catch (error) {
     console.error('GET ALL CHANNELS ERROR:', error);
+    // ✅ FIX: It was res. (500), changed to res.status(500)
     res.status(500).json({ msg: 'Server error occurred while fetching channels.' });
   }
 }
@@ -134,82 +135,78 @@ export const getChannelById = async (req, res) => {
 };
 
 export const sendMessageToChannel = async (req, res) => {
-    try {
-        const senderId = req.userId;
-        const { channelId } = req.params;
-        const { message } = req.body;
-        const image = req.file ? req.file.location : null;
-        const imageKey = req.file ? req.file.key : null;
+  try {
+    const senderId = req.userId;
+    const { channelId } = req.params;
+    const { message } = req.body;
+    const image = req.file ? req.file.location : null;
+    const imageKey = req.file ? req.file.key : null;
 
-        if (!senderId) {
-            return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+    if (!senderId) return res.status(401).json({ message: "Unauthorized" });
+
+    const channel = await Channel.findById(channelId);
+    if (!channel) return res.status(404).json({ message: "Channel not found" });
+
+    // 1. Save Message
+    const newMessage = await Message.create({
+        sender: senderId,
+        channel: channelId,
+        message: message || '',
+        image: image,
+        imageKey: imageKey,
+    });
+
+    // 2. Update Channel Counts
+    const updateQuery = { $push: { messages: newMessage._id } };
+    const incUpdate = {};
+
+    channel.members.forEach(memberId => {
+        if (memberId.toString() !== senderId.toString()) {
+            // Update the Map using dot notation
+            incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
         }
+    });
 
-        // 1. Find channel
-        const channel = await Channel.findById(channelId);
-        if (!channel) {
-            return res.status(404).json({ message: "Channel not found" });
-        }
-
-        // 2. Check membership
-        const memberIds = channel.members
-            .filter(m => m)
-            .map(m => m.toString());
-
-        if (!memberIds.includes(senderId)) {
-            return res.status(403).json({ message: "You are not a member of this channel." });
-        }
-
-        // 3. Create the message
-        const newMessage = await Message.create({
-            sender: senderId,
-            channel: channelId,
-            message: message || '',
-            image: image,
-            imageKey: imageKey,
-        });
-
-        // ---------------------------------------------------------
-        // ✅ CORRECTED LOGIC: Update Channel (NOT Conversation)
-        // ---------------------------------------------------------
-        
-        const updateQuery = { $push: { messages: newMessage._id } };
-        const incUpdate = {};
-
-        // Increment unread count for everyone except the sender
-        channel.members.forEach(memberId => {
-            if (memberId && memberId.toString() !== senderId.toString()) {
-                incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
-            }
-        });
-
-        if (Object.keys(incUpdate).length > 0) {
-            updateQuery.$inc = incUpdate;
-        }
-
-        // Update the Channel model
-        const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
-            .populate("members", "name profilePic profileImage");
-
-        // ---------------------------------------------------------
-
-        // 4. Populate the message for the socket
-        const populatedMessage = await Message.findById(newMessage._id)
-            .populate("sender", "name profilePic profileImage");
-
-        // 5. Broadcast via Socket.io
-        // Only emit ONE event to the room. The frontend handles logic for active/inactive tabs.
-        io.to(channelId.toString()).emit("newChannelMessage", {
-            message: populatedMessage,
-            channel: updatedChannel
-        });
-
-        res.status(201).json(populatedMessage);
-
-    } catch (error) {
-        console.error("Error in sendMessageToChannel:", error);
-        return res.status(500).json({ message: `Server error: ${error.message}` });
+    if (Object.keys(incUpdate).length > 0) {
+        updateQuery.$inc = incUpdate;
     }
+
+    // 3. Get Updated Channel (with populated members)
+    const updatedChannel = await Channel.findByIdAndUpdate(channelId, updateQuery, { new: true })
+        .populate("members", "name profilePic profileImage");
+
+    const populatedMessage = await Message.findById(newMessage._id)
+        .populate("sender", "name profilePic profileImage");
+
+    // 4. BROADCAST WITH LOGS
+    console.log(`--- Broadcast Start for Channel: ${updatedChannel.name} ---`);
+    
+    updatedChannel.members.forEach(member => {
+        if (member && member._id) {
+            const memberIdStr = member._id.toString();
+            const memberSocketId = getSocketId(memberIdStr);
+
+            console.log(`Checking Member: ${member.name} (${memberIdStr}) - Socket: ${memberSocketId}`);
+
+            if (memberSocketId) {
+                io.to(memberSocketId).emit("newChannelMessage", {
+                    message: populatedMessage,
+                    channel: updatedChannel
+                });
+                console.log(`>> Sent notification to ${member.name}`);
+            } else {
+                console.log(`XX Member ${member.name} is OFFLINE (No Socket ID)`);
+            }
+        }
+    });
+    console.log(`--- Broadcast End ---`);
+
+    res.status(201).json(populatedMessage);
+
+  } catch (error) {
+    console.error("Error in sendMessageToChannel:", error);
+    return res.status(500).json({ message: `Server error: ${error.message}` });
+  }
 };
 
 export const getChannelMessages = async (req, res) => {
@@ -223,7 +220,7 @@ export const getChannelMessages = async (req, res) => {
         }
 
         const messages = await Message.find({ channel: channelId })
-            .populate('sender', 'name profilePic profileImage  email')
+            .populate('sender', 'name profilePic profileImage email')
             .sort({ createdAt: 1 });
 
         res.status(200).json(messages);

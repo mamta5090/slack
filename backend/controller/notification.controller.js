@@ -4,7 +4,7 @@ import Notification from '../models/notification.model.js';
 import User from '../models/User.js';
 import {sendNotificationToUserSocket} from '../socket.js';
 import { createAndSendNotification } from '../config/notification.service.js';
-
+import { getSocketIdsForUser } from "../socket.js"; 
 
 export const personalNotifyHandler = async (req, res) => {
   try {
@@ -72,20 +72,20 @@ export const channelNotifyHandler = async (req, res) => {
 };
 
 
-export const getUserNotifications = async (req, res) => {
-  try {
-    const userId = req.userId; // Assuming auth middleware provides req.userId
-    const notifications = await Notification.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .populate("actorId", "name profilePic"); // Populate actor details
+// export const getUserNotifications = async (req, res) => {
+//   try {
+//     const userId = req.userId; // Assuming auth middleware provides req.userId
+//     const notifications = await Notification.find({ userId })
+//         .sort({ createdAt: -1 })
+//         .limit(50)
+//         .populate("actorId", "name profilePic"); // Populate actor details
 
-    res.json({ success: true, notifications });
-  } catch (err) {
-    console.error("getUserNotifications error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
-  }
-};
+//     res.json({ success: true, notifications });
+//   } catch (err) {
+//     console.error("getUserNotifications error:", err);
+//     res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
 
 export const markNotificationAsRead = async (req, res) => {
   try {
@@ -123,16 +123,19 @@ export const markNotificationAsRead = async (req, res) => {
 //   }
 // };
 
-// export const getUserNotifications = async (req, res) => {
-//   try {
-//     const userId = req.user._id;
-//     const notifications = await Notification.find({ userId }).sort({ createdAt: -1 }).limit(50);
-//     res.json({ success: true, notifications });
-//   } catch (err) {
-//     console.error("getUserNotifications error:", err);
-//     res.status(500).json({ success: false, message: "Server error" });
-//   }
-// };
+export const getUserNotifications = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const notifications = await Notification.find({ userId })
+        .populate("actorId", "name profilePic")  // ✅ Sender details for popups
+        .sort({ createdAt: -1 })
+        .limit(50);
+    res.json({ success: true, notifications });
+  } catch (err) {
+    console.error("getUserNotifications error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 // export const createVoiceCallNotification = async ({ userId, actorId, callType, callData }) => {
 //   try {
@@ -156,3 +159,91 @@ export const markNotificationAsRead = async (req, res) => {
 //     throw err;
 //   }
 // };
+
+export const broadcastChannelNotification = async (channel, notificationData) => {
+  try {
+    console.log(`--- Broadcast Start for Channel: ${channel.name || "Unknown"} ---`);
+    if (!channel?.members || channel.members.length === 0) {
+      console.log("No members found in channel.");
+      return;
+    }
+
+    const members = channel.members.map(m => (typeof m === "object" ? m : { _id: m }));
+
+    const senderId = notificationData.fullMessage?.sender?._id || notificationData.senderId || null;
+
+    const docs = [];
+    for (const member of members) {
+      if (senderId && String(member._id) === String(senderId)) continue;
+      docs.push({
+        userId: member._id,
+        type: "channel",
+        actorId: senderId || null,
+        channelId: channel._id,
+        messageId: notificationData.fullMessage?._id || null,
+        title: `New message in #${channel.name}`,
+        body: notificationData.message || "",
+        data: {
+          channelName: channel.name,
+          channelId: channel._id,
+          messageId: notificationData.fullMessage?._id || null,
+        },
+        isRead: false,
+        delivered: false,
+        createdAt: new Date(),
+      });
+    }
+
+    // Persist notifications to DB (queued for offline users)
+    const inserted = docs.length ? await Notification.insertMany(docs) : [];
+
+    // Emit to online sockets
+    for (const member of members) {
+      const socketIds = getSocketIdsForUser(member._id);
+      process.stdout.write(`Checking Member: ${member.name || member._id} (${member._id}) - Sockets: ${socketIds.length ? socketIds.join(",") : "none"}\n`);
+
+      if (socketIds.length) {
+        // send full message to sockets (if provided) so channel UI updates
+        if (notificationData.fullMessage) {
+          for (const sid of socketIds) {
+            io.to(sid).emit("newChannelMessage", {
+              message: notificationData.fullMessage,
+              channel,
+            });
+          }
+        }
+
+        // find inserted notification id
+        const notifForUser = inserted.find(n => String(n.userId) === String(member._id));
+
+        // send popup event
+        const payload = {
+          type: "CHANNEL_ACTIVITY",
+          channelId: channel._id,
+          channelName: channel.name,
+          message: notificationData.message,
+          sender: notificationData.senderName,
+          notificationId: notifForUser?._id ?? null,
+          timestamp: new Date(),
+        };
+        for (const sid of socketIds) {
+          io.to(sid).emit("channelNotification", payload);
+        }
+
+        // mark that user's notifications delivered (optional: mark only those delivered)
+        if (notifForUser) {
+          await Notification.findByIdAndUpdate(notifForUser._id, { delivered: true });
+        }
+        console.log(`>> Sent notification to ${member.name || member._id}`);
+      } else {
+        console.log(`XX Member ${member.name || member._id} is OFFLINE (No Socket)`);
+        // offline -> already queued by insertMany
+        // optionally trigger push (FCM/WebPush) here
+      }
+    }
+
+    console.log(`--- Broadcast End ---`);
+  } catch (err) {
+    console.error("broadcastChannelNotification error:", err);
+  }
+};
