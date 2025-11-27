@@ -75,6 +75,17 @@ const selectedChannelId=useSelector((state)=>state.channel.selectedChannelId)
         setOpenBox(false);
     });
 
+    useEffect(() => {
+        const fetchChannels = async () => {
+            try {
+                const res = await axios.get("/api/channel/getAllChannel");
+                dispatch(setAllChannels(res.data));
+            } catch (err) {
+                console.error("Error fetching channels", err);
+            }
+        };
+        if (me?._id) fetchChannels();
+    }, [dispatch, me?._id]);
    
     useEffect(() => {
         dispatch(fetchConversations());
@@ -205,46 +216,36 @@ useEffect(() => {
                 </div>
 
            <ul>
-               {openChannel && (
-                    <div className="p-2 text-white">
-                        {!allChannels && <p className="text-gray-400 text-sm px-2">Loading channels...</p>}
-                        
-                        <ul>
-                          {allChannels && allChannels.map((ch) => {
-  const myId = String(me?._id ?? "");
- const unreadCount = Number(ch.unreadCounts?.[myId] ?? 0);
-const hasUnread = unreadCount > 0;
+             {openChannel && (
+                    <ul className="mt-1 space-y-1">
+                        {allChannels.map((ch) => {
+                            // Calculate Unread Count safely
+                            const myId = me?._id;
+                            const count = ch.unreadCounts && myId ? ch.unreadCounts[myId] : 0;
+                            const isBold = count > 0;
 
-  const baseClasses = [
-    "flex justify-between items-center w-full text-left p-2 rounded cursor-pointer transition-all duration-200",
-    hasUnread ? "hover:bg-[#350d36] text-white font-extrabold" : "hover:bg-[#350d36] text-[#d8c5dd] font-normal"
-  ].join(" ");
-
-  return (
-    <li key={ch._id} className="mb-0.5">
-      <button
-        type="button"
-        onClick={() => openChannelPage(ch)}
-        className={baseClasses}
-        title={`${ch.name}${unreadCount ? ` — ${unreadCount} unread` : ""}`}
-      >
-        <div className="flex items-center gap-1 truncate max-w-[80%]">
-          <span className="text-lg opacity-70">#</span>
-          <span className="truncate">{ch.name}</span>
-        </div>
-
-        {hasUnread && (
-          <span className="bg-[#eabdfc] text-[#3f0c41] text-[11px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 shadow-sm">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
-    </li>
-  );
-})}
-
-                        </ul>
-                    </div>
+                            return (
+                                <li 
+                                    key={ch._id} 
+                                    onClick={() => openChannelPage(ch)}
+                                    className={`
+                                        flex justify-between items-center px-6 py-1 cursor-pointer
+                                        ${ch._id === activeChannelId ? "bg-[#1164a3] text-white" : "hover:bg-[#350d36] text-[#d8c5dd]"}
+                                        ${isBold ? "font-bold text-white" : ""}
+                                    `}
+                                >
+                                    <div className='truncate'># {ch.name}</div>
+                                    
+                                    {/* --- THE BADGE --- */}
+                                    {count > 0 && (
+                                        <div className="bg-[#eabdfc] text-[#3f0c41] text-xs font-bold px-2 rounded-full">
+                                            {count}
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
                 )}
 
 </ul>

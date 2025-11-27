@@ -14,10 +14,7 @@ const io = new Server(server, {
   },
 });
 
-/**
- * userSocketMap: Map<userIdString, Set<socketIdString>>
- * - supports multiple tabs/devices per user
- */
+
 const userSocketMap = new Map();
 
 export const addSocketForUser = (userId, socketId) => {
@@ -41,12 +38,12 @@ export const getSocketIdsForUser = (userId) => {
 };
 
 export const getSocketId = (userId) => {
-  // legacy helper: return first socket id if any
+
   const ids = getSocketIdsForUser(userId);
   return ids.length ? ids[0] : undefined;
 };
 
-// Emit notifications to all sockets for a user
+
 export const sendNotificationToUserSocket = (userId, eventName, payload) => {
   const socketIds = getSocketIdsForUser(userId);
   if (!socketIds.length) return false;
@@ -56,15 +53,15 @@ export const sendNotificationToUserSocket = (userId, eventName, payload) => {
   return true;
 };
 
-// When a socket connects
+
 io.on("connection", (socket) => {
-  // allow registration by query or explicit register event
+
   const userIdFromQuery = socket.handshake.query?.userId;
   if (userIdFromQuery) {
     addSocketForUser(userIdFromQuery, socket.id);
   }
 
-  // notify all clients of online users (optional)
+
   io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
 
   // allow client to explicitly register after auth

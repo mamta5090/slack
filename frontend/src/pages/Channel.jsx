@@ -5,9 +5,9 @@ import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
 
 // --- Redux Actions ---
-import { fetchConversations } from '../redux/conversationSlice';
+// Make sure resetChannelUnread is exported from your channelSlice as shown in the previous step
+import { resetChannelUnread } from "../redux/channelSlice.js"; 
 import { setChannelMessages, addChannelMessage, clearChannelMessages } from "../redux/channelMessageSlice";
-import { setSelectedChannelId, setAllChannels } from "../redux/channelSlice";
 
 // --- Component Imports ---
 import SenderMessage from "./SenderMessage";
@@ -31,7 +31,7 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 
 const Channel = () => {
   // --- Hooks Initialization ---
-  const { channelId } = useParams(); // ✅ Corrected: No alias, so channelId is available
+  const { channelId } = useParams();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
   const imageRef = useRef(null);
@@ -47,100 +47,69 @@ const Channel = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
-  const [pluesOpen, setPlusOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
     
   // --- Redux State Selection ---
   const user = useSelector((state) => state.user.user);
+  const me = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
   const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
-  const allChannels = useSelector((state) => state.channel.allChannels);
   const socket = useSelector((state) => state.socket?.socket);
 
   // --- 1. Mark Channel as Read (Clears Sidebar Notification) ---
-useEffect(() => {
-  const markAsRead = async () => {
+  useEffect(() => {
     if (!channelId || !me?._id) return;
 
-    try {
-      // 1. Mark channel unreadCounts = 0 in backend
-      await axios.post(`${serverURL}/api/channel/${channelId}/read`, {}, { withCredentials: true });
-
-      // 2. Update Redux allChannels unreadCounts
-      const updatedChannels = allChannels.map((ch) =>
-        ch._id === channelId
-          ? { ...ch, unreadCounts: { ...ch.unreadCounts, [me._id]: 0 } }
-          : ch
-      );
-
-      dispatch(setAllChannels(updatedChannels));
-
-      // ⬇️⬇️ YOU PASTE THE SNIPPET HERE ⬇️⬇️
-      // After updating channel unreadCounts in Redux:
+    const markRead = async () => {
       try {
-        // Fetch user's notifications and mark channel-specific ones as read
-        const res = await axios.get(`/api/notification/user/notifications`, {
-          withCredentials: true,
-        });
-        const notifications = res.data?.notifications || [];
+        // A. Call Backend to persist 0 in DB
+        await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
 
-        // find notifications related to this channel that are not read
-        const toMark = notifications.filter(
-          (n) =>
-            !n.isRead &&
-            (n.data?.channelId === channelId || n.channelId === channelId)
-        );
+        // B. Update Redux to remove badge immediately from Sidebar
+        dispatch(resetChannelUnread({ 
+            channelId, 
+            userId: me._id 
+        }));
 
-        // mark each as read
-        await Promise.all(
-          toMark.map((n) =>
-            axios.put(
-              `${serverURL}/api/notification/${n._id || n.id}/read`,
-              {},
-              { withCredentials: true }
-            )
-          )
-        );
-
-        // update redux store
-        toMark.forEach((n) => dispatch(markAsRead(n._id || n.id)));
-      } catch (err) {
-        console.error("Failed to mark channel notifications as read:", err);
+      } catch (error) {
+        console.error("Error marking channel read:", error);
       }
-      // ⬆️⬆️ END OF SNIPPET ⬆️⬆️
+    };
 
-    } catch (error) {
-      console.log("Error marking channel read:", error);
-    }
-  };
-
-  markAsRead();
-}, [channelId, user]);
-// Removed allChannels from dependency to prevent infinite loop if reference changes
+    markRead();
+    // We re-run this when the channelId changes
+  }, [channelId, me?._id, dispatch]);
 
   
-  // --- 2. Socket Listener for New Messages ---
+  // --- 2. Socket Listener for New Messages (Active Channel Logic) ---
   useEffect(() => {
     if (!socket) return;
 
     const handler = (payload) => {
+      // payload might be nested depending on backend emit structure
       const message = payload?.message || payload;
-      const incomingChannelId = payload?.channel?._id || payload?.channel;
+      
+      // Some backends send the full channel object, some send just ID
+      const incomingChannelId = payload?.channel?._id || payload?.channel || payload?.channelId;
 
-      // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it.
+      // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it here.
+      // (The sidebar handles notifications for other channels)
       if (String(incomingChannelId) !== String(channelId)) {
           return; 
       }
 
-      // Dedupe logic
+      // Dedupe logic: Check if message already exists in Redux
       const exists = allMessages.some(m => String(m._id) === String(message._id));
       if (exists) return;
 
+      // Add to current chat view
       dispatch(addChannelMessage(message));
     };
 
     socket.on('newChannelMessage', handler);
     return () => socket.off('newChannelMessage', handler);
   }, [socket, channelId, dispatch, allMessages]);
+
 
   // --- 3. Fetch Messages History on Load ---
   useEffect(() => {
@@ -170,6 +139,7 @@ useEffect(() => {
     fetchMessages();
   }, [channelId, dispatch]);
 
+
   // --- 4. Socket Join/Leave Room Logic ---
   useEffect(() => {
     if (!socket || !channelId) return;
@@ -178,6 +148,7 @@ useEffect(() => {
       socket.emit('leaveChannel', channelId);
     };
   }, [socket, channelId]);
+
 
   // --- 5. Auto Scroll to Bottom ---
   useEffect(() => {
@@ -196,6 +167,7 @@ useEffect(() => {
     if (file) {
       setBackendImage(file);
       setFrontendImage(URL.createObjectURL(file));
+      setPlusOpen(false); // Close the menu after selection
     }
   };
 
@@ -246,6 +218,7 @@ useEffect(() => {
     setSaving(true);
     try {
       const payload = { topic };
+      // Note: Ensure this API endpoint is correct for Channel topics
       const res = await axios.put(`/api/conversation/topic/with/${user._id}`, payload);
       if (res.data) console.log("Topic updated successfully", res.data);
       setOpenEditTopic(false);
@@ -278,7 +251,9 @@ useEffect(() => {
         <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0">
             <div className="cursor-pointer">
-               <p onClick={() => setIsSubPageOpen(true)} className="font-bold text-lg truncate"># {selectedChannel.name}</p>
+               <p onClick={() => setIsSubPageOpen(true)} className="font-bold text-lg truncate">
+                 # {selectedChannel.name}
+               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -336,40 +311,43 @@ useEffect(() => {
       </header>
 
       {/* Messages area */}
-     <main className="flex-1 overflow-y-auto p-4 bg-gray-50">
-      <div className="max-w-[900px] mx-auto w-full">
-        {allMessages.length === 0 ? (
-          <div className="py-12 text-center text-sm text-gray-500">
-            No messages yet — say hello
-          </div>
-        ) : (
-          allMessages.map((msg, idx) => {
-            const isMine = String(msg.sender?._id) === String(user?._id);
-            const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-            return isMine ? (
-              <SenderMessage
-                key={key}
-                message={msg.message}
-                createdAt={msg.createdAt}
-                image={msg.image}
-                messageId={msg._id}
-                channelId={channelId}
-              />
-            ) : (
-              <ReceiverMessage
-                key={key}
-                message={msg.message}
-                createdAt={msg.createdAt}
-                user={msg.sender}
-                image={msg.image}
-              />
-            );
-          })
-        )}
-        <div ref={listEndRef} />
-      </div>
-    </main>
+      <main className="flex-1 overflow-y-auto p-4 bg-gray-50">
+        <div className="max-w-[900px] mx-auto w-full">
+          {allMessages.length === 0 ? (
+            <div className="py-12 text-center text-sm text-gray-500">
+              No messages yet — say hello
+            </div>
+          ) : (
+            allMessages.map((msg, idx) => {
+              const isMine = String(msg.sender?._id) === String(user?._id);
+              // Ensure unique key strategy
+              const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+              
+              return isMine ? (
+                <SenderMessage
+                  key={key}
+                  message={msg.message}
+                  createdAt={msg.createdAt}
+                  image={msg.image}
+                  messageId={msg._id}
+                  channelId={channelId}
+                />
+              ) : (
+                <ReceiverMessage
+                  key={key}
+                  message={msg.message}
+                  createdAt={msg.createdAt}
+                  user={msg.sender}
+                  image={msg.image}
+                />
+              );
+            })
+          )}
+          <div ref={listEndRef} />
+        </div>
+      </main>
 
+      {/* Edit Topic Modal */}
       {openEditTopic && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
           <div className="bg-white w-[600px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
@@ -379,7 +357,7 @@ useEffect(() => {
             </div>
             <div className="flex flex-col p-6 space-y-5 overflow-y-auto">
               <input type="text" value={topic} onChange={handleTopicChange} className="border rounded-xl p-2 hover:bg-[#f8f8f8]" />
-              <p className="text-sm text-gray-700">Add a topic to your conversation with {user.name}. This will be visible to both of you at the top of your DM.</p>
+              <p className="text-sm text-gray-700">Add a topic to your conversation.</p>
             </div>
             <div className="flex items-center gap-3 py-4 px-6 justify-end border-t">
               <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded" disabled={saving}>Cancel</button>
@@ -429,17 +407,20 @@ useEffect(() => {
       
             <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
               <div className="flex items-center gap-3 text-gray-600">
+                {/* Upload Button */}
                 <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
                   <IoAddSharp />
                 </button>
+                {/* Emoji Button */}
                 <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
                   <BsEmojiSmile />
                 </button>
               </div>
       
-              {pluesOpen && (
-                <div className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2">
-                  <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer">
+              {/* File Upload Dropup */}
+              {plusOpen && (
+                <div className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2 z-10">
+                  <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer whitespace-nowrap">
                     Upload from your computer
                     <input type="file" hidden accept="image/*" ref={imageRef} onChange={handleImage} />
                   </div>
@@ -459,7 +440,7 @@ useEffect(() => {
           </form>
       
           {showPicker && (
-            <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow z-10'>
+            <div className='absolute bottom-[80px] left-[20px] lg:left-[50px] shadow z-10'>
               <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
             </div>
           )}
