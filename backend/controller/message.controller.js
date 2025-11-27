@@ -2,7 +2,7 @@ import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/User.js"; 
 import { getSocketId, io } from "../socket.js";
-import { deleteFromS3 } from '../config/s3.js';
+// import { deleteFromS3 } from '../config/s3.js';
 import { createActivity } from './activity.controller.js'; 
 import { createAndSendNotification } from '../config/notification.service.js';
 
