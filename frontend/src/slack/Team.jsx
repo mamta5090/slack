@@ -16,7 +16,7 @@ import axios from "axios";
 const SERVER_URL =
   (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
-  "http://localhost:5000";
+  "http://localhost:5001";
 
 const CLIENT_URL =
   (typeof process !== "undefined" && process.env?.REACT_APP_CLIENT_URL) ||

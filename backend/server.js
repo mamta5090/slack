@@ -33,7 +33,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 // serve uploads statically so fallback local URLs work
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 app.get("/", (req, res) => res.send("server is running"));
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.get("/api/user/me", auth, async (req, res) => {

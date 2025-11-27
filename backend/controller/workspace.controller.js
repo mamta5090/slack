@@ -126,7 +126,7 @@ export const updateWorkspace = async (req, res) => {
       // Fallback to local uploads served at /uploads
       if (!imageUrl) {
         const filename = req.file.filename || path.basename(filePath || "");
-        imageUrl = `${process.env.SERVER_URL || "http://localhost:5000"}/uploads/${filename}`;
+        imageUrl = `${process.env.SERVER_URL || "http://localhost:1"}/uploads/${filename}`;
       }
       updates.profileImage = imageUrl;
     }

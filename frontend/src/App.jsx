@@ -159,7 +159,7 @@ useEffect(() => {
           return [newNote, ...prev];
         });
         // auto-remove local toast after 5s (you already had this behavior)
-        setTimeout(() => removeNotification(note.id), 5000);
+        setTimeout(() => removeNotification(note.id), 5001);
       }
     });
 
