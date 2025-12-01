@@ -160,12 +160,11 @@ export const sendMessageToChannel = async (req, res) => {
     const updateQuery = { $push: { messages: newMessage._id } };
     const incUpdate = {};
 
-    channel.members.forEach(memberId => {
-        if (memberId.toString() !== senderId.toString()) {
-            // Update the Map using dot notation
-            incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
-        }
-    });
+   channel.members.forEach(memberId => {
+    if (memberId.toString() !== senderId.toString()) {
+        incUpdate[`unreadCounts.${memberId.toString()}`] = 1;
+    }
+});
 
     if (Object.keys(incUpdate).length > 0) {
         updateQuery.$inc = incUpdate;

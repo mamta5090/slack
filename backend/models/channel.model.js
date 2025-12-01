@@ -39,6 +39,11 @@ const channelSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   }],
+  unreadCounts: {
+    type: Map,
+    of: Number,
+    default: {}
+  },
   createdAt: {
     type: Date,
     default: Date.now,

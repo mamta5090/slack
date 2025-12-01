@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import axios from "axios";
-import {serverURL} from '../main'
+import { serverURL } from '../main';
 
 // Helper to get auth headers
 const getAuthHeaders = () => {
@@ -31,21 +31,29 @@ const conversationSlice = createSlice({
     error: null,
   },
   reducers: {
-    // --- START OF MODIFIED CODE ---
-    // A comment explaining the change: This reducer handles real-time updates for a single conversation.
+    // This reducer handles real-time updates for a single conversation.
     // It will update an existing conversation or insert a new one if it doesn't exist.
     upsertConversation: (state, action) => {
       const updatedConvo = action.payload;
+      console.log("🔄 ConversationSlice - Upserting conversation:", {
+        id: updatedConvo._id,
+        unreadCounts: updatedConvo.unreadCounts,
+        participants: updatedConvo.participants?.map(p => p._id || p)
+      });
+      
       const index = state.items.findIndex(c => c._id === updatedConvo._id);
       if (index !== -1) {
         // If conversation exists, replace it
+        console.log("✏️ Updating existing conversation at index", index);
         state.items[index] = updatedConvo;
       } else {
         // If it's a new conversation, add it to the list
+        console.log("➕ Adding new conversation to list");
         state.items.push(updatedConvo);
       }
+      
+      console.log("📊 Total conversations after upsert:", state.items.length);
     },
-    // --- END OF MODIFIED CODE ---
   },
   extraReducers: (builder) => {
     builder
@@ -64,10 +72,31 @@ const conversationSlice = createSlice({
   },
 });
 
-// A comment explaining the change: Export the new action creator.
+// Export the actions
 export const { upsertConversation } = conversationSlice.actions;
 
-// Selectors for components to use
+// Async Thunk for marking messages as read
+// I moved this down here to keep the file structure clean, but it can go anywhere
+export const markMessagesAsRead = createAsyncThunk(
+  "conversations/markAsRead",
+  async (conversationId, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await axios.post(
+        `${serverURL}/api/message/mark-read`,
+        { conversationId },
+        { headers: getAuthHeaders() }
+      );
+      
+      // Dispatch upsertConversation with the returned data (where count is now 0)
+      dispatch(upsertConversation(response.data));
+      return response.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
+  }
+); // <--- This was missing in your previous code
+
+// Selectors
 const selectConversationState = (state) => state.conversations;
 
 export const selectAllConversations = createSelector(

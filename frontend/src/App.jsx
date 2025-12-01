@@ -6,15 +6,15 @@ import axios from "axios";
 
 import { setSocket, setOnlineUsers, clearSocket } from "./redux/SocketSlice";
 import { setUser } from "./redux/userSlice";
-import { upsertConversation } from "./redux/conversationSlice";
+import { upsertConversation, fetchConversations } from "./redux/conversationSlice";
 import { addMessage } from "./redux/messageSlice";
+import { setAllChannels } from "./redux/channelSlice";
 import Registration from "./component/Registration";
 import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
 import Channel from "./pages/Channel";
 import WelcomeScreen from "./pages/WelcomeScreen";
-//import VideoRoom from "./pages/VideoRoom";
 import "./index.css";
 import Signin from "./slack/Signin";
 import ProfilePage from "./ismore/ProfilePage";
@@ -40,8 +40,6 @@ import HomeRight from "./pages/HomeRight";
 import { setIncomingCall } from "./redux/callSlice";
 import {serverURL} from './main.jsx'
 import {addNotification} from './redux/notification.js'
-//import {setNotification} from './redux/notification.js'
-//import Notification from "./component/Notification";
 import { setNotifications as setNotificationsAction, addNotification as addNotificationAction } from "./redux/notification.js";
 import NotificationToast from "./component/NotificationToast";
 
@@ -57,7 +55,7 @@ const [notifications, setNotifications] = useState([]);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
-  // 🔹 Auth check
+ 
 useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem("token");
@@ -83,7 +81,7 @@ useEffect(() => {
   }, [dispatch]);
 
 
-  // 🔹 Socket setup
+
 useEffect(() => {
   if (user?._id) {
     const socketIo = io(serverURL, {
@@ -93,39 +91,57 @@ useEffect(() => {
 
     dispatch(setSocket(socketIo));
 
-    const fetchAndStoreNotifications = async () => {
-      try {
-        const res = await axios.get(`${serverURL}/api/notification/user/notifications`, {
-          withCredentials: true,
-        });
-        // backend returns { success: true, notifications: [...] }
-        const notifications = res.data?.notifications ?? res.data?.notifications ?? [];
-        // Normalize shape to your slice (ensure id, isRead)
-        const normalized = notifications.map(n => ({
-          id: n._id || n.id,
-          type: n.type,
-          title: n.title,
-          text: n.body || n.text || "",
-          data: n.data || {},
-          createdAt: n.createdAt || n.created_at,
-          isRead: !!n.isRead,
-          actor: n.actorId || n.actor,
-        }));
-        dispatch(setNotificationsAction(normalized));
-      } catch (err) {
-        console.error("Failed to fetch notifications:", err);
-      }
-    };
+   const fetchAndStoreNotifications = async () => {
+        try {
+          const res = await axios.get(`${serverURL}/api/notification/user/notifications`, { withCredentials: true });
+          const notifications = res.data?.notifications || [];
+          const normalized = notifications.map(n => ({
+            id: n._id || n.id,
+            type: n.type,
+            title: n.title,
+            text: n.body || n.text || "",
+            data: n.data || {},
+            createdAt: n.createdAt || n.created_at,
+            isRead: !!n.isRead,
+            actor: n.actorId || n.actor,
+          }));
+          dispatch(setNotificationsAction(normalized));
+        } catch (err) {
+          console.error("Failed to fetch notifications:", err);
+        }
+      };
+
+      const refreshConversationsAndChannels = async () => {
+        try {
+          dispatch(fetchConversations());
+          const channelsRes = await axios.get(`${serverURL}/api/channel/getAllChannel`, { withCredentials: true });
+          if (channelsRes.data) {
+            dispatch(setAllChannels(channelsRes.data));
+          }
+        } catch (err) {
+          console.error("Failed to refresh conversations/channels:", err);
+        }
+      };
 
     socketIo.on("connect", () => {
       console.log("socket connected:", socketIo.id);
+      socketIo.emit("register", user._id);
       fetchAndStoreNotifications();
+      refreshConversationsAndChannels();
     });
 
     // also on reconnect (socket.io sometimes emits 'reconnect')
     socketIo.on("reconnect", () => {
       console.log("socket reconnected");
+      socketIo.emit("register", user._id);
       fetchAndStoreNotifications();
+      refreshConversationsAndChannels();
+    });
+
+    // Listen for refreshData event from backend after register
+    socketIo.on("refreshData", () => {
+      console.log("📡 Received refreshData event - updating conversations and channels");
+      refreshConversationsAndChannels();
     });
 
     socketIo.on("getOnlineUsers", (users) => {
@@ -183,14 +199,34 @@ useEffect(() => {
       console.warn("call-error", payload);
     });
 
-    socketIo.on("newMessage", (payload) => {
-      if (payload.newMessage) {
-        dispatch(addMessage(payload.newMessage));
-      }
-      if (payload.updatedConversation) {
-        dispatch(upsertConversation(payload.updatedConversation));
-      }
-    });
+   socketIo.on("newMessage", (payload) => {
+        const { newMessage, updatedConversation } = payload;
+
+        if (newMessage) {
+          dispatch(addMessage(newMessage));
+        }
+
+        if (updatedConversation) {
+          // 1. Check if the user is currently viewing this chat
+          // We assume the URL structure is /dm/<User_ID>
+          const currentPath = window.location.pathname;
+          
+          // Get the sender's ID (the person talking to us)
+          const senderId = newMessage?.sender?._id || newMessage?.sender;
+
+          // Check if we are on the page of the person sending the message
+          const isViewingChat = currentPath.includes(`/dm/${senderId}`);
+
+          if (isViewingChat && updatedConversation.unreadCounts) {
+             console.log("👀 User is viewing chat, forcing unread count to 0 in Redux update");
+             // Force the count to 0 locally before saving to Redux
+             // This prevents the "1" from ever flashing on the screen
+             updatedConversation.unreadCounts[user._id] = 0;
+          }
+
+          dispatch(upsertConversation(updatedConversation));
+        }
+      });
 
     socketIo.on("newChannelMessage", (newMessage) => {
       console.log("Global listener received channel message:", newMessage);
@@ -206,6 +242,7 @@ useEffect(() => {
       socketIo.off("newChannelMessage");
       socketIo.off("channelNotification");
       socketIo.off("notification");
+      socketIo.off("refreshData");
       socketIo.disconnect();
       dispatch(clearSocket());
     };

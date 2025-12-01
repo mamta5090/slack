@@ -1,7 +1,7 @@
 import http from "http";
 import express from "express";
 import { Server } from "socket.io";
-import Notification from "./models/notification.model.js"; // adjust path if needed
+import Notification from "./models/notification.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -65,6 +65,7 @@ io.on("connection", (socket) => {
   io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
 
   // allow client to explicitly register after auth
+
   socket.on("register", async (userId) => {
     if (!userId) return;
     addSocketForUser(userId, socket.id);
@@ -82,6 +83,12 @@ io.on("connection", (socket) => {
         // mark delivered
         await Notification.updateMany({ userId, delivered: false }, { delivered: true });
       }
+      
+      // Emit event to refresh conversations and channels with updated unread counts
+      io.to(socket.id).emit("refreshData", { 
+        message: "User came back online, refresh conversations and channels" 
+      });
+      
     } catch (err) {
       console.error("Error flushing pending notifications for user", userId, err);
     }

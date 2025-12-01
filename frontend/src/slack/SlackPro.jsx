@@ -42,7 +42,8 @@ export default function SlackPro() {
               className="flex flex-col items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
             >
               <RiHome4Fill className="text-2xl" />
-              <span className="text-xs mt-1">Home</span>
+             <a href="/"><span className="text-xs mt-1">Home</span>
+              </a> 
             </button>
 
             <button

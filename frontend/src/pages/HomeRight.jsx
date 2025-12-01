@@ -2,12 +2,11 @@ import axios from "axios";
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import {serverURL} from '../main.jsx'
-
+import { serverURL } from '../main.jsx';
 
 import { setSingleUser } from "../redux/userSlice.js";
 import { setMessages, clearMessages } from "../redux/messageSlice.js";
-import { fetchConversations } from "../redux/conversationSlice.js";
+import { fetchConversations, markMessagesAsRead, selectAllConversations } from "../redux/conversationSlice.js";
 import { setNotifications } from "../redux/notification.js";
 
 // Components
@@ -16,7 +15,7 @@ import ReceiverMessage from "./ReceiverMessage.jsx";
 import Avatar from "../component/Avatar.jsx";
 import useClickOutside from "../hook/useClickOutside.js";
 import VideoCallUI from "../component/VideoCallUI.jsx";
-import { useWebRTC } from '../hook/useWebRTC.js'
+import { useWebRTC } from '../hook/useWebRTC.js';
 
 // Icons
 import { CiHeadphones, CiStar, CiClock2 } from "react-icons/ci";
@@ -64,8 +63,7 @@ const HomeRight = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
-  const [plusOpen, setPlusOpen] = useState(false); // Fixed typo: pluesOpen -> plusOpen
-  const [openProfile] = useState(false); // Unused, but kept
+  const [plusOpen, setPlusOpen] = useState(false); 
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -95,7 +93,8 @@ const HomeRight = () => {
   const user = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.message.messages);
   const { socket, onlineUsers = [] } = useSelector((state) => state.socket);
-  const {notification}=useSelector((state)=>state.notification)
+  const { notification } = useSelector((state) => state.notification);
+  const conversations = useSelector(selectAllConversations);
 
   const {
     callState,
@@ -142,6 +141,53 @@ const HomeRight = () => {
     );
   }, [searchQuery, allUsers, user, singleUser, selectedUsers]);
 
+  const authHeaders = () => {
+    const token = localStorage.getItem("token");
+    return { headers: { Authorization: `Bearer ${token}` } };
+  };
+
+  // =========================================================================
+  // LOGIC TO RESET NOTIFICATIONS
+  // =========================================================================
+
+  // 1. Find the conversation object for the current chat
+const currentConversation = useMemo(() => {
+    if (!conversations || !id || !user?._id) return null;
+    return conversations.find(c => 
+      c.participants?.some(p => (p._id || p) === id) && 
+      c.participants?.some(p => (p._id || p) === user?._id)
+    );
+  }, [conversations, id, user?._id]);
+
+  // 2. Mark as read on Mount or ID Change
+  useEffect(() => {
+    if (currentConversation?._id && user?._id) {
+       // Always attempt to mark as read when entering the page
+       // This syncs the database to 0
+       dispatch(markMessagesAsRead(currentConversation._id));
+    }
+  }, [id, user?._id, currentConversation?._id, dispatch]);
+
+  // 3. Mark as read on Real-time Message (Backup Sync)
+  useEffect(() => {
+    if(!socket || !currentConversation?._id) return;
+
+    const handleNewMessageWhileOpen = (payload) => {
+        const convo = payload.updatedConversation;
+        // If message is for this chat
+        if (convo && convo._id === currentConversation._id) {
+             // Call API to ensure DB is updated to 0
+             dispatch(markMessagesAsRead(currentConversation._id));
+        }
+    };
+
+
+    socket.on("newMessage", handleNewMessageWhileOpen);
+    return () => socket.off("newMessage", handleNewMessageWhileOpen);
+  }, [socket, currentConversation, dispatch]);
+
+  // =========================================================================
+
   // Side effects
   useEffect(() => {
     if (singleUser) {
@@ -154,7 +200,6 @@ const HomeRight = () => {
       dispatch(clearMessages());
       fetchUser();
       fetchMessages();
-      markThreadAsRead();
     } else {
       dispatch(setSingleUser(null));
     }
@@ -164,12 +209,6 @@ const HomeRight = () => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-
-
-  const authHeaders = () => {
-    const token = localStorage.getItem("token");
-    return { headers: { Authorization: `Bearer ${token}` } };
-  };
 
   const fetchUser = async () => {
     if (!id) return;
@@ -189,18 +228,6 @@ const HomeRight = () => {
       dispatch(setMessages(Array.isArray(res.data) ? res.data : []));
     } catch (error) {
       console.error("Error fetching messages", error);
-    }
-  };
-
-   const markThreadAsRead = async () => {
-    if (!id) return;
-    try {
-      // This endpoint must be handled by your new backend controller
-      await axios.post(`${serverURL}/api/conversation/read/${id}`, {}, authHeaders());
-      // This re-fetches the conversation list with the updated (zero) unread count
-      dispatch(fetchConversations());
-    } catch (error) {
-      console.error("Failed to mark thread as read", error);
     }
   };
 
@@ -267,25 +294,24 @@ const HomeRight = () => {
     setSearchQuery("");
   };
 
- const handleNotificationClick = async () => {
-    try {
-      const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
-      dispatch(setNotifications(result.data));
-    } catch (err) { // Now the catch block correctly follows the try block.
-      console.error("Notification click error:", err);
-    }
-  };
+//  const handleNotificationClick = async () => {
+//     try {
+//       const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
+//       dispatch(setNotifications(result.data));
+//     } catch (err) { // Now the catch block correctly follows the try block.
+//       console.error("Notification click error:", err);
+//     }
+//   };
 
-  const handleMarkNotification=async()=>{
-    try{
-      const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
-      dispatch(setNotifications(result.data));
-    }catch(error){
-      console.error("Error marking notification as read:", error);
-    }
-  }
+//   const handleMarkNotification=async()=>{
+//     try{
+//       const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
+//       dispatch(setNotifications(result.data));
+//     }catch(error){
+//       console.error("Error marking notification as read:", error);
+//     }
+//   }
 
-  
   const handleCreateGroupConversation = async () => {
     // Implement group creation if needed
   };
@@ -528,7 +554,6 @@ const HomeRight = () => {
                 createdAt={msg.createdAt}
                 image={msg.image}
                 messageId={msg._id}
-
               />
             ) : (
               <ReceiverMessage

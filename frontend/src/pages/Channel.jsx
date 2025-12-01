@@ -82,33 +82,46 @@ const Channel = () => {
 
   
   // --- 2. Socket Listener for New Messages (Active Channel Logic) ---
-  useEffect(() => {
-    if (!socket) return;
+ useEffect(() => {
+    if (!socket || !channelId || !me?._id) return;
 
-    const handler = (payload) => {
-      // payload might be nested depending on backend emit structure
+    const handler = async (payload) => {
       const message = payload?.message || payload;
-      
-      // Some backends send the full channel object, some send just ID
       const incomingChannelId = payload?.channel?._id || payload?.channel || payload?.channelId;
 
-      // 🔒 SECURITY CHECK: If this message belongs to a different channel, ignore it here.
-      // (The sidebar handles notifications for other channels)
+      // 1. If message is for a DIFFERENT channel, ignore it (Sidebar handles the badge)
       if (String(incomingChannelId) !== String(channelId)) {
           return; 
       }
 
-      // Dedupe logic: Check if message already exists in Redux
+      // 2. If message is for THIS channel (Active):
+      
+      // A. Add message to chat UI
       const exists = allMessages.some(m => String(m._id) === String(message._id));
-      if (exists) return;
+      if (!exists) {
+        dispatch(addChannelMessage(message));
+      }
 
-      // Add to current chat view
-      dispatch(addChannelMessage(message));
+      // B. IMPORTANT: Mark channel as read immediately in DB and Redux.
+      // Since the backend just incremented the count to 1, we must reset it to 0
+      // because the user is currently looking at the screen.
+      try {
+          // Backend Reset
+          await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
+          
+          // Redux Reset (Updates Sidebar Count immediately)
+          dispatch(resetChannelUnread({ 
+              channelId, 
+              userId: me._id 
+          }));
+      } catch (err) {
+          console.error("Error marking active channel read:", err);
+      }
     };
 
     socket.on('newChannelMessage', handler);
     return () => socket.off('newChannelMessage', handler);
-  }, [socket, channelId, dispatch, allMessages]);
+  }, [socket, channelId, dispatch, allMessages, me?._id]);
 
 
   // --- 3. Fetch Messages History on Load ---

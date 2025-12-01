@@ -205,17 +205,29 @@ export const createGroupConversation = async (req, res) => {
 
 export const markConversationAsRead = async (req, res) => {
     try {
-        const currentUserId = req.userId;
-        const otherUserId = req.params.id; // The other user's ID from the URL
+        const currentUserId = req.userId; // From auth middleware
+        const otherUserId = req.params.id; // From URL params
 
-      const conversation = await Conversation.findOne({
-        participants: { $all: [currentUserId, otherUserId] },
-    });
+        // 1. Find the conversation between these two users
+        const conversation = await Conversation.findOne({
+            participants: { $all: [currentUserId, otherUserId] },
+        });
 
-        if (conversation) {
-             conversation.setUnreadCount(String(currentUserId), 0);
-        await conversation.save();
+        if (!conversation) {
+             return res.status(404).json({ message: "Conversation not found" });
         }
+
+        // 2. Reset the count using Mongoose Map syntax
+        // Assuming your schema has `unread` as a Map
+        if (conversation.unread) {
+            conversation.unread.set(String(currentUserId), 0);
+        } else if (conversation.unreadCounts) {
+            // Fallback if you named the field 'unreadCounts' in your schema
+            conversation.unreadCounts.set(String(currentUserId), 0);
+        }
+
+        // 3. Save the changes to DB
+        await conversation.save();
 
         res.status(200).json({ message: "Conversation marked as read" });
     } catch (error) {

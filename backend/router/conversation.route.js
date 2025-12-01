@@ -19,5 +19,6 @@ router.get("/:id", getConversationById);
 router.post("/read/:id", auth, markConversationAsRead);
 router.put("/topic/with/:otherUserId", auth, updateConversationTopic);
 router.post("/group", auth, createGroupConversation);
+router.put("/mark-read/:id", auth, markConversationAsRead);
 
 export default router;

@@ -194,3 +194,35 @@ export const deleteMessageController = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete message", error: error.message });
   }
 };
+
+export const markAsRead = async (req, res) => {
+  try {
+    const currentUserId = req.userId;
+    const { conversationId } = req.body;
+
+    if (!conversationId) {
+      return res.status(400).json({ message: "Conversation ID is required" });
+    }
+
+    // Find conversation and set the current user's unread count to 0
+    const updatedConversation = await Conversation.findByIdAndUpdate(
+      conversationId,
+      {
+        $set: { [`unreadCounts.${currentUserId}`]: 0 }
+      },
+      { new: true } // Return the updated document
+    ).populate("participants", "name email profilePic");
+
+    if (!updatedConversation) {
+      return res.status(404).json({ message: "Conversation not found" });
+    }
+
+    // Optional: Emit a socket event to the user themselves so all their tabs update
+    // io.to(getSocketId(currentUserId)).emit("conversationUpdated", updatedConversation);
+
+    return res.status(200).json(updatedConversation);
+  } catch (error) {
+    console.error("markAsRead error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};

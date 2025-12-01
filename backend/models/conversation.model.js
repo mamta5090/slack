@@ -4,30 +4,23 @@ const conversationSchema = new mongoose.Schema(
   {
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     messages: [{ type: mongoose.Schema.Types.ObjectId, ref: "Message" }],
-    unread: { type: Map, of: Number, default: {} },
-     isGroup: {
+    isGroup: {
       type: Boolean,
       default: false,
     },
-      lastMessageAt: {
+    lastMessageAt: {
       type: Date,
       default: Date.now,
     },
-    unread: {
-      type: Map,
-      of: Number,
-      default: {},
-    },
     topic: {
-        type: String,
-        default: "",
+      type: String,
+      default: "",
     },
     unreadCounts: {
-        type: Map,
-        of: Number,
-        default: {}
+      type: Map,
+      of: Number,
+      default: {}
     }
-
   },
   { timestamps: true }
 );
