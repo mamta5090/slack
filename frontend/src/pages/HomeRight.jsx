@@ -39,6 +39,7 @@ import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
+import FilteredFiles from "../component/FilteredFiles.jsx";
 
 
 const HomeRight = () => {
@@ -64,6 +65,7 @@ const HomeRight = () => {
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
   const [plusOpen, setPlusOpen] = useState(false); 
+  const [openFilter,setOpenFilter]=useState(false);
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -534,13 +536,30 @@ const currentConversation = useMemo(() => {
         </div>
 
         {/* Message and Canvas tabs */}
-        <div className="border-b border-gray-300 flex flex-row gap-[25px] px-[15px] pb-[10px] ">
-          <div className="flex flex-row items-center gap-[5px] font-semibold"><FiMessageCircle /><p>Message</p></div>
-          <div className="flex flex-row items-center gap-[5px] font-semibold"><LiaFile /><p>Files</p></div>
-          <div className="flex flex-row items-center gap-[5px] font-semibold"><LuFolder /><p>slack</p></div>
-          <div className="flex flex-row items-center gap-[5px] font-semibold"><CgFileAdd /><p>Untitled</p></div>
-          <div className="font-semibold text-2xl"><div>+</div></div>
-        </div>
+<div className="border-b border-gray-300 flex flex-row gap-[25px] px-[15px] pb-[10px] relative"> 
+  {/* Added 'relative' to the parent container so absolute works inside */}
+  
+  <div className="flex flex-row items-center gap-[5px] font-semibold"><FiMessageCircle /><p>Message</p></div>
+  
+  <div 
+    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer p-1 rounded ${openFilter ? 'bg-gray-100' : ''}`}
+    onClick={() => setOpenFilter(!openFilter)} // Toggle instead of just true
+  >
+    <LiaFile /><p>Files</p>
+  </div>
+  
+  <div className="flex flex-row items-center gap-[5px] font-semibold"><LuFolder /><p>slack</p></div>
+  <div className="flex flex-row items-center gap-[5px] font-semibold"><CgFileAdd /><p>Untitled</p></div>
+  <div className="font-semibold text-2xl"><div>+</div></div>
+
+  {/* Render the Component HERE, inside the relative container */}
+ {openFilter && (
+  <FilteredFiles 
+    receiverId={id} // Pass the 'id' from useParams() here
+    onClose={() => setOpenFilter(false)}
+  />
+)}
+</div>
 
         {/* Messages List */}
         <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">

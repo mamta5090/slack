@@ -15,6 +15,7 @@ import workspaceRouter from "./router/workspace.routes.js";
 import channelController from "./router/channel.route.js";
 import activityRouter from "./router/activity.routes.js";
 import notificationRouter from "./router/notification.routes.js";
+import filterRouter from "./router/filter.route.js";
 import { app, server } from "./socket.js";
 import auth from "./middleware/auth.js";
 import User from "./models/User.js";
@@ -56,6 +57,7 @@ app.use("/api/workspace", workspaceRouter);
 app.use("/api/channel", channelController);
 app.use("/api/activity", activityRouter);
 app.use("/api/notifications",notificationRouter);
+app.use("/api/files",filterRouter);
 connectDB();
 server.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);

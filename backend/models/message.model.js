@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
 
+const fileSchema = new mongoose.Schema({
+  name: String,
+  url: String,
+  mimetype: String,
+  key: String, // S3 key (if you have it)
+});
+
 const messageSchema = new mongoose.Schema({
   sender: { 
     type: mongoose.Schema.Types.ObjectId, 
@@ -21,14 +28,24 @@ const messageSchema = new mongoose.Schema({
     default: "" ,
     trim: true,
   },
+  // Backwards compatible single-image fields (you already use these)
   image: {
     type: String,
     default: "",
   },
+  imageKey: {
+    type: String,
+    default: ""
+  },
+  // New files array - holds images & docs
+  files: {
+    type: [fileSchema],
+    default: []
+  },
   isDeleted: {
-      type: Boolean,
-      default: false,
-    },
+    type: Boolean,
+    default: false,
+  },
 }, { timestamps: true }); 
 
 messageSchema.pre('save', function(next) {

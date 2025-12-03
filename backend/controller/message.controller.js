@@ -13,20 +13,50 @@ export const sendMessage = async (req, res) => {
     const senderId = req.userId;
     const { receiverId } = req.params;
     const { message } = req.body;
-    const image = req.file ? req.file.location : null; 
-    const imageKey = req.file ? req.file.key : null; 
 
-    if (!message && !image) {
+    // If you're using multer + s3, multer might provide req.file (single) or req.files (array)
+    const filesArray = [];
+
+    if (req.file) {
+      // single file upload
+      filesArray.push({
+        name: req.file.originalname || req.file.key || "file",
+        url: req.file.location || req.file.path || "",
+        mimetype: req.file.mimetype || "",
+        key: req.file.key || "",
+      });
+    }
+
+    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
+      for (const f of req.files) {
+        filesArray.push({
+          name: f.originalname || f.key || "file",
+          url: f.location || f.path || "",
+          mimetype: f.mimetype || "",
+          key: f.key || "",
+        });
+      }
+    }
+
+    if (!message && filesArray.length === 0 && !req.file && !req.files) {
       return res.status(400).json({ message: "Message content cannot be empty." });
     }
 
-    const newMessage = await Message.create({
+    // create message (keep backwards-compatible image fields if single image)
+    const docToCreate = {
       sender: senderId,
       receiver: receiverId,
       message: message || '',
-      image: image,
-      imageKey: imageKey,
-    });
+      files: filesArray,
+    };
+
+    // If single file and it looks like an image, also keep image / imageKey for old code
+    if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith?.("image/")) {
+      docToCreate.image = filesArray[0].url;
+      docToCreate.imageKey = filesArray[0].key || "";
+    }
+
+    const newMessage = await Message.create(docToCreate);
 
     const updatedConversation = await Conversation.findOneAndUpdate(
       { participants: { $all: [senderId, receiverId] } }, 
@@ -40,7 +70,7 @@ export const sendMessage = async (req, res) => {
         upsert: true, 
         new: true,
       }
-    ).populate("participants", "name email profilePic"); 
+    ).populate("participants", "name email profilePic");
 
     if (!updatedConversation) {
         return res.status(500).json({ message: "Failed to find or create conversation." });
@@ -49,34 +79,38 @@ export const sendMessage = async (req, res) => {
     const populatedNewMessage = await Message.findById(newMessage._id)
       .populate("sender", "name email profilePic");
 
-       const sender = await User.findById(senderId).select("name");
+    const sender = await User.findById(senderId).select("name");
     const receiverSocketId = getSocketId(receiverId);
-    
-   io.to(getSocketId(senderId)).emit("newMessage", {
+    const senderSocketId = getSocketId(senderId);
+
+    // Emit to sender (so the sender's other tabs update)
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("newMessage", {
         newMessage: populatedNewMessage,
-        updatedConversation: updatedConversation
-    });
+        updatedConversation
+      });
+    }
 
     if (receiverSocketId) {
-        // User is ONLINE: send the real-time message
+      // online receiver -> real-time
       io.to(receiverSocketId).emit("newMessage", {
         newMessage: populatedNewMessage,
-        updatedConversation: updatedConversation
+        updatedConversation
       });
-    }else{
-      // User is OFFLINE: save a persistent notification to MongoDB
+    } else {
+      // offline -> persistent notification record
       if (sender) {
         console.log(`User ${receiverId} is offline. Saving notification to DB.`);
         await createAndSendNotification({
-          userId: receiverId, // The offline user
+          userId: receiverId,
           type: "personal_message",
           actorId: senderId,
           title: `New message from ${sender.name}`,
-          body: message || "Sent an image",
+          body: message || "Sent a file",
         });
       }
     }
-     io.to(getSocketId(senderId)).emit("newMessage", { /* payload */ });
+
     return res.status(201).json(populatedNewMessage);
 
   } catch (error) {
@@ -84,6 +118,7 @@ export const sendMessage = async (req, res) => {
     return res.status(500).json({ message: `Send Message error: ${error.message}` });
   }
 };
+
 
 export const getAllMessages = async (req, res) => {
   try {

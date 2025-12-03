@@ -16,5 +16,5 @@ router.post("/send/:receiverId", auth,uploadImage.single('image'), sendMessage);
 router.get("/getAll/:receiverId", auth, getAllMessages);
 // router.get("/previous", auth, getPreviousChat);
 router.delete("/delete/:messageId", auth, deleteMessageController);
-router.post("mark-read",auth,markAsRead);
+router.post("/mark-read",auth,markAsRead);
 export default router;
