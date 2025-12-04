@@ -229,7 +229,7 @@ const ChannelSubPage = ({ channel, onClose }) => {
                             <button className="p-1 hover:bg-gray-200 rounded"><FiArrowUp size={16} /></button>
                             <button className="p-1 hover:bg-gray-200 rounded"><FiArrowDown size={16} /></button>
                           </div>
-                        </div>
+                        </div>,,,.
 
                         <div className='group flex items-center justify-between p-2 hover:bg-gray-100 rounded-md'>
                           <div className='flex items-center gap-3'><VscFiles className='text-gray-600' size={18} /><p className='text-sm'>Files</p></div>

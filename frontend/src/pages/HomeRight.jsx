@@ -39,7 +39,8 @@ import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
-import FilteredFiles from "../component/FilteredFiles.jsx";
+import FilteredMsgFiles from "../component/filePage/FilteredMsgFiles.jsx";
+import FilterMsgPage from "../component/filePage/FilterMsgPage.jsx";
 
 
 const HomeRight = () => {
@@ -66,11 +67,19 @@ const HomeRight = () => {
   const [backendImage, setBackendImage] = useState(null);
   const [plusOpen, setPlusOpen] = useState(false); 
   const [openFilter,setOpenFilter]=useState(false);
+  const [openFilePage,setOpenFilePage]=useState(false);
+const [showPopover, setShowPopover] = useState(false);
+const [view, setView] = useState("messages");
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
     setShowPicker(false);
   };
+
+  useEffect(() => {
+  setView("messages");
+  setShowPopover(false);
+}, [id]);
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -499,7 +508,7 @@ const currentConversation = useMemo(() => {
         />
       )}
 
-      <div className={`pt-[58px] w-full h-full flex flex-col bg-white ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
+      <div className={`w-full h-full flex flex-col bg-white overflow-hidden pt-[58px] ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 h-[49px] flex-shrink-0">
           <div onClick={() => setOpenEdit(true)} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md -ml-1">
@@ -535,57 +544,177 @@ const currentConversation = useMemo(() => {
           </div>
         </div>
 
-        {/* Message and Canvas tabs */}
-<div className="border-b border-gray-300 flex flex-row gap-[25px] px-[15px] pb-[10px] relative"> 
-  {/* Added 'relative' to the parent container so absolute works inside */}
+      {/* --- TABS HEADER SECTION --- */}
+<div className="border-b border-gray-300 flex flex-row gap-[25px] px-[15px] pb-[10px] relative z-20"> 
   
-  <div className="flex flex-row items-center gap-[5px] font-semibold"><FiMessageCircle /><p>Message</p></div>
-  
+  {/* 1. MESSAGE TAB (Clicking this switches back to messages) */}
   <div 
-    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer p-1 rounded ${openFilter ? 'bg-gray-100' : ''}`}
-    onClick={() => setOpenFilter(!openFilter)} // Toggle instead of just true
+    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'messages' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+    onClick={() => setView("messages")}
+  >
+    <FiMessageCircle /><p>Message</p>
+  </div>
+  
+  {/* 2. FILES TAB (Hover = Popover, Click = Full Page) */}
+  <div 
+    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'files' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+    
+    // Logic: Only show popover if we aren't already looking at the full file page
+    onMouseEnter={() => { if (view !== 'files') setShowPopover(true); }} 
+    
+    // Logic: Close popover when leaving the tab area
+    onMouseLeave={() => setShowPopover(false)} 
+
+    // Logic: Switch to full page view and hide popover
+    onClick={() => { setView("files"); setShowPopover(false); }}
   >
     <LiaFile /><p>Files</p>
   </div>
   
-  <div className="flex flex-row items-center gap-[5px] font-semibold"><LuFolder /><p>slack</p></div>
-  <div className="flex flex-row items-center gap-[5px] font-semibold"><CgFileAdd /><p>Untitled</p></div>
+  <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><LuFolder /><p>slack</p></div>
+  <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><CgFileAdd /><p>Untitled</p></div>
   <div className="font-semibold text-2xl"><div>+</div></div>
 
-  {/* Render the Component HERE, inside the relative container */}
- {openFilter && (
-  <FilteredFiles 
-    receiverId={id} // Pass the 'id' from useParams() here
-    onClose={() => setOpenFilter(false)}
-  />
-)}
+  {/* 3. POPOVER (Rendered absolutely inside the relative container) */}
+  {showPopover && view !== 'files' && (
+    <div 
+      className="absolute top-[40px] left-[80px] z-50"
+      onMouseEnter={() => setShowPopover(true)} // Keep open if user moves mouse into the popover
+      onMouseLeave={() => setShowPopover(false)}
+    >
+      <FilteredMsgFiles 
+        receiverId={id} 
+        onClose={() => setShowPopover(false)}
+      />
+    </div>
+  )}
 </div>
 
-        {/* Messages List */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white ">
-          {messages.map((msg, idx) => {
-            const isMine = String(msg.sender?._id) === String(user._id);
-            const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-            return isMine ? (
-              <SenderMessage
-                key={key}
-                message={msg.message}
-                createdAt={msg.createdAt}
-                image={msg.image}
-                messageId={msg._id}
+
+{/* --- MAIN CONTENT SWITCHER --- */}
+
+{/* SCENARIO A: SHOW MESSAGES */}
+{view === 'messages' && (
+  <>
+    <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
+      {messages.map((msg, idx) => {
+        const isMine = String(msg.sender?._id) === String(user._id);
+        const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+        return isMine ? (
+          <SenderMessage
+            key={key}
+            message={msg.message}
+            createdAt={msg.createdAt}
+            image={msg.image}
+            messageId={msg._id}
+          />
+        ) : (
+          <ReceiverMessage
+            key={key}
+            message={msg.message}
+            createdAt={msg.createdAt}
+            image={msg.image}
+            isDeleted={msg.isDeleted}
+          />
+        );
+      })}
+      <div ref={listEndRef} />
+    </div>
+    
+    {/* Message Input Area */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
+          <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
+            <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+              <FiBold className="cursor-pointer" />
+              <FiItalic className="cursor-pointer" />
+              <FaStrikethrough className="cursor-pointer" />
+              <GoLink className="cursor-pointer" />
+              <AiOutlineOrderedList className="cursor-pointer" />
+              <FaListUl className="cursor-pointer" />
+              <GoQuote className="cursor-pointer" />
+              <FaCode className="cursor-pointer" />
+              <RiCodeBlock className="cursor-pointer" />
+            </div>
+
+            <form onSubmit={sendMessage} className="flex flex-col order-2">
+              <textarea
+                value={newMsg}
+                onChange={(e) => setNewMsg(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`Message ${singleUser?.name}`}
+                className="w-full p-3 min-h-[60px] outline-none resize-none"
+                disabled={loading}
               />
-            ) : (
-              <ReceiverMessage
-                key={key}
-                message={msg.message}
-                createdAt={msg.createdAt}
-                image={msg.image}
-                isDeleted={msg.isDeleted}
-              />
-            );
-          })}
-          <div ref={listEndRef} />
+
+              {frontendImage && (
+                <div className="p-2">
+                  <div className="relative w-20 h-20">
+                    <div className="group relative h-full w-full">
+                      <img
+                        src={frontendImage}
+                        alt="Preview"
+                        className="h-full w-full rounded-md object-cover"
+                      />
+                      <button
+                        onClick={cancelImage}
+                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label="Remove image"
+                      >
+                        <RxCross2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
+                <div className="flex items-center gap-3 text-gray-600">
+                  <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
+                    <IoAddSharp />
+                  </button>
+                  <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
+                    <BsEmojiSmile />
+                  </button>
+                </div>
+
+                {plusOpen && (
+                  <div ref={plusMenuRef} className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2">
+                    <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer">
+                      Upload from your computer
+                      <input type="file" hidden accept="image/*" ref={imageRef} onChange={handleImage} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!newMsg.trim() && !backendImage)}>
+                    <IoSend />
+                  </button>
+                  <div className="h-5 w-px bg-gray-300" />
+                  <button type="button" className="p-1 rounded hover:bg-gray-200">
+                    <MdKeyboardArrowDown className="text-2xl" />
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {showPicker && (
+              <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow z-10'>
+                <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
+              </div>
+            )}
+          </div>
         </div>
+
+  </>
+)}
+
+{/* SCENARIO B: SHOW FULL FILE PAGE */}
+{view === 'files' && (
+  <div className="flex-1 overflow-hidden bg-white">
+    <FilterMsgPage receiverId={id} />
+  </div>
+)}
 
         {/* Modals */}
         {openEdit && (
@@ -690,90 +819,7 @@ const currentConversation = useMemo(() => {
           </div>
         )}
 
-        {/* Message Input Area */}
-        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
-          <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-            <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-              <FiBold className="cursor-pointer" />
-              <FiItalic className="cursor-pointer" />
-              <FaStrikethrough className="cursor-pointer" />
-              <GoLink className="cursor-pointer" />
-              <AiOutlineOrderedList className="cursor-pointer" />
-              <FaListUl className="cursor-pointer" />
-              <GoQuote className="cursor-pointer" />
-              <FaCode className="cursor-pointer" />
-              <RiCodeBlock className="cursor-pointer" />
-            </div>
-
-            <form onSubmit={sendMessage} className="flex flex-col order-2">
-              <textarea
-                value={newMsg}
-                onChange={(e) => setNewMsg(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Message ${singleUser?.name}`}
-                className="w-full p-3 min-h-[60px] outline-none resize-none"
-                disabled={loading}
-              />
-
-              {frontendImage && (
-                <div className="p-2">
-                  <div className="relative w-20 h-20">
-                    <div className="group relative h-full w-full">
-                      <img
-                        src={frontendImage}
-                        alt="Preview"
-                        className="h-full w-full rounded-md object-cover"
-                      />
-                      <button
-                        onClick={cancelImage}
-                        className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                        aria-label="Remove image"
-                      >
-                        <RxCross2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
-                <div className="flex items-center gap-3 text-gray-600">
-                  <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
-                    <IoAddSharp />
-                  </button>
-                  <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
-                    <BsEmojiSmile />
-                  </button>
-                </div>
-
-                {plusOpen && (
-                  <div ref={plusMenuRef} className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2">
-                    <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer">
-                      Upload from your computer
-                      <input type="file" hidden accept="image/*" ref={imageRef} onChange={handleImage} />
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!newMsg.trim() && !backendImage)}>
-                    <IoSend />
-                  </button>
-                  <div className="h-5 w-px bg-gray-300" />
-                  <button type="button" className="p-1 rounded hover:bg-gray-200">
-                    <MdKeyboardArrowDown className="text-2xl" />
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            {showPicker && (
-              <div className='absolute bottom-[80px] left-[260px] lg:left-[460px] shadow z-10'>
-                <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
-              </div>
-            )}
-          </div>
-        </div>
+    
       </div>
     </>
   );

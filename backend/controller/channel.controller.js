@@ -272,3 +272,89 @@ export const markChannelAsRead = async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 };
+
+export const getChannelFiles = async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    const userId = req.userId;
+
+    // 1. Verify Channel and Membership
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+    if (!channel.members.includes(userId)) {
+      return res.status(403).json({ message: 'You are not a member of this channel' });
+    }
+
+    // 2. Fetch messages with attachments
+    // We look for messages where 'image' is not null OR 'files' array exists/not empty
+    const messages = await Message.find({
+      channel: channelId,
+      $or: [
+        { image: { $ne: null, $ne: "" } }, // Checks your current 'image' field
+        { files: { $exists: true, $not: { $size: 0 } } } // Checks if you have a 'files' array
+      ]
+    })
+    .populate('sender', 'name profilePic')
+    .sort({ createdAt: -1 }); // Newest first
+
+    // 3. Initialize Categories
+    const response = {
+      images: [],
+      videos: [],
+      documents: []
+    };
+
+    // 4. Helper function to categorize file by extension
+    const categorizeFile = (fileUrl, msgObj, fileMetadata = null) => {
+      if (!fileUrl) return;
+
+      // Get extension (e.g., 'png', 'pdf')
+      const extension = fileUrl.split('.').pop().toLowerCase();
+
+      const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+      const videoExts = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
+      const docExts = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip', 'rar'];
+
+      const fileData = {
+        _id: msgObj._id,
+        url: fileUrl,
+        name: fileMetadata?.name || fileUrl.split('/').pop(), // Try to get name from metadata or URL
+        sender: msgObj.sender,
+        createdAt: msgObj.createdAt,
+        type: fileMetadata?.mimetype || 'unknown'
+      };
+
+      if (imageExts.includes(extension)) {
+        response.images.push(fileData);
+      } else if (videoExts.includes(extension)) {
+        response.videos.push(fileData);
+      } else {
+        // Default to document if matches doc extension or just generic file
+        response.documents.push(fileData);
+      }
+    };
+
+    // 5. Iterate and Sort
+    messages.forEach(msg => {
+      // Handle the 'image' field (from your current controller logic)
+      if (msg.image) {
+        categorizeFile(msg.image, msg);
+      }
+
+      // Handle 'files' array (if you have updated your model to support multiple files)
+      if (msg.files && Array.isArray(msg.files)) {
+        msg.files.forEach(file => {
+          categorizeFile(file.url, msg, file);
+        });
+      }
+    });
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('GET CHANNEL FILES ERROR:', error);
+    res.status(500).json({ message: 'Server error while fetching channel files.' });
+  }
+};

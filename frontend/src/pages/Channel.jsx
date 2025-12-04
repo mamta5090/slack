@@ -4,17 +4,13 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
 
-// --- Redux Actions ---
-// Make sure resetChannelUnread is exported from your channelSlice as shown in the previous step
 import { resetChannelUnread } from "../redux/channelSlice.js"; 
 import { setChannelMessages, addChannelMessage, clearChannelMessages } from "../redux/channelMessageSlice";
 
-// --- Component Imports ---
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
-import ChannelSubPage from "../component/subpage/ChannelSubPage";
+import ChannelSubPage from "../component/channelPage/ChannelSubPage.jsx";
 
-// --- Icon Imports ---
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
 import { CgFileAdd } from "react-icons/cg";
@@ -28,15 +24,15 @@ import { GoLink, GoQuote } from "react-icons/go";
 import { AiOutlineOrderedList } from "react-icons/ai";
 import { RiCodeBlock } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
-
+import ChannelFilteredFiles from "../component/filePage/ChannelFilteredFiles.jsx";
+import ChannelFilterPage from "../component/filePage/ChannelFilterPage.jsx";
 const Channel = () => {
-  // --- Hooks Initialization ---
+
   const { channelId } = useParams();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
   const imageRef = useRef(null);
 
-  // --- State Management ---
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [activeTab, setActiveTab] = useState("messages");
@@ -48,24 +44,22 @@ const Channel = () => {
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
   const [plusOpen, setPlusOpen] = useState(false);
-    
-  // --- Redux State Selection ---
+   const [openChannelFileTab, setOpenChannelFileTab] = useState(false);
+   const [openChannelFilePage, setOpenChannelFilePage] = useState(false);
+const [showPopover, setShowPopover] = useState(false);
+
   const user = useSelector((state) => state.user.user);
   const me = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
   const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
   const socket = useSelector((state) => state.socket?.socket);
 
-  // --- 1. Mark Channel as Read (Clears Sidebar Notification) ---
   useEffect(() => {
     if (!channelId || !me?._id) return;
 
     const markRead = async () => {
       try {
-        // A. Call Backend to persist 0 in DB
         await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
-
-        // B. Update Redux to remove badge immediately from Sidebar
         dispatch(resetChannelUnread({ 
             channelId, 
             userId: me._id 
@@ -75,13 +69,15 @@ const Channel = () => {
         console.error("Error marking channel read:", error);
       }
     };
-
     markRead();
-    // We re-run this when the channelId changes
   }, [channelId, me?._id, dispatch]);
 
-  
-  // --- 2. Socket Listener for New Messages (Active Channel Logic) ---
+   useEffect(() => {
+    setActiveTab("messages");
+    setShowPopover(false);
+  }, [channelId]);
+
+ 
  useEffect(() => {
     if (!socket || !channelId || !me?._id) return;
 
@@ -94,22 +90,13 @@ const Channel = () => {
           return; 
       }
 
-      // 2. If message is for THIS channel (Active):
-      
-      // A. Add message to chat UI
+     
       const exists = allMessages.some(m => String(m._id) === String(message._id));
       if (!exists) {
         dispatch(addChannelMessage(message));
       }
-
-      // B. IMPORTANT: Mark channel as read immediately in DB and Redux.
-      // Since the backend just incremented the count to 1, we must reset it to 0
-      // because the user is currently looking at the screen.
       try {
-          // Backend Reset
           await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
-          
-          // Redux Reset (Updates Sidebar Count immediately)
           dispatch(resetChannelUnread({ 
               channelId, 
               userId: me._id 
@@ -124,23 +111,15 @@ const Channel = () => {
   }, [socket, channelId, dispatch, allMessages, me?._id]);
 
 
-  // --- 3. Fetch Messages History on Load ---
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         if (!channelId) return;
-
         setLoading(true);
-        
-        // 1. Clear the chat immediately so we don't see messages from the previous channel
         dispatch(clearChannelMessages());
-
-        // 2. Call the backend API to get message history
         const res = await axios.get(`/api/channel/${channelId}/messages`, {
            withCredentials: true 
         });
-
-        // 3. Save the history to Redux
         dispatch(setChannelMessages(res.data));
       } catch (error) {
         console.error("Error fetching channel messages:", error);
@@ -153,7 +132,6 @@ const Channel = () => {
   }, [channelId, dispatch]);
 
 
-  // --- 4. Socket Join/Leave Room Logic ---
   useEffect(() => {
     if (!socket || !channelId) return;
     socket.emit('joinChannel', channelId);
@@ -163,13 +141,13 @@ const Channel = () => {
   }, [socket, channelId]);
 
 
-  // --- 5. Auto Scroll to Bottom ---
+ 
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [allMessages]);
 
 
-  // --- Handlers ---
+
   const onEmojiClick = (emojiData) => {
     setNewMsg(prevNewMsg => prevNewMsg + emojiData.emoji);
     setShowPicker(false);
@@ -180,7 +158,7 @@ const Channel = () => {
     if (file) {
       setBackendImage(file);
       setFrontendImage(URL.createObjectURL(file));
-      setPlusOpen(false); // Close the menu after selection
+      setPlusOpen(false); 
     }
   };
 
@@ -200,7 +178,7 @@ const Channel = () => {
     const formData = new FormData();
     formData.append("message", newMsg);
     if (backendImage) {
-      formData.append("image", backendImage); // File object
+      formData.append("image", backendImage); 
     }
 
     try {
@@ -220,7 +198,6 @@ const Channel = () => {
   };
 
   const handleKeyDown = (e) => {
-    // Send on Enter (but not Shift+Enter)
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage(e);
@@ -231,7 +208,6 @@ const Channel = () => {
     setSaving(true);
     try {
       const payload = { topic };
-      // Note: Ensure this API endpoint is correct for Channel topics
       const res = await axios.put(`/api/conversation/topic/with/${user._id}`, payload);
       if (res.data) console.log("Topic updated successfully", res.data);
       setOpenEditTopic(false);
@@ -246,8 +222,7 @@ const Channel = () => {
   const handleTopicChange = (e) => setTopic(e.target.value);
   const handleCancel = () => { setOpenEditTopic(false); };
 
-  // --- Loading State UI ---
-  // Note: We check selectedChannel to ensure we have channel details (name, members) to display in header
+
   if (!selectedChannel) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -256,10 +231,10 @@ const Channel = () => {
     );
   }
 
-  // --- Main Component Render ---
+
   return (
     <div className="w-full h-full flex flex-col bg-white py-[40px]">
-      {/* Sticky Header */}
+    
       <header className="sticky top-0 z-20 bg-white border-b">
         <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-start gap-4 min-w-0">
@@ -288,100 +263,77 @@ const Channel = () => {
           />
         )}
 
-        <div className="hidden sm:flex items-center gap-3 ml-4 text-xs text-gray-600">
-          <button onClick={() => setActiveTab("messages")} className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "messages" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}>
-            <FiMessageCircle />
-            <span>Message</span>
+               <div className="hidden sm:flex items-center gap-3 ml-4 text-xs text-gray-600 relative z-30">
+          
+          {/* MESSAGES TAB */}
+          <button 
+             onClick={() => setActiveTab("messages")} 
+                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'messages' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+          >
+            <FiMessageCircle /><span>Message</span>
           </button>
-          <button onClick={() => setActiveTab("files")} className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "files" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}>
-            <LiaFile />
-            <span>Files</span>
-          </button>
-          <button onClick={() => setActiveTab("pages")} className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "pages" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}>
-            <LuFolder />
-            <span>Pages</span>
-          </button>
-          <button onClick={() => setActiveTab("create")} className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "create" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}>
-            <CgFileAdd />
-            <span>Untitled</span>
-          </button>
+          
+          {/* FILES TAB (Hover & Click Logic) */}
+          <div 
+                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'files' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+             onMouseEnter={() => { if(activeTab !== 'files') setShowPopover(true); }}
+             onMouseLeave={() => setShowPopover(false)}
+          >
+            <button 
+               onClick={() => { setActiveTab("files"); setShowPopover(false); }} 
+               className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "files" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}
+            >
+              <LiaFile /><span>Files</span>
+            </button>
+
+
+
+          {/* POPOVER */}
+          {showPopover && activeTab !== 'page' && (
+             <div 
+               className="absolute top-[35px] left-[100px] z-50"
+               onMouseEnter={() => setShowPopover(true)}
+               onMouseLeave={() => setShowPopover(false)}
+             >
+                <ChannelFilteredFiles channelId={channelId} onClose={() => setShowPopover(false)} />
+             </div>
+          )}
         </div>
-            
-        <div className="sm:hidden border-t">
-          <div className="flex items-center justify-between px-4 py-2">
-            <div className="flex items-center gap-3 text-xs text-gray-700">
-              <button onClick={() => setActiveTab("messages")} className={`flex items-center gap-2 ${activeTab === "messages" ? "font-semibold" : ""}`}><FiMessageCircle />Message</button>
-              <button onClick={() => setActiveTab("files")} className={`flex items-center gap-2 ${activeTab === "files" ? "font-semibold" : ""}`}><LiaFile />Files</button>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center border rounded-md p-1.5 cursor-pointer h-8">
-                <p className="font-semibold text-sm mr-2">{selectedChannel.members?.length || 0}</p>
-                <FaUserFriends className="text-lg" />
-              </div>
-            </div>
-          </div>
-        </div>
+ <button 
+             onClick={() => setActiveTab("page")} 
+                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'page' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+          ><LuFolder /><span>Pages</span></button>
+ <button 
+             onClick={() => setActiveTab("Untitled")} 
+                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'Untitled' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+          ><CgFileAdd /><span>Untitled</span></button>
+      </div>
       </header>
 
-      {/* Messages area */}
-      <main className="flex-1 overflow-y-auto p-4 bg-gray-50">
-        <div className="max-w-[900px] mx-auto w-full">
-          {allMessages.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-500">
-              No messages yet — say hello
-            </div>
-          ) : (
-            allMessages.map((msg, idx) => {
-              const isMine = String(msg.sender?._id) === String(user?._id);
-              // Ensure unique key strategy
-              const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-              
-              return isMine ? (
-                <SenderMessage
-                  key={key}
-                  message={msg.message}
-                  createdAt={msg.createdAt}
-                  image={msg.image}
-                  messageId={msg._id}
-                  channelId={channelId}
-                />
-              ) : (
-                <ReceiverMessage
-                  key={key}
-                  message={msg.message}
-                  createdAt={msg.createdAt}
-                  user={msg.sender}
-                  image={msg.image}
-                />
-              );
-            })
-          )}
-          <div ref={listEndRef} />
-        </div>
-      </main>
+     
+      <div className="flex-1 overflow-hidden relative w-full bg-gray-50">
+        
+    
+        {activeTab === 'messages' && (
+          <div className="h-full flex flex-col">
+              {/* Scrollable Message List */}
+              <main className="flex-1 overflow-y-auto p-4">
+                <div className="max-w-[900px] mx-auto w-full">
+                  {allMessages.length === 0 ? (
+                    <div className="py-12 text-center text-sm text-gray-500">No messages yet — say hello</div>
+                  ) : (
+                    allMessages.map((msg, idx) => {
+                      const isMine = String(msg.sender?._id) === String(user?._id);
+                      const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+                      return isMine ? <SenderMessage key={key} message={msg.message} createdAt={msg.createdAt} image={msg.image} messageId={msg._id} channelId={channelId} /> : <ReceiverMessage key={key} message={msg.message} createdAt={msg.createdAt} user={msg.sender} image={msg.image} />;
+                    })
+                  )}
+                  <div ref={listEndRef} />
+                </div>
+              </main>
 
-      {/* Edit Topic Modal */}
-      {openEditTopic && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
-          <div className="bg-white w-[600px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b">
-              <h2 className="text-xl font-bold">Edit topic</h2>
-              <button onClick={() => setOpenEditTopic(false)} className="text-xl text-gray-600" aria-label="Close edit modal"><RxCross2 /></button>
-            </div>
-            <div className="flex flex-col p-6 space-y-5 overflow-y-auto">
-              <input type="text" value={topic} onChange={handleTopicChange} className="border rounded-xl p-2 hover:bg-[#f8f8f8]" />
-              <p className="text-sm text-gray-700">Add a topic to your conversation.</p>
-            </div>
-            <div className="flex items-center gap-3 py-4 px-6 justify-end border-t">
-              <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded" disabled={saving}>Cancel</button>
-              <button type="button" onClick={handleSaveTopic} className="px-4 py-2 bg-green-600 text-white rounded" disabled={saving}>{saving ? "Saving..." : "Save topic"}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Message Input Area */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
+              {/* Fixed Input Area */}
+               <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
             <FiBold className="cursor-pointer" />
@@ -459,6 +411,39 @@ const Channel = () => {
           )}
         </div>
       </div>
+          </div>
+        )}
+
+        {/* VIEW: FILES */}
+        {activeTab === 'files' && (
+           <ChannelFilterPage channelId={channelId} />
+        )}
+
+      </div>
+
+
+      {/* Edit Topic Modal */}
+      {openEditTopic && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
+          <div className="bg-white w-[600px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
+            <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b">
+              <h2 className="text-xl font-bold">Edit topic</h2>
+              <button onClick={() => setOpenEditTopic(false)} className="text-xl text-gray-600" aria-label="Close edit modal"><RxCross2 /></button>
+            </div>
+            <div className="flex flex-col p-6 space-y-5 overflow-y-auto">
+              <input type="text" value={topic} onChange={handleTopicChange} className="border rounded-xl p-2 hover:bg-[#f8f8f8]" />
+              <p className="text-sm text-gray-700">Add a topic to your conversation.</p>
+            </div>
+            <div className="flex items-center gap-3 py-4 px-6 justify-end border-t">
+              <button type="button" onClick={handleCancel} className="px-4 py-2 border rounded" disabled={saving}>Cancel</button>
+              <button type="button" onClick={handleSaveTopic} className="px-4 py-2 bg-green-600 text-white rounded" disabled={saving}>{saving ? "Saving..." : "Save topic"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Message Input Area */}
+     
     </div>
   );
 };

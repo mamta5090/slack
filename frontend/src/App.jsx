@@ -17,7 +17,7 @@ import Channel from "./pages/Channel";
 import WelcomeScreen from "./pages/WelcomeScreen";
 import "./index.css";
 import Signin from "./slack/Signin";
-import ProfilePage from "./ismore/ProfilePage";
+import ProfilePage from "./component/profile/ProfilePage.jsx";
 import Invite from "./component/koalaliving/Invite";
 import SlackLogin from "./slack/SlackLogin";
 import ConfirmEmail from "./slack/ConfirmEmail";

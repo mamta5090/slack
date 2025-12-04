@@ -5,8 +5,8 @@ import axios from 'axios';
 
 import Koalaliving from '../koalaliving/Koalaliving';
 import Avatar from '../Avatar';
-import LeaveInactiveChannelsModal from '../subpage/LeaveInactiveChannelsModal';
-import NewChannel from '../subpage/NewChannel';
+import LeaveInactiveChannelsModal from '../channelPage/LeaveInactiveChannelsModal';
+import NewChannel from '../channelPage/NewChannel';
 import useClickOutside from '../../hook/useClickOutside'; 
 import slackbot from '../../assets/slackbot.png';
 import Invite from '../koalaliving/Invite';

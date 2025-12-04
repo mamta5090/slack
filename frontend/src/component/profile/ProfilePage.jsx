@@ -1,21 +1,21 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import Topbar from "../pages/Topbar";
-import Sidebar from "../pages/Sidebar";
+import Topbar from "../../pages/Topbar";
+import Sidebar from "../../pages/Sidebar";
 import { ImProfile } from "react-icons/im";
-import dp from "../assets/dp.webp";
+import dp from "../../assets/dp.webp";
 import { CiSearch, CiClock2, CiHeadphones } from "react-icons/ci";
 import { IoFilter, IoMailOutline, IoAddSharp } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
 import { useNavigate } from "react-router-dom";
-import { setSingleUser } from "../redux/userSlice";
+import { setSingleUser } from "../../redux/userSlice";
 import { LuMessageCircle } from "react-icons/lu";
 import { IoMdMore } from "react-icons/io";
 import { CgProfile } from "react-icons/cg";
 import axios from "axios";
 import { AiOutlineAudio } from "react-icons/ai";
 import { format, formatDistanceToNow } from "date-fns"; 
-import { serverURL } from "../main";
+import { serverURL } from "../../main";
 
 
  
