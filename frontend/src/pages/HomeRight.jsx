@@ -4,7 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { serverURL } from '../main.jsx';
 
-import { setSingleUser } from "../redux/userSlice.js";
+
+import { setSingleUser,setUser,setUsers } from "../redux/userSlice.js";
 import { setMessages, clearMessages } from "../redux/messageSlice.js";
 import { fetchConversations, markMessagesAsRead, selectAllConversations } from "../redux/conversationSlice.js";
 import { setNotifications } from "../redux/notification.js";
@@ -522,6 +523,8 @@ const currentConversation = useMemo(() => {
             <p className="font-bold text-lg">{singleUser.name}</p>
           </div>
 
+
+
           <div className="flex items-center gap-1 text-gray-600">
             <div className="flex flex-row border rounded-md items-center">
 
@@ -727,6 +730,12 @@ const currentConversation = useMemo(() => {
                   <Avatar user={singleUser} size="lg" />
                   <div className="flex p-6 flex-col justify-center gap-2">
                     <h1 className="text-3xl font-bold">{singleUser.name}</h1>
+                     {singleUser?.status?.text && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                    <span className="text-sm">{singleUser.status.emoji}</span>
+                                    <span className="text-xs text-gray-500 truncate">{singleUser.status.text}</span>
+                                </div>
+                              )}
                     <p className="font-semibold">{singleUser.role}</p>
                   </div>
                 </div>

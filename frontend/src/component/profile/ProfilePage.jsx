@@ -8,7 +8,7 @@ import { CiSearch, CiClock2, CiHeadphones } from "react-icons/ci";
 import { IoFilter, IoMailOutline, IoAddSharp } from "react-icons/io5";
 import { RxCross2 } from "react-icons/rx";
 import { useNavigate } from "react-router-dom";
-import { setSingleUser } from "../../redux/userSlice";
+import { setSingleUser, setUser } from "../../redux/userSlice";
 import { LuMessageCircle } from "react-icons/lu";
 import { IoMdMore } from "react-icons/io";
 import { CgProfile } from "react-icons/cg";
@@ -16,9 +16,6 @@ import axios from "axios";
 import { AiOutlineAudio } from "react-icons/ai";
 import { format, formatDistanceToNow } from "date-fns"; 
 import { serverURL } from "../../main";
-
-
- 
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
@@ -56,7 +53,7 @@ const ProfilePage = () => {
   const getImageUrl = (path) => {
     if (!path) return dp;
     if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    return `${serverURL}/path.replace(/\\/g, '/')}`; // Ensure forward slashes
+    return `${serverURL}/${path.replace(/\\/g, '/')}`; // Ensure forward slashes
   };
 
   const filtered = useMemo(() => {
@@ -142,13 +139,12 @@ const ProfilePage = () => {
       const fd = new FormData();
       fd.append('name', form.name);
       fd.append('displayName', form.displayName);
-      fd.append('role', form.title); // This correctly saves the "Title" as "role"
+      fd.append('role', form.title); 
       fd.append('number', form.number);
       fd.append('location', form.location);
       fd.append('namePronunciation', form.namePronunciation);
       fd.append('email', form.email);
       fd.append('date', form.date);
-      // I removed the duplicate fd.append('title', form.title) to avoid confusion
 
       if (uploadFile) {
         fd.append("avatar", uploadFile);
@@ -181,6 +177,7 @@ const ProfilePage = () => {
     setUploadFile(null);
   };
 
+  // This variable checks if the user currently shown in the sidebar is online
   const isSingleOnline = singleUser ? (onlineUsers || []).some((id) => String(id) === String(singleUser._id)) : false;
 
   return (
@@ -217,18 +214,20 @@ const ProfilePage = () => {
                               </div>
                               <div className="flex flex-row items-center gap-2">
                                   <h3 className="flex font-semibold text-lg truncate">{allUsers?.name}</h3>
-      {  isOnline ? (<div className="flex items-center gap-2"><span className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white"></span><span className="text-sm text-gray-600">Active</span></div>) : (<div className="flex items-center gap-2 flex-row "><span className="w-1 h-1 rounded-full ring-2 text-gray-600 items-center"></span></div>)}
+                                  {isOnline ? (<div className="flex items-center gap-2"><span className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white"></span><span className="text-sm text-gray-600">Active</span></div>) : (<div className="flex items-center gap-2 flex-row "><span className="w-1 h-1 rounded-full ring-2 text-gray-600 items-center"></span></div>)}
                               </div>
                               
-                              {/* --- THIS IS THE CORRECTED LINE --- */}
-                              {/* It now looks for 'allUsers.role' which contains the title data */}
                               {allUsers.role && (
                                   <p className="text-gray-700 text-xs mt-1 truncate w-full ">{allUsers.role}</p>
                               )}
                               
-                              {/* {allUsers.email && (
-                                  <p className="text-blue-600 text-xs mt-1 truncate w-full">{allUsers.email}</p>
-                              )} */}
+                              {/* Display status in grid view if available */}
+                              {allUsers?.status?.text && (
+                                <div className="flex items-center justify-center gap-2 mt-1">
+                                    <span className="text-sm">{allUsers.status.emoji}</span>
+                                    <span className="text-xs text-gray-500 truncate">{allUsers.status.text}</span>
+                                </div>
+                              )}
                           </div>
                       </div>
                   );
@@ -238,6 +237,7 @@ const ProfilePage = () => {
           </div>
         </main>
         
+        {/* --- RIGHT SIDEBAR PROFILE PANE --- */}
         {singleUser && (
           <aside className="fixed top-[48px] right-0 bottom-0 left-[72px] sm:left-[272px] md:static md:w-[420px] md:border-l transition-all duration-200 h-[calc(100vh-48px)] flex flex-col bg-white" aria-label="Profile pane">
             <div className="sticky top-11 z-10 bg-white border-b px-6 py-4 flex items-center justify-between"><h3 className="text-xl font-semibold">Profile</h3><button onClick={closeProfilePane} className="text-xl text-gray-500 hover:text-gray-700 cursor-pointer" aria-label="Close profile pane">✕</button></div>
@@ -260,10 +260,39 @@ const ProfilePage = () => {
                 </div>
                 {currentUser?._id === singleUser._id && (<div className="flex items-center gap-[10px] mt-2 text-sm text-blue-700"><IoAddSharp /><span>Add name pronunciation</span></div>)}
                 <p className="text-gray-600 mt-3">{singleUser.role}</p>
-                <div className="flex items-center gap-3 mt-4">
-                    {isSingleOnline ? (<div className="flex items-center gap-2"><span className="w-3 h-3 bg-green-500 rounded-full ring-2 ring-white"></span><span className="text-sm text-gray-600">Active</span></div>) : (<div className="flex items-center gap-2 flex-row "><span className="w-1 h-1 rounded-full ring-2 text-gray-600"></span><span className="text-sm text-gray-600 flex">Always</span></div>)}
+                
+                {/* --- START: CORRECTED STATUS SECTION --- */}
+                <div className="flex flex-col gap-2 mt-4">
+                    {/* 1. Online/Active Status */}
+                    <div className="flex items-center gap-3">
+                        {isSingleOnline ? (
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+                                <span className="text-gray-700">Active</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 border-2 border-gray-400 rounded-full"></span>
+                                <span className="text-gray-700">Away</span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 2. Custom Status (Emoji + Text) */}
+                    {singleUser?.status?.text && (
+                        <div className="flex items-center gap-3">
+                            <span className="text-lg w-5 text-center">
+                                {singleUser.status.emoji || "💬"}
+                            </span>
+                            <span className="text-gray-700">
+                                {singleUser.status.text}
+                            </span>
+                        </div>
+                    )}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500 mt-3"><CiClock2 className="font-bold text-xl text-black" /><span>{localTime} local time</span></div>
+                {/* --- END: CORRECTED STATUS SECTION --- */}
+
+                <div className="flex items-center gap-3 text-sm text-gray-500 mt-3"><CiClock2 className="font-bold text-xl text-black" /><span>{localTime} local time</span></div>
                 {currentUser?._id === singleUser._id ? (
                   <div className="flex flex-row gap-[10px] items-center mt-4"><div className="px-3 py-2 border rounded">Set a status</div><div className="px-3 py-2 border rounded">View as</div><button className="px-2 py-2 border rounded"><IoMdMore /></button></div>
                 ) : (
@@ -327,7 +356,6 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {/* MODALS (Your Original UI) */}
       {openEdit && singleUser && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 pt-20 px-4">
           <div className="bg-white w-full max-w-[900px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">

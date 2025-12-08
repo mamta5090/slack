@@ -7,7 +7,7 @@ import { FaEdit } from "react-icons/fa";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
 import { setAllUsers } from "../redux/userSlice";
 import Avatar from "../component/Avatar";
-import {serverURL} from '../main'
+import { serverURL } from '../main';
 
 const DmsLeft = () => {
   const navigate = useNavigate();
@@ -47,17 +47,15 @@ const DmsLeft = () => {
   }, [searchTerm, allUsers, me?._id]);
 
   const sortedConversations = useMemo(() => {
-    // Sort conversations by the most recent message
     return [...conversations].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
   }, [conversations]);
 
   const openChat = (otherId) => {
-    // This navigation keeps the user within the Dms layout
     navigate(`/dms/${otherId}`);
   };
 
   const renderUserItem = (item) => {
-    const user = item.other; // In a conversation object, the other person is in `other`
+    const user = item.other;
     if (!user) return null;
 
     const isOnline = onlineUsers.some((id) => String(id) === String(user._id));
@@ -67,24 +65,45 @@ const DmsLeft = () => {
       <div
         key={user._id}
         onClick={() => openChat(user._id)}
-        className={`flex items-center justify-between hover:bg-[#3e1d3f] rounded-md p-2 cursor-pointer ${
+        className={`flex items-center justify-between hover:bg-[#3e1d3f] rounded-md p-2 cursor-pointer transition-colors ${
           isActive ? "bg-white text-black" : "text-gray-300"
         }`}
       >
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 overflow-hidden">
+          {/* Avatar Section */}
+          <div className="relative flex-shrink-0">
             <Avatar user={user} size="md" />
             {isOnline && (
               <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-[#5a2a5c] bg-green-500" />
             )}
           </div>
-          <div className="flex flex-col">
-            <p className={`font-semibold text-sm ${isActive ? 'text-black' : 'text-white'}`}>{user.name}</p>
-            <p className="text-xs">{item.lastMessage?.text || '...'}</p>
+
+          {/* User Info Section */}
+          <div className="flex flex-col overflow-hidden">
+            {/* Name and Status Row */}
+            <div className="flex items-center gap-1.5">
+              <p className={`font-semibold text-sm truncate ${isActive ? 'text-black' : 'text-white'}`}>
+                {user.name}
+              </p>
+              
+              {/* --- STATUS EMOJI LOGIC --- */}
+              {user.status?.emoji && (
+                <span className="text-sm" title={user.status.text || ""}>
+                  {user.status.emoji}
+                </span>
+              )}
+            </div>
+
+            {/* Last Message Preview */}
+            <p className={`text-xs truncate ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
+              {item.lastMessage?.text || '...'}
+            </p>
           </div>
         </div>
+
+        {/* Unread Count Badge */}
         {item.unreadCount > 0 && (
-          <span className="min-w-[20px] h-[20px] px-2 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+          <span className="min-w-[20px] h-[20px] px-2 rounded-full bg-red-500 text-white text-xs flex items-center justify-center flex-shrink-0 ml-2">
             {item.unreadCount}
           </span>
         )}
@@ -93,7 +112,7 @@ const DmsLeft = () => {
   };
 
   return (
-    <div className="lg:w-[640px]  lg:pl-[75px]  pt-[50px] pl-[54px] flex-shrink-0 h-full bg-[#5a2a5c] flex flex-col border-r border-gray-700">
+    <div className="lg:w-[640px] lg:pl-[75px] pt-[50px] pl-[54px] flex-shrink-0 h-full bg-[#5a2a5c] flex flex-col border-r border-gray-700">
       <div className="p-3 border-b border-purple-900 flex justify-between items-center flex-shrink-0">
         <h3 className="font-bold text-lg text-white">Direct messages</h3>
         <FaEdit className="text-xl text-white cursor-pointer" />

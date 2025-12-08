@@ -87,6 +87,7 @@ export const getMe = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+     await user.cleanExpiredStatus();
     res.status(200).json(user);
   } catch (error) {
     console.error("GetMe Error:", error);
@@ -174,9 +175,67 @@ export const getProfile=async(req,res)=>{
   if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    await user.cleanExpiredStatus();
  return res.status(200).json(user)
   }catch (error) {
     return res.status(500).json({message:`edit prfile error ${error}`})
   }
 }
 
+export const setStatus=async(req,res)=>{
+  try{
+    const userId = req.userId || req.user.id || req.user._id; 
+    const {text,emoji,expiryTime,pauseNotifications}=req.body;
+    const user=await User.findById(userId);
+    if(!user) return res.status(404).json({message:"User not found"})
+
+      user.status={
+        text:text || "",
+        emoji:emoji || "",
+        expiryTime:expiryTime || null,
+        pauseNotifications:pauseNotifications || false
+      }
+
+      await user.save();
+      res.status(200).json({
+        success:true,
+        message:"Status update",
+        user
+      })
+      console.log(user)
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+}
+
+export const clearStatus=async(req,res)=>{
+  try{
+    const {userId}=req.user;
+    const user=await User.findById(userId);
+    if(!user) return res.status(404).json({message:"user not found"})
+
+      user.status = {
+      text: "",
+      emoji: "",
+      expiryTime: null,
+      pauseNotifications: false
+    };
+
+    await user.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Status cleared", 
+      user 
+    });
+  }catch (error) {
+    res.status(500).json({ message: "Server Error" });
+  }
+}
+
+// export const getUserProfile=async(req,res)=>{
+//   try{
+
+//   }
+// }

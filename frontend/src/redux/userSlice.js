@@ -34,8 +34,16 @@ const userSlice = createSlice({
     setMe:(state,action)=>{
       state.me=action.payload
     },
+    updateUserStatus:(state,action)=>{
+      if(state.user){
+        state.user.status=action.payload;
+      }
+      if(state.me){
+        state.me.status=action.payload;
+      }
+    }
   },
 });
 
-export const { setUser,setProfileData, clearUser, setUsers, setAllUsers, setSingleUser ,setMe} = userSlice.actions; 
+export const { setUser,setProfileData, clearUser, setUsers, setAllUsers, setSingleUser ,setMe,updateUserStatus} = userSlice.actions; 
 export default userSlice.reducer;

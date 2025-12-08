@@ -7,10 +7,12 @@ import { CiSaveDown2 } from "react-icons/ci";
 import { FaFileAlt } from "react-icons/fa";
 import { BsArrowUpRightCircleFill } from "react-icons/bs";
 import { HiDocumentDuplicate } from "react-icons/hi";
-import { GoFileDirectory } from "react-icons/go"; // Icon for Files
+import { GoFileDirectory } from "react-icons/go";
 import Sidebarprofile from "../component/profile/Sidebarprofile";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Avatar from "../component/Avatar";
+import { serverURL } from "../main";
+import axios from "axios";
 
 
 const activityData = [
@@ -32,6 +34,7 @@ const filesData = [
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const dispatch=useDispatch()
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [laterOpen, setLaterOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
@@ -42,7 +45,7 @@ const Sidebar = () => {
 const user=useSelector((state)=>state.user.user)
   const { allUsers = [] } = useSelector((state) => state.user);
   const { onlineUsers = [] } = useSelector((s) => s.socket) || {};
-
+  const {setUser}=useSelector((state)=>state.user)
   const isOnline = (userId) => onlineUsers.some((id) => String(id) === String(userId));
     
   const moreMenuRef = useRef(null);
@@ -56,17 +59,17 @@ const lastMessagesByConversation = useMemo(() => {
     const conversations = new Map();
     const userCache = new Map();
 
-    // 1. Build a reliable cache from the allUsers array
+  
     if (allUsers) {
       allUsers.forEach(u => userCache.set(u._id.toString(), u));
     }
 
-    // 2. Ensure the logged-in user is also in the cache
+  
     if (user?._id) {
         userCache.set(user._id.toString(), user);
     }
     
-    // 3. Fallback: find user data within message objects if not in allUsers yet
+  
     for (const msg of messages) {
       if (msg.sender?._id && msg.sender?.name && !userCache.has(msg.sender._id.toString())) {
         userCache.set(msg.sender._id.toString(), msg.sender);
@@ -76,13 +79,13 @@ const lastMessagesByConversation = useMemo(() => {
       }
     }
 
-    // 4. Process all messages to find the latest for each conversation
+
     for (const msg of messages) {
       const senderId = msg.sender?._id?.toString() || msg.sender?.toString();
       const receiverId = msg.receiver?._id?.toString() || msg.receiver?.toString();
 
       if (!senderId || !receiverId) {
-        continue; // Skip malformed messages
+        continue; 
       }
 
       const otherUserId = senderId === user._id.toString() ? receiverId : senderId;
@@ -91,7 +94,7 @@ const lastMessagesByConversation = useMemo(() => {
       if (!existingMessage || new Date(msg.createdAt) > new Date(existingMessage.createdAt)) {
         let otherUserDetails = userCache.get(otherUserId);
         
-        // Create a placeholder if a user is not found in the cache
+       
         if (!otherUserDetails) {
           otherUserDetails = { _id: otherUserId, name: 'Unknown User' }; 
         }
@@ -126,7 +129,7 @@ const lastMessagesByConversation = useMemo(() => {
     const handleClickOutside = (event) => {
       if (
         moreMenuRef.current &&
-        !moreMenuRef.current.contains(event.target) && // Corrected typo here
+        !moreMenuRef.current.contains(event.target) && 
         moreButtonRef.current &&
         !moreButtonRef.current.contains(event.target)
       ) {
@@ -138,6 +141,8 @@ const lastMessagesByConversation = useMemo(() => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+ 
 
   return (
     <nav
@@ -371,6 +376,8 @@ const lastMessagesByConversation = useMemo(() => {
           )}
         </div>
       </div>
+
+{/*profile */}
 
       <div className="flex flex-col gap-4 items-center">
         <button
