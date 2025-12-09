@@ -521,6 +521,7 @@ const currentConversation = useMemo(() => {
               />
             </div>
             <p className="font-bold text-lg">{singleUser.name}</p>
+                        <p className="font-bold text-lg">{singleUser?.status?.emoji}</p>
           </div>
 
 

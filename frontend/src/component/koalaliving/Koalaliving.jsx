@@ -11,6 +11,7 @@ import Invite from "./Invite";
 const Koalaliving = () => {
   const dropdownRef = useRef(null);
   const [dropdown, setDropdown] = useState(false);
+  
   const dispatch = useDispatch();
   const navigate = useNavigate() ;
 
@@ -99,10 +100,19 @@ const Koalaliving = () => {
             </div>
           </div>
 
+ 
           {/* Menu options */}
           <div className="flex flex-col text-sm">
-           
+           <button
+        className="text-left px-4 py-3 border-b  hover:bg-[#275982] hover:text-white w-full text-sm"
+        onClick={() => setOpenInvite(prev=>!prev)}
+      >
+        Invite people to {workspaceName}
+      </button>
+      {openInvite && (
 <Invite/>
+      )}
+
             <button
               className="text-left px-4 py-3 hover:bg-[#275982] hover:text-white flex items-center justify-between"
               onClick={() => {

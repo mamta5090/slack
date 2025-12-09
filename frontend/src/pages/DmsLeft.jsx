@@ -5,7 +5,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { CiSearch } from "react-icons/ci";
 import { FaEdit } from "react-icons/fa";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
-import { setAllUsers } from "../redux/userSlice";
+import { setAllUsers ,setUser} from "../redux/userSlice";
 import Avatar from "../component/Avatar";
 import { serverURL } from '../main';
 
@@ -17,6 +17,7 @@ const DmsLeft = () => {
   const { allUsers = [] } = useSelector((s) => s.user);
   const conversations = useSelector(selectAllConversations) || [];
   const { onlineUsers = [] } = useSelector((s) => s.socket) || {};
+  const user=useSelector((state)=>state.user.user)
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -85,11 +86,14 @@ const DmsLeft = () => {
               <p className={`font-semibold text-sm truncate ${isActive ? 'text-black' : 'text-white'}`}>
                 {user.name}
               </p>
+              <p className={`font-semibold text-sm truncate ${isActive ? 'text-black' : 'text-white'}`}>
+                {user?.status?.emoji}
+              </p>
               
               {/* --- STATUS EMOJI LOGIC --- */}
               {user.status?.emoji && (
                 <span className="text-sm" title={user.status.text || ""}>
-                  {user.status.emoji}
+                  {user?.status?.emoji}
                 </span>
               )}
             </div>

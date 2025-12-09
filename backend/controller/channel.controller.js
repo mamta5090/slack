@@ -3,6 +3,7 @@ import Message from '../models/message.model.js';
 import mongoose from 'mongoose';
 import { io, getSocketId } from '../socket.js';
 import { deleteFromS3 } from '../config/s3.js';
+import { json } from 'express';
 
 export const createChannel = async (req, res) => {
     try {
@@ -104,7 +105,12 @@ export const getAllChannels = async (req, res) => {
     if(!userId){
       return res.status(401).json({msg:'Authentication error. User ID not found.'})
     }
-    const channels = await Channel.find({members: userId}).sort({name: 1});
+ const channels = await Channel.find({
+        $or: [
+            { visibility: 'public' },
+            { members: userId }
+        ]
+    }).sort({name: 1});
     res.status(200).json(channels);
   } catch (error) {
     console.error('GET ALL CHANNELS ERROR:', error);
@@ -358,3 +364,31 @@ export const getChannelFiles = async (req, res) => {
     res.status(500).json({ message: 'Server error while fetching channel files.' });
   }
 };
+
+export const joinChannel=async(req,res)=>{
+  try{
+    const {channelId}=req.body;
+  const userId=req.userId;
+
+  const channel=await Channel.findById(channelId);
+  if(!channel){
+    return res.status(404).json({message:'Channel not found'});
+  }
+
+  if(channel.members.includes(userId)){
+    return res.status(400).json({message:'You are ALREADY A MEMBER OF THIS CHANNEL'})
+  }
+
+  if(channel.visibility!=='public'){
+    return res.status(403).json({message:'You cannot join a private channel directly.'})
+  }
+
+  channel.members.push(userId);
+  await channel.save();
+
+  res.status(200).json({message:'Joined channel successfully', channel})
+  }catch(error){
+    console.log('join channel error',error)
+    res.status(500).json({message:'server error while joining channel'})
+  }
+}

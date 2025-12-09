@@ -117,22 +117,50 @@ export const logOut = async (req, res) => {
 export const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({}, "-password");
-    console.log(req.headers);
-    res.status(200).json(users);
+    
+    // Get current time
+    const now = new Date();
+
+    // Map through users to mask expired statuses visually without hitting DB excessively
+    const usersWithCleanStatus = users.map(user => {
+      // Convert to object to modify it safely before sending
+      const userObj = user.toObject(); 
+
+      if (userObj.status && userObj.status.expiryTime) {
+        if (new Date(userObj.status.expiryTime) < now) {
+           // If expired, send empty status to frontend
+           userObj.status = {
+             text: "",
+             emoji: "",
+             expiryTime: null,
+             pauseNotifications: false
+           };
+        }
+      }
+      return userObj;
+    });
+
+    // Optional: Log headers if needed, otherwise remove console.log(req.headers)
+    res.status(200).json(usersWithCleanStatus);
   } catch (error) {
     res.status(500).json({ message: "Error fetching users", error: error.message });
   }
 };
 
-export const getSingleUser=async(req,res)=>{
- try {
+export const getSingleUser = async (req, res) => {
+  try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
+    
+    // Check expiry logic here using the model method
+    // This ensures that if the status has expired, it clears it before sending the response
+    await user.cleanExpiredStatus(); 
+
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 
 

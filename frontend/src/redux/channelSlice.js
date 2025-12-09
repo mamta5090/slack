@@ -70,8 +70,6 @@ const channelSlice = createSlice({
     }
 });
 
-// ✅ FIXED EXPORTS: Added incrementUnreadCount and resetChannelUnread
-// Removed setAddMember because it was commented out in reducers
 export const { 
     setChannel, 
     setAllChannels, 

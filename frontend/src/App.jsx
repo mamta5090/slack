@@ -42,6 +42,7 @@ import {serverURL} from './main.jsx'
 import {addNotification} from './redux/notification.js'
 import { setNotifications as setNotificationsAction, addNotification as addNotificationAction } from "./redux/notification.js";
 import NotificationToast from "./component/NotificationToast";
+import Directories from "./pages/Directories.jsx";
 
 
 const App = () => {
@@ -308,6 +309,10 @@ useEffect(() => {
       <Route
         path="/homepage"
         element={user ? <HomePage /> : <Navigate to="/login" replace />}
+      />
+       <Route
+        path="/directories"
+        element={user ? <Directories /> : <Navigate to="/login" replace />}
       />
       <Route path="/slacklogin" element={<SlackLogin />} />
       <Route path="/signin" element={<Signin />} />

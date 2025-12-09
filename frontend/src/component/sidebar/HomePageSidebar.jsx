@@ -23,6 +23,7 @@ import { HiOutlineDotsVertical } from "react-icons/hi";
 import { IoMdArrowDropdown } from "react-icons/io";
 import { MdKeyboardArrowRight } from "react-icons/md";
 
+
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -169,7 +170,12 @@ const HomePageSidebar = () => {
                     <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><RiChatThreadLine /> <p>Threads</p></div>
                     <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><CiHeadphones /><p>Huddles</p></div>
                     <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><LuSendHorizontal /> <p>Drafts & sent</p></div>
-                    <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><FaFileArchive /><p>Directories</p></div>
+         <div 
+            className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'
+            onClick={() => navigate('/directories')}
+        >
+            <FaFileArchive /><p>Directories</p>
+        </div>
                 </div>
 
                 {/* Channels Section */}
@@ -340,7 +346,7 @@ const HomePageSidebar = () => {
 )}
                 </div>
 
-                <div className='flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-[#683c6a] rounded-md' onClick={()=>setInvite(true)}>
+                <div className='flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-[#683c6a] rounded-md ' onClick={()=>setInvite(true)}>
                     <div className='text-xl bg-[#683c6a] w-[25px] h-[25px] flex items-center justify-center rounded'>+</div>
                     <p>Invite people</p>
                 </div>
