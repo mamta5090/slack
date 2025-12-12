@@ -19,6 +19,8 @@ import filterRouter from "./router/filter.route.js";
 import { app, server } from "./socket.js";
 import auth from "./middleware/auth.js";
 import User from "./models/User.js";
+import draftRouter from "./router/draft.route.js";
+import startScheduler from "./scheduler.js";
 app.use(
   cors({
     origin: [
@@ -58,6 +60,8 @@ app.use("/api/channel", channelController);
 app.use("/api/activity", activityRouter);
 app.use("/api/notifications",notificationRouter);
 app.use("/api/files",filterRouter);
+app.use('/api/draft',draftRouter)
+startScheduler(); 
 connectDB();
 server.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);

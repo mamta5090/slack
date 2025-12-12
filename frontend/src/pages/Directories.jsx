@@ -21,8 +21,7 @@ import { serverURL } from '../main';
 import { useNavigate } from 'react-router-dom';
 
 const Directories = () => {
-  // Cleaned up: Removed unused dropdown/auth logic. 
-  // This component manages the Directory Tabs only.
+
   const [activeTab, setActiveTab] = useState('Channels'); 
   const singleUser = useSelector((state) => state.user.singleUser);
 
@@ -35,7 +34,7 @@ const Directories = () => {
 
       <main className="mt-12 md:ml-[30%] ml-[30%] md:w-[70%] h-[calc(100vh-48px)] bg-white flex flex-col border-l border-gray-200">
         
-        {/* Header Section (Fixed) */}
+     
         <div className="px-6 pt-6 pb-0 flex-shrink-0 border-b border-gray-200">
           <h1 className="text-2xl font-bold mb-4 text-gray-900">Directories</h1>
           
@@ -48,13 +47,13 @@ const Directories = () => {
           </div>
         </div>
       
-        {/* Content Section (Scrollable) */}
+     
         <div className={`flex-1 bg-white ${activeTab === 'People' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
            
             {activeTab === 'People' && (
              <div className="h-full bg-white flex flex-row border-l border-gray-200 relative">
                 
-                {/* Left Side: All User List (Scrollable) */}
+
                 <div className={`flex-1 h-full min-w-0 bg-[#f8f8f8] overflow-y-auto ${singleUser ? 'hidden md:block' : 'block'}`}>
                    <AllUser />
                 </div>

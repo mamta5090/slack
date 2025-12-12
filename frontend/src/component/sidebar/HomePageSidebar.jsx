@@ -22,29 +22,30 @@ import { LuSendHorizontal } from "react-icons/lu";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { IoMdArrowDropdown } from "react-icons/io";
 import { MdKeyboardArrowRight } from "react-icons/md";
+import DraftsSend from '../../pages/DraftsSend';
 
 
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    // Rename 'id' to 'activeChatId' to avoid confusion
+
     const { id: activeChatId, channelId: activeChannelId } = useParams(); 
 
-    // State for accordions
+   
     const [openChannel, setOpenChannel] = useState(true);
     const [directMessageOpen, setDirectMessageOpen] = useState(true);
     const [openApp, setOpenApp] = useState(false);
     const [invite, setInvite] = useState(false);
 
-    // State for pop-up menus and modals
     const [openBox, setOpenBox] = useState(false);
     const [openAddChannel, setOpenAddChannel] = useState(false);
     const [openCreate, setCreateOpen] = useState(false);
     const [manageOpen, setManageOpen] = useState(false);
     const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
+    const [openDraftsPage,setOpenDraftsPage]=useState()
 
-    // Redux Selectors
+  
     const me = useSelector((state) => state.user.user);
     const { allUsers = [] } = useSelector((state) => state.user);
     const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
@@ -112,19 +113,10 @@ const HomePageSidebar = () => {
 
  const openChat = async (otherId) => {
         if (!me?._id) return;
-        
         try {
-            // 1. Create or Get the conversation
             await axios.post("/api/conversation/", { senderId: me._id, receiverId: otherId });
-
-            // 2. [NEW] Mark the conversation as read in the Database
-            // This resets the counter to 0 so it starts from 1 next time.
             await axios.put(`/api/conversation/mark-read/${otherId}`);
-
-            // 3. Fetch the updated list (now the count will be 0)
             dispatch(fetchConversations());
-
-            // 4. Navigate
             navigate(`/dm/${otherId}`);
         } catch (err) {
             console.error("Failed to create or get conversation:", err);
@@ -168,8 +160,13 @@ const HomePageSidebar = () => {
             <div className='flex flex-col flex-grow overflow-auto'>
                 <div className='p-2 space-y-2 border-b border-[#d8c5dd]'>
                     <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><RiChatThreadLine /> <p>Threads</p></div>
-                    <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><CiHeadphones /><p>Huddles</p></div>
-                    <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'><LuSendHorizontal /> <p>Drafts & sent</p></div>
+                    <div className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer' onClick={() => navigate('/huddles')}><CiHeadphones /><p>Huddles</p></div>
+<div 
+    className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer' 
+    onClick={() => navigate('/draftssend')}
+>
+    <LuSendHorizontal /> <p>Drafts & sent</p>
+</div>
          <div 
             className='text-[#d8c5dd] hover:bg-[#683c6a] hover:rounded flex flex-row items-center gap-1 p-1 cursor-pointer'
             onClick={() => navigate('/directories')}
@@ -178,6 +175,9 @@ const HomePageSidebar = () => {
         </div>
                 </div>
 
+{/* {openDraftsPage && (
+    <DraftsSend/>
+)} */}
                 {/* Channels Section */}
                 <div className="flex text-[#d8c5dd] items-center justify-between cursor-pointer hover:bg-[#683c6a] p-1 rounded group">
                     <div className='flex items-center gap-[10px] flex-grow' onClick={() => setOpenChannel(prev => !prev)}>

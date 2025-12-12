@@ -43,6 +43,8 @@ import {addNotification} from './redux/notification.js'
 import { setNotifications as setNotificationsAction, addNotification as addNotificationAction } from "./redux/notification.js";
 import NotificationToast from "./component/NotificationToast";
 import Directories from "./pages/Directories.jsx";
+import DraftsSend from "./pages/DraftsSend.jsx";
+import Huddles from "./component/Huddles.jsx";
 
 
 const App = () => {
@@ -131,7 +133,6 @@ useEffect(() => {
       refreshConversationsAndChannels();
     });
 
-    // also on reconnect (socket.io sometimes emits 'reconnect')
     socketIo.on("reconnect", () => {
       console.log("socket reconnected");
       socketIo.emit("register", user._id);
@@ -139,7 +140,6 @@ useEffect(() => {
       refreshConversationsAndChannels();
     });
 
-    // Listen for refreshData event from backend after register
     socketIo.on("refreshData", () => {
       console.log("📡 Received refreshData event - updating conversations and channels");
       refreshConversationsAndChannels();
@@ -149,7 +149,6 @@ useEffect(() => {
       dispatch(setOnlineUsers(users));
     });
 
-    // Incoming popup for channels
     socketIo.on("channelNotification", (data) => {
       console.log("🔔 Popup Event Received:", data);
 
@@ -180,7 +179,6 @@ useEffect(() => {
       }
     });
 
-    // Generic notifications (personal or other channels) — push to redux
     socketIo.on("notification", (notificationPayload) => {
       // backend may send the full notification document
       const note = {
@@ -195,7 +193,6 @@ useEffect(() => {
       dispatch(addNotificationAction(note));
     });
 
-    // existing listeners
     socketIo.on("call-error", (payload) => {
       console.warn("call-error", payload);
     });
@@ -208,20 +205,14 @@ useEffect(() => {
         }
 
         if (updatedConversation) {
-          // 1. Check if the user is currently viewing this chat
-          // We assume the URL structure is /dm/<User_ID>
           const currentPath = window.location.pathname;
           
-          // Get the sender's ID (the person talking to us)
           const senderId = newMessage?.sender?._id || newMessage?.sender;
 
-          // Check if we are on the page of the person sending the message
           const isViewingChat = currentPath.includes(`/dm/${senderId}`);
 
           if (isViewingChat && updatedConversation.unreadCounts) {
              console.log("👀 User is viewing chat, forcing unread count to 0 in Redux update");
-             // Force the count to 0 locally before saving to Redux
-             // This prevents the "1" from ever flashing on the screen
              updatedConversation.unreadCounts[user._id] = 0;
           }
 
@@ -251,7 +242,6 @@ useEffect(() => {
 }, [user, dispatch, navigate]);
 
    if (!authChecked) {
-    // Render a simple loading state to avoid flashes of content
     return <div style={{ width: '100vw', height: '100vh', backgroundColor: '#121212' }} />;
   }
 
@@ -272,6 +262,8 @@ useEffect(() => {
         <Route index element={<WelcomeScreen />} />
         <Route path="dm/:id" element={<HomeRight />} />
         <Route path="channel/:channelId" element={<Channel />} />
+                <Route path="/draftssend/channel/:channelId" element={<Channel />} />
+                      <Route path="/draftssend/dm/:id" element={<HomeRight />} />  
         <Route path="files" element={<Files />} />
       </Route>
 
@@ -313,6 +305,14 @@ useEffect(() => {
        <Route
         path="/directories"
         element={user ? <Directories /> : <Navigate to="/login" replace />}
+      />
+       <Route
+        path="/draftssend"
+        element={user ? <DraftsSend /> : <Navigate to="/login" replace />}
+      />
+       <Route
+        path="/huddles"
+        element={user ? <Huddles /> : <Navigate to="/login" replace />}
       />
       <Route path="/slacklogin" element={<SlackLogin />} />
       <Route path="/signin" element={<Signin />} />

@@ -5,27 +5,29 @@ import Topbar from '../pages/Topbar';
 import Sidebar from '../pages/Sidebar';
 import HomeRight from '../pages/HomeRight';
 import Channel from '../pages/Channel';
-import Directories from '../pages/Directories'; // Import the file created above
+import Directories from '../pages/Directories'; 
+import DraftsSend from '../pages/DraftsSend';
+import Huddles from './Huddles';
 
 const HomePage = () => {
   return (
     <div className="w-full h-screen bg-[#f3f4f6]"> 
       <Topbar />
       <div className="flex h-full">
-        {/* Fixed Sidebars */}
+   
         <Sidebar />
         <HomePageSidebar />
 
-        {/* Main Content Area - Padded to sit right of sidebars */}
-        {/* 5% (Sidebar) + 25% (HomePageSidebar) = 30% left padding */}
+  
         <main className="flex-1 h-full pl-[calc(5%+25%)]">
           <Routes>
             <Route index element={<WelcomeScreen />} />
             <Route path="/dm/:id" element={<HomeRight />} />
-            
-            {/* The Route for Directories */}
+            <Route path='/huddles' element={<Huddles/>}/>
+            <Route path='/draftssend' element={<DraftsSend />} />
+            <Route path='/draftssend/dm/:id' element={<HomeRight />} />
             <Route path='/directories' element={<Directories />} />
-            
+            <Route path='/draftssend/channel/:channelId' element={<Channel />} />
             <Route path="/channel/:channelId" element={<Channel />} />
           </Routes>
         </main>
