@@ -5,9 +5,9 @@ import axios from "axios";
 import { setUser } from "../../redux/userSlice";
 import Avatar from "../Avatar";
 import { serverURL } from '../../main';
-import Status from "../../pages/Status"; // Importing the corrected Status component
+import Status from "../../pages/Status"; 
 
-// Icons
+// --- Icons ---
 const SmileIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"></circle>
@@ -34,7 +34,7 @@ const HelpCircle = () => (
 const Sidebarprofile = () => {
   const [open, setOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false); // Controls the Status Modal
+  const [showStatusModal, setShowStatusModal] = useState(false); 
   
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
@@ -48,6 +48,63 @@ const Sidebarprofile = () => {
   const workspaceName = "Koalaliving"; 
   const profileRouteValue = user?.username || user?._id || "me";
 
+  // Check if Do Not Disturb is currently active
+  const isDNDActive = user?.notificationPausedUntil && new Date(user.notificationPausedUntil) > new Date();
+
+  // --- Helper Functions to Calculate ISO Dates ---
+  const getTomorrowMorning = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0); // 9:00 AM
+    return d.toISOString();
+  };
+
+  const getNextWeekMorning = () => {
+    const d = new Date();
+    const day = d.getDay(); // 0 (Sun) to 6 (Sat)
+    // Calculate days until next Monday. If today is Monday (1), add 7.
+    const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
+    d.setDate(d.getDate() + daysUntilNextMonday);
+    d.setHours(9, 0, 0, 0); // 9:00 AM
+    return d.toISOString();
+  };
+
+  // --- API Handler ---
+  const handleSetDND = async (type, value) => {
+    try {
+      let payload = {};
+
+      if (type === 'duration') {
+        // value is in minutes (30, 60, 120)
+        payload = { duration: value };
+      } else if (type === 'date') {
+        // value is ISO string
+        payload = { customIsoDate: value };
+      } else if (type === 'resume') {
+        // Clear the status
+        payload = { mode: 'resume' };
+      }
+
+      const res = await axios.put(
+        `${serverURL}/api/user/pause-notifications`, 
+        payload, 
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+        }
+      );
+
+      if (res.data.success) {
+        // Update Redux with new user data immediately so UI reflects change
+        dispatch(setUser(res.data.user));
+        // Close menus
+        setShowNotifications(false);
+        setOpen(false);
+      }
+    } catch (error) {
+      console.error("Error setting DND:", error);
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await axios.post(`${serverURL}/api/user/logout`);
@@ -60,13 +117,9 @@ const Sidebarprofile = () => {
     }
   };
 
-  // Close sidebar menu on outside click
   useEffect(() => {
     const handleClick = (e) => {
-      // Don't close if we clicked the button
       if (buttonRef.current && buttonRef.current.contains(e.target)) return;
-      
-      // Close if we clicked outside the menu
       if (menuRef.current && !menuRef.current.contains(e.target)) {
         setOpen(false);
         setShowNotifications(false);
@@ -86,7 +139,7 @@ const Sidebarprofile = () => {
   return (
     <div className="relative">
       
-      {/* Sidebar Trigger Button */}
+      {/* Avatar Button */}
       <button
         ref={buttonRef}
         type="button"
@@ -101,19 +154,20 @@ const Sidebarprofile = () => {
         />
       </button>
 
-      {/* RENDER STATUS MODAL: Independent of the menu */}
+      {/* Status Modal */}
       {showStatusModal && (
         <Status onClose={() => setShowStatusModal(false)} />
       )}
 
-      {/* MAIN POPUP MENU */}
+      {/* Main Dropdown Menu */}
       {open && (
         <div
           ref={menuRef}
           className="absolute left-14 bottom-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 text-gray-800 font-sans"
           style={{ animation: "fadeIn 0.1s ease-out" }}
         >
-          {/* Section 1: Header & Status */}
+
+          {/* Header Section */}
           <div className="p-4 pb-2">
             <div className="flex items-center gap-3 mb-3">
               <div className="relative">
@@ -133,8 +187,8 @@ const Sidebarprofile = () => {
             <button 
                 className="w-full flex items-center gap-2 text-gray-500 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded px-2 py-1.5 transition-colors text-sm"
                 onClick={() => {
-                    setOpen(false); // Close the menu
-                    setShowStatusModal(true); // Open the Status Modal
+                    setOpen(false);
+                    setShowStatusModal(true); 
                 }}
             >
                <SmileIcon />
@@ -142,7 +196,7 @@ const Sidebarprofile = () => {
             </button>
           </div>
 
-          {/* Section 2: Availability & Notifications */}
+          {/* Status & Notifications Section */}
           <div className="py-2 border-t border-gray-100 relative">
             <button 
                onMouseEnter={() => setShowNotifications(false)}
@@ -151,16 +205,24 @@ const Sidebarprofile = () => {
               Set yourself as <strong>away</strong>
             </button>
             
+            {/* PAUSE NOTIFICATIONS TRIGGER */}
             <button 
               className={`w-full flex items-center justify-between text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors ${showNotifications ? 'bg-blue-600 text-white' : ''}`}
               onMouseEnter={() => setShowNotifications(true)} 
               onClick={() => setShowNotifications(!showNotifications)} 
             >
-              <span>Pause notifications</span>
+              <div className="flex flex-col">
+                <span>{isDNDActive ? "Notifications Paused" : "Pause notifications"}</span>
+                {isDNDActive && (
+                  <span className="text-xs opacity-80">
+                    Until {new Date(user.notificationPausedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </div>
               <ChevronRight />
             </button>
 
-            {/* --- NOTIFICATION SUBMENU --- */}
+           {/* PAUSE NOTIFICATIONS SUB-MENU */}
            {showNotifications && (
               <div className="absolute left-full bottom-[-180px] w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden text-gray-800">
                 <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center text-gray-900">
@@ -168,15 +230,54 @@ const Sidebarprofile = () => {
                     <span className="text-gray-400"><HelpCircle /></span>
                 </div>
                 <div className="py-2">
-                    {['For 30 minutes', 'For 1 hour', 'For 2 hours', 'Until tomorrow', 'Until next week'].map((time) => (
-                        <button key={time} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
-                            {time}
+                    
+                    {/* Resume Option (Only if Paused) */}
+                    {isDNDActive && (
+                        <button 
+                            onClick={() => handleSetDND('resume')}
+                            className="w-full text-left px-5 py-1.5 text-sm font-bold text-green-600 hover:bg-blue-600 hover:text-white transition-colors"
+                        >
+                            Resume notifications
                         </button>
-                    ))}
+                    )}
+
+                    {/* Time Options */}
+                    <button 
+                        onClick={() => handleSetDND('duration', 30)} 
+                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                        For 30 minutes
+                    </button>
+                    <button 
+                        onClick={() => handleSetDND('duration', 60)} 
+                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                        For 1 hour
+                    </button>
+                    <button 
+                        onClick={() => handleSetDND('duration', 120)} 
+                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                        For 2 hours
+                    </button>
+                    <button 
+                        onClick={() => handleSetDND('date', getTomorrowMorning())} 
+                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                        Until tomorrow
+                    </button>
+                    <button 
+                        onClick={() => handleSetDND('date', getNextWeekMorning())} 
+                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+                    >
+                        Until next week
+                    </button>
+                    
                     <button className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
                         Custom...
                     </button>
                 </div>
+
                 <div className="py-2 border-t border-gray-100">
                      <button className="w-full text-left px-5 py-2 hover:bg-blue-600 group transition-colors">
                         <div className="text-sm font-medium text-gray-800 group-hover:text-white">Pause for all except VIPs</div>
@@ -194,7 +295,7 @@ const Sidebarprofile = () => {
             )}
           </div>
 
-          {/* Section 3: Profile & Preferences */}
+          {/* Profile & Preferences */}
           <div className="py-2 border-t border-gray-100">
             <button
               onClick={() => { navigate(`/profile/${profileRouteValue}`); setOpen(false); }}
@@ -210,7 +311,7 @@ const Sidebarprofile = () => {
             </button>
           </div>
 
-          {/* Section 4: Downloads & Logout */}
+          {/* Downloads & Logout */}
           <div className="py-2 border-t border-gray-100">
              <button className="w-full flex items-center justify-between text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
               <span>Downloads</span>

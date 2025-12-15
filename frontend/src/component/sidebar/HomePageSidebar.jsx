@@ -56,6 +56,8 @@ const HomePageSidebar = () => {
     const channelOptionsRef = useRef(null); 
     const addChannelBoxRef = useRef(null); 
 
+    const isDND = me?.notificationPausedUntil && new Date() < new Date(me.notificationPausedUntil);
+
     useClickOutside(channelOptionsRef, () => {
         setOpenAddChannel(false);
         setCreateOpen(false);
@@ -67,7 +69,7 @@ const HomePageSidebar = () => {
     });
 
     // 1. Fetch Channels
-    useEffect(() => {
+   useEffect(() => {
         const fetchChannels = async () => {
             try {
                 const res = await axios.get("/api/channel/getAllChannel");
@@ -80,7 +82,7 @@ const HomePageSidebar = () => {
     }, [dispatch, me?._id]);
    
     // 2. Fetch Users & Conversations
-    useEffect(() => {
+   useEffect(() => {
         dispatch(fetchConversations());
         if (!allUsers || allUsers.length === 0) {
             const fetchAllUsers = async () => {
@@ -329,8 +331,9 @@ const HomePageSidebar = () => {
                         <p className="text-sm truncate">{user.name}</p>
                     </div>
                     
+                    
                     {/* 4. Display the badge only if hasUnread is true */}
-                    {hasUnread && (
+                  {hasUnread && !isDND && (
                         <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center'>
                             {unreadCount}
                         </span>

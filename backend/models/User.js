@@ -15,27 +15,41 @@ const userSchema = new mongoose.Schema(
     title: { type: String, default: "" },
     topic: { type: String },
     
-    // --- FIX START ---
+  
     status: {
       text: { type: String, default: "" },
-      emoji: { type: String, default: "" }, // Moved inside status, changed to String
-      expiryTime: { type: Date, default: null }, // Moved inside status
-      pauseNotifications: { type: Boolean, default: false } // Moved inside status
+      emoji: { type: String, default: "" }, 
+      expiryTime: { type: Date, default: null },
+      pauseNotifications: { type: Boolean, default: false }
     },
-    // --- FIX END ---
+
+
+    notificationPausedUntil: { type: Date, default: null }
   },
   { timestamps: true }
 );
 
-// Middleware to clean status if expired
+
 userSchema.methods.cleanExpiredStatus = async function () {
-  if (this.status && this.status.expiryTime && new Date() > new Date(this.status.expiryTime)) {
-    this.status = {
-      text: "",
-      emoji: "",
-      expiryTime: null,
-      pauseNotifications: false
-    };
+  let isModified = false;
+  const now = new Date();
+
+  // 1. Clean Status
+  if (this.status && this.status.expiryTime && now > new Date(this.status.expiryTime)) {
+    this.status.text = "";
+    this.status.emoji = "";
+    this.status.expiryTime = null;
+    isModified = true;
+  }
+
+  // 2. Clean Notification Pause
+  if (this.notificationPausedUntil && now > new Date(this.notificationPausedUntil)) {
+    this.notificationPausedUntil = null;
+    this.status.pauseNotifications = false; // Sync the boolean
+    isModified = true;
+  }
+
+  if (isModified) {
     await this.save();
   }
   return this;

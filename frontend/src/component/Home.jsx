@@ -8,8 +8,10 @@ import Channel from '../pages/Channel';
 import Directories from '../pages/Directories'; 
 import DraftsSend from '../pages/DraftsSend';
 import Huddles from './Huddles';
+import useListenMessages from '../hook/useListenMessages';
 
 const HomePage = () => {
+    useListenMessages();
   return (
     <div className="w-full h-screen bg-[#f3f4f6]"> 
       <Topbar />

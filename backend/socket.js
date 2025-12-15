@@ -64,7 +64,7 @@ io.on("connection", (socket) => {
 
   io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
 
-  // allow client to explicitly register after auth
+
 
   socket.on("register", async (userId) => {
     if (!userId) return;
@@ -94,7 +94,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // message sending example
+ 
   socket.on("sendMessage", (payload) => {
     const receiverSocketId = getSocketId(payload.receiverId);
     if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", payload);
@@ -108,7 +108,7 @@ io.on("connection", (socket) => {
     socket.leave(channelId);
   });
 
-  // WebRTC signaling passthroughs
+ 
   socket.on("webrtc:start-call", ({ to, from, offer }) => {
     const calleeSockets = getSocketIdsForUser(to);
     if (calleeSockets.length) {
@@ -137,10 +137,9 @@ io.on("connection", (socket) => {
     for (const sid of recips) io.to(sid).emit("webrtc:hang-up");
   });
 
-  // cleanup on disconnect
+ 
   socket.on("disconnect", () => {
-    // remove this socket from any user that had it
-    // simpler: iterate map (acceptable for moderate size); for large scale maintain reverse map
+
     for (const [uid, set] of userSocketMap.entries()) {
       if (set.has(socket.id)) {
         removeSocketForUser(uid, socket.id);

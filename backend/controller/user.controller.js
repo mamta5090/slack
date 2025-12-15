@@ -252,6 +252,7 @@ export const clearStatus=async(req,res)=>{
 
     await user.save();
 
+
     res.status(200).json({ 
       success: true, 
       message: "Status cleared", 
@@ -262,8 +263,48 @@ export const clearStatus=async(req,res)=>{
   }
 }
 
-// export const getUserProfile=async(req,res)=>{
-//   try{
+export const pauseNotifications = async (req, res) => {
+  try {
+    const userId = req.userId || req.user.id; 
+    const { duration, customIsoDate, mode } = req.body;
 
-//   }
-// }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // --- Logic to Set/Clear Pause ---
+    if (mode === 'resume') {
+      user.notificationPausedUntil = null;
+      user.status.pauseNotifications = false; 
+    } else {
+      let expiryDate = new Date();
+
+      if (customIsoDate) {
+        expiryDate = new Date(customIsoDate);
+      } else if (duration) {
+        expiryDate.setMinutes(expiryDate.getMinutes() + parseInt(duration));
+      } else {
+        return res.status(400).json({ message: "Duration or Date required" });
+      }
+
+      user.notificationPausedUntil = expiryDate;
+      user.status.pauseNotifications = true; 
+    }
+
+    await user.save();
+
+
+    const fullUser = await User.findById(userId).select("-password");
+
+    res.status(200).json({
+      success: true,
+      message: mode === 'resume' ? "Notifications resumed" : "Notifications paused",
+      user: fullUser 
+    });
+
+  } catch (error) {
+    console.error("Pause Notifications Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

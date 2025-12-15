@@ -1,18 +1,26 @@
-// src/redux/callSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const callSlice = createSlice({
   name: 'call',
-  initialState: { incomingCallData: null },
+  initialState: {
+    isIncoming: false,
+    incomingCallData: null,
+    callHistory:[],
+  },
   reducers: {
     setIncomingCall: (state, action) => {
+      state.isIncoming = true;
       state.incomingCallData = action.payload;
     },
     clearIncomingCall: (state) => {
+      state.isIncoming = false;
       state.incomingCallData = null;
     },
+    addCallHistory:(state,action)=>{
+      state.incomingCallData.unshift(action.payload);
+    }
   },
 });
 
-export const { setIncomingCall, clearIncomingCall } = callSlice.actions;
+export const { setIncomingCall, clearIncomingCall,addCallHistory } = callSlice.actions;
 export default callSlice.reducer;
