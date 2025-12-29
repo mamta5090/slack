@@ -20,6 +20,7 @@ import { app, server } from "./socket.js";
 import auth from "./middleware/auth.js";
 import User from "./models/User.js";
 import draftRouter from "./router/draft.route.js";
+import preferenceRouter from "./router/preference.router.js";
 import startScheduler from "./scheduler.js";
 app.use(
   cors({
@@ -61,6 +62,7 @@ app.use("/api/activity", activityRouter);
 app.use("/api/notifications",notificationRouter);
 app.use("/api/files",filterRouter);
 app.use('/api/draft',draftRouter)
+app.use('/api/preferences',preferenceRouter);
 startScheduler(); 
 connectDB();
 server.listen(PORT, () => {

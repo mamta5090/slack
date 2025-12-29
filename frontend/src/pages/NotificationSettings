@@ -1,0 +1,65 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+const NotificationSettings = ({ userId }) => {
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // 1. Load data from backend
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`/api/preferences/${userId}`);
+        setSettings(res.data.notifications);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error loading preferences", err);
+      }
+    };
+    fetchSettings();
+  }, [userId]);
+
+  // 2. Function to update backend
+  const updateSetting = async (path, value) => {
+    try {
+      // Logic to update local state optimistically
+      // (Deep update logic omitted for brevity)
+      
+      await axios.patch(`/api/preferences/${userId}`, {
+        [`notifications.${path}`]: value
+      });
+    } catch (err) {
+      alert("Failed to save setting");
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="space-y-10 text-[#1d1c1d]">
+      <section>
+        <div className="space-y-4">
+          <h4 className="font-bold text-[15px]">How to notify you</h4>
+          <div className="space-y-2.5">
+            <Checkbox 
+              label="Desktop notifications" 
+              checked={settings.messagingDefaults.desktopNotifications}
+              onChange={(e) => updateSetting('messagingDefaults.desktopNotifications', e.target.checked)}
+            />
+            {/* ... other checkboxes ... */}
+          </div>
+        </div>
+      </section>
+      
+      <section>
+        <h4 className="font-bold text-[15px]">Channel keywords</h4>
+        <textarea 
+          className="..." 
+          value={settings.channelKeywords}
+          onChange={(e) => setSettings({...settings, channelKeywords: e.target.value})}
+          onBlur={(e) => updateSetting('channelKeywords', e.target.value)}
+        />
+      </section>
+    </div>
+  );
+};

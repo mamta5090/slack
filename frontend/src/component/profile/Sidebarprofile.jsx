@@ -6,6 +6,7 @@ import { setUser } from "../../redux/userSlice";
 import Avatar from "../Avatar";
 import { serverURL } from '../../main';
 import Status from "../../pages/Status"; 
+import Prefrences from "../../pages/Prefrences";
 
 // --- Icons ---
 const SmileIcon = () => (
@@ -35,7 +36,12 @@ const Sidebarprofile = () => {
   const [open, setOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false); 
-  
+  const [openCustomNotification, setOpenCustomNotification] = useState(false);
+  const [openPreferences, setOpenPrefrences] = useState(false);
+  // Custom Modal States
+  const [customDate, setCustomDate] = useState("2025-12-26");
+  const [customTime, setCustomTime] = useState("13:00");
+
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
   const navigate = useNavigate();
@@ -43,66 +49,61 @@ const Sidebarprofile = () => {
 
   const user = useSelector((state) => state.user.user);
   const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
-  
+  const currentUser = useSelector((state) => state.user.user) || {};
   const isOnline = user && onlineUsers.includes(user._id);
   const workspaceName = "Koalaliving"; 
   const profileRouteValue = user?.username || user?._id || "me";
 
-  // Check if Do Not Disturb is currently active
   const isDNDActive = user?.notificationPausedUntil && new Date(user.notificationPausedUntil) > new Date();
 
-  // --- Helper Functions to Calculate ISO Dates ---
+  // --- API HANDLER ---
+  const handleSetDND = async (type, value, pauseMode = 'everyone') => {
+    try {
+      let payload = { pauseMode }; 
+
+      if (type === 'duration') {
+        payload.duration = value;
+      } else if (type === 'date') {
+        payload.customIsoDate = value;
+      } else if (type === 'resume') {
+        payload.mode = 'resume';
+      }
+
+      const res = await axios.put(`${serverURL}/api/user/pause-notifications`, payload, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+
+      if (res.data.success) {
+        dispatch(setUser(res.data.user)); 
+        setShowNotifications(false);
+        setOpen(false);
+        setOpenCustomNotification(false);
+      }
+    } catch (error) {
+      console.error("Error setting DND:", error);
+    }
+  };
+
+  const handleCustomSave = () => {
+    // Combine date and time into an ISO string
+    const combinedDateTime = new Date(`${customDate}T${customTime}:00`).toISOString();
+    handleSetDND('date', combinedDateTime);
+  };
+
   const getTomorrowMorning = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    d.setHours(9, 0, 0, 0); // 9:00 AM
+    d.setHours(9, 0, 0, 0); 
     return d.toISOString();
   };
 
   const getNextWeekMorning = () => {
     const d = new Date();
-    const day = d.getDay(); // 0 (Sun) to 6 (Sat)
-    // Calculate days until next Monday. If today is Monday (1), add 7.
+    const day = d.getDay(); 
     const daysUntilNextMonday = day === 0 ? 1 : 8 - day;
     d.setDate(d.getDate() + daysUntilNextMonday);
-    d.setHours(9, 0, 0, 0); // 9:00 AM
+    d.setHours(9, 0, 0, 0); 
     return d.toISOString();
-  };
-
-  // --- API Handler ---
-  const handleSetDND = async (type, value) => {
-    try {
-      let payload = {};
-
-      if (type === 'duration') {
-        // value is in minutes (30, 60, 120)
-        payload = { duration: value };
-      } else if (type === 'date') {
-        // value is ISO string
-        payload = { customIsoDate: value };
-      } else if (type === 'resume') {
-        // Clear the status
-        payload = { mode: 'resume' };
-      }
-
-      const res = await axios.put(
-        `${serverURL}/api/user/pause-notifications`, 
-        payload, 
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        }
-      );
-
-      if (res.data.success) {
-        // Update Redux with new user data immediately so UI reflects change
-        dispatch(setUser(res.data.user));
-        // Close menus
-        setShowNotifications(false);
-        setOpen(false);
-      }
-    } catch (error) {
-      console.error("Error setting DND:", error);
-    }
   };
 
   const handleLogout = async () => {
@@ -138,8 +139,6 @@ const Sidebarprofile = () => {
 
   return (
     <div className="relative">
-      
-      {/* Avatar Button */}
       <button
         ref={buttonRef}
         type="button"
@@ -147,65 +146,38 @@ const Sidebarprofile = () => {
         onClick={() => setOpen((prev) => !prev)}
       >
         <Avatar user={user} size="md" />
-        <div
-          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
-            isOnline ? "bg-green-500" : "bg-gray-500"
-          }`}
-        />
+        <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? "bg-green-500" : "bg-gray-500"}`} />
       </button>
 
-      {/* Status Modal */}
-      {showStatusModal && (
-        <Status onClose={() => setShowStatusModal(false)} />
-      )}
+      {showStatusModal && <Status onClose={() => setShowStatusModal(false)} />}
 
-      {/* Main Dropdown Menu */}
       {open && (
-        <div
-          ref={menuRef}
-          className="absolute left-14 bottom-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 text-gray-800 font-sans"
-          style={{ animation: "fadeIn 0.1s ease-out" }}
-        >
-
-          {/* Header Section */}
+        <div ref={menuRef} className="absolute left-14 bottom-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 text-gray-800 font-sans">
           <div className="p-4 pb-2">
             <div className="flex items-center gap-3 mb-3">
-              <div className="relative">
-                <Avatar user={user} size="md" /> 
-              </div>
+              <Avatar user={user} size="md" /> 
               <div className="flex flex-col text-left">
-                <span className="font-bold text-gray-900 text-lg leading-tight">
-                  {user.name || user.username}
-                </span>
+                <span className="font-bold text-gray-900 text-lg leading-tight">{user.name || user.username}</span>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   <span className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                   <span className="text-xs text-gray-500">{isOnline ? 'Active' : 'Offline'}</span>
                 </div>
               </div>
             </div>
-
             <button 
                 className="w-full flex items-center gap-2 text-gray-500 bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded px-2 py-1.5 transition-colors text-sm"
-                onClick={() => {
-                    setOpen(false);
-                    setShowStatusModal(true); 
-                }}
+                onClick={() => { setOpen(false); setShowStatusModal(true); }}
             >
                <SmileIcon />
                <span className="text-gray-400">Update your status</span>
             </button>
           </div>
 
-          {/* Status & Notifications Section */}
           <div className="py-2 border-t border-gray-100 relative">
-            <button 
-               onMouseEnter={() => setShowNotifications(false)}
-              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-            >
+            <button className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
               Set yourself as <strong>away</strong>
             </button>
             
-            {/* PAUSE NOTIFICATIONS TRIGGER */}
             <button 
               className={`w-full flex items-center justify-between text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors ${showNotifications ? 'bg-blue-600 text-white' : ''}`}
               onMouseEnter={() => setShowNotifications(true)} 
@@ -222,110 +194,117 @@ const Sidebarprofile = () => {
               <ChevronRight />
             </button>
 
-           {/* PAUSE NOTIFICATIONS SUB-MENU */}
            {showNotifications && (
-              <div className="absolute left-full bottom-[-180px] w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden text-gray-800">
+              <div className="absolute left-full bottom-[-140px] w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden text-gray-800">
                 <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center text-gray-900">
                     <span className="font-bold text-sm">Pause notifications...</span>
-                    <span className="text-gray-400"><HelpCircle /></span>
+                    <HelpCircle />
                 </div>
                 <div className="py-2">
-                    
-                    {/* Resume Option (Only if Paused) */}
                     {isDNDActive && (
-                        <button 
-                            onClick={() => handleSetDND('resume')}
-                            className="w-full text-left px-5 py-1.5 text-sm font-bold text-green-600 hover:bg-blue-600 hover:text-white transition-colors"
-                        >
+                        <button onClick={() => handleSetDND('resume')} className="w-full text-left px-5 py-1.5 text-sm font-bold text-green-600 hover:bg-blue-600 hover:text-white transition-colors">
                             Resume notifications
                         </button>
                     )}
-
-                    {/* Time Options */}
-                    <button 
-                        onClick={() => handleSetDND('duration', 30)} 
-                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                        For 30 minutes
-                    </button>
-                    <button 
-                        onClick={() => handleSetDND('duration', 60)} 
-                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                        For 1 hour
-                    </button>
-                    <button 
-                        onClick={() => handleSetDND('duration', 120)} 
-                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                        For 2 hours
-                    </button>
-                    <button 
-                        onClick={() => handleSetDND('date', getTomorrowMorning())} 
-                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                        Until tomorrow
-                    </button>
-                    <button 
-                        onClick={() => handleSetDND('date', getNextWeekMorning())} 
-                        className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-                    >
-                        Until next week
-                    </button>
-                    
-                    <button className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
-                        Custom...
-                    </button>
+                    <button onClick={() => handleSetDND('duration', 30)} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">For 30 minutes</button>
+                    <button onClick={() => handleSetDND('duration', 60)} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">For 1 hour</button>
+                    <button onClick={() => handleSetDND('duration', 120)} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">For 2 hours</button>
+                    <button onClick={() => handleSetDND('date', getTomorrowMorning())} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Until tomorrow</button>
+                    <button onClick={() => handleSetDND('date', getNextWeekMorning())} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Until next week</button>
+                    <button onClick={() => setOpenCustomNotification(true)} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Custom...</button>
                 </div>
 
                 <div className="py-2 border-t border-gray-100">
-                     <button className="w-full text-left px-5 py-2 hover:bg-blue-600 group transition-colors">
+                     <button 
+                        onClick={() => handleSetDND('duration', 60, 'except_vips')} 
+                        className="w-full text-left px-5 py-2 hover:bg-blue-600 group transition-colors"
+                     >
                         <div className="text-sm font-medium text-gray-800 group-hover:text-white">Pause for all except VIPs</div>
                         <div className="text-xs text-gray-500 mt-0.5 group-hover:text-blue-100 leading-snug">
                             Always allow notifications from certain people by adding them as a VIP.
                         </div>
                      </button>
                 </div>
-                 <div className="py-2 border-t border-gray-100">
-                    <button className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
-                        Set a notification schedule
-                    </button>
-                 </div>
               </div>
             )}
           </div>
 
-          {/* Profile & Preferences */}
           <div className="py-2 border-t border-gray-100">
-            <button
-              onClick={() => { navigate(`/profile/${profileRouteValue}`); setOpen(false); }}
-              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-            >
-              Profile
-            </button>
-            <button
-              onClick={() => { navigate("/settings"); setOpen(false); }}
-              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
-            >
-              Preferences
-            </button>
+            <button onClick={() => { navigate(`/profile/${profileRouteValue}`); setOpen(false); }} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Profile</button>
+<button 
+  onClick={() => { setOpenPrefrences(true)}} 
+  className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+>
+  Preferences
+</button>
           </div>
 
-          {/* Downloads & Logout */}
+ {openPreferences && <Prefrences onClose={() => setOpenPrefrences(false)} />}
           <div className="py-2 border-t border-gray-100">
-             <button className="w-full flex items-center justify-between text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">
-              <span>Downloads</span>
-              <span className="text-xs text-gray-400 opacity-70">Ctrl+Shift+J</span>
-            </button>
+            <button onClick={() => { handleLogout(); setOpen(false); }}
+              userId={currentUser._id}  className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Sign out of {workspaceName}</button>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOM DND MODAL - PLACED AT ROOT FOR BETTER OVERLAY HANDLING */}
+      {openCustomNotification && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
+          <div className="w-full max-w-[440px] rounded-lg bg-white p-8 shadow-2xl relative">
             
-            <button
-              onClick={() => { handleLogout(); setOpen(false); }}
-              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+            <button 
+              onClick={() => setOpenCustomNotification(false)}
+              className="absolute right-6 top-6 text-gray-500 hover:text-gray-800"
             >
-              Sign out of {workspaceName}
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
-          </div>
 
+            <h2 className="mb-6 text-2xl font-black text-[#1d1c1d]">Pause notifications</h2>
+
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2 block text-[15px] font-bold text-[#1d1c1d]">
+                  Pause notifications until...
+                </label>
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-[15px] focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[15px] font-bold text-[#1d1c1d]">
+                  Time
+                </label>
+                <div className="relative">
+                  <select 
+                    value={customTime}
+                    onChange={(e) => setCustomTime(e.target.value)}
+                    className="w-full appearance-none rounded border border-gray-300 bg-white px-3 py-2 text-[15px] focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  >
+                    <option value="09:00">9:00 AM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="17:00">5:00 PM</option>
+                    <option value="21:00">9:00 PM</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <svg className="h-4 w-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-end">
+              <button 
+                onClick={handleCustomSave}
+                className="rounded-[4px] bg-[#007a5a] px-6 py-2 text-[15px] font-bold text-white transition-colors hover:bg-[#006248]"
+              >
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

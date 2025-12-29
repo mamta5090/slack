@@ -58,7 +58,22 @@ const [notifications, setNotifications] = useState([]);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
- 
+ useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const res = await axios.get(`${serverURL}/api/user/profile`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      // This line restores the user (including the notification field) into Redux
+      dispatch(setUser(res.data.user)); 
+    } catch (err) {
+      console.log("Not logged in");
+    }
+  };
+  if (localStorage.getItem("token")) fetchUser();
+}, []);
+
+
 useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem("token");

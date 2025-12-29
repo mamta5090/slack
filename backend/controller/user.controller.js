@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 
+
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
   console.log('>>> Register request body:', req.body);
@@ -265,46 +266,67 @@ export const clearStatus=async(req,res)=>{
 
 export const pauseNotifications = async (req, res) => {
   try {
-    const userId = req.userId || req.user.id; 
-    const { duration, customIsoDate, mode } = req.body;
+    const userId = req.userId; // Provided by your auth middleware
+    const { duration, customIsoDate, mode, pauseMode } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    let updateData = {};
 
-    // --- Logic to Set/Clear Pause ---
-    if (mode === 'resume') {
-      user.notificationPausedUntil = null;
-      user.status.pauseNotifications = false; 
-    } else {
-      let expiryDate = new Date();
+    // 1. Check if the user wants to RESUME (Turn off DND)
+    if (mode === "resume") {
+      updateData = {
+        notificationPausedUntil: null,
+        notificationPauseMode: "everyone", // Reset to default
+      };
+    } 
+    // 2. Otherwise, we are PAUSING
+    else {
+      let untilDate = null;
 
-      if (customIsoDate) {
-        expiryDate = new Date(customIsoDate);
-      } else if (duration) {
-        expiryDate.setMinutes(expiryDate.getMinutes() + parseInt(duration));
+      if (duration) {
+        // duration is expected in minutes (e.g., 30, 60, 120)
+        untilDate = new Date(Date.now() + duration * 60 * 1000);
+      } else if (customIsoDate) {
+        // specific ISO string (e.g., "2023-12-31T09:00:00.000Z")
+        untilDate = new Date(customIsoDate);
       } else {
-        return res.status(400).json({ message: "Duration or Date required" });
+        // Fallback: If no duration/date provided, default to 1 hour
+        untilDate = new Date(Date.now() + 60 * 60 * 1000);
       }
 
-      user.notificationPausedUntil = expiryDate;
-      user.status.pauseNotifications = true; 
+      updateData = {
+        notificationPausedUntil: untilDate,
+        // pauseMode should be 'everyone' or 'except_vips'
+        notificationPauseMode: pauseMode || "everyone", 
+      };
     }
 
-    await user.save();
+    // 3. Update the user document
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true } // Return the updated document
+    ).select("-password"); // Exclude password for security
 
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-    const fullUser = await User.findById(userId).select("-password");
-
-    res.status(200).json({
+    // 4. Send success response
+    return res.status(200).json({
       success: true,
-      message: mode === 'resume' ? "Notifications resumed" : "Notifications paused",
-      user: fullUser 
+      message: mode === "resume" ? "Notifications resumed" : "Notifications paused",
+      user: updatedUser,
     });
 
   } catch (error) {
-    console.error("Pause Notifications Error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error in pauseNotifications controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };

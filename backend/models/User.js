@@ -24,7 +24,16 @@ const userSchema = new mongoose.Schema(
     },
 
 
-    notificationPausedUntil: { type: Date, default: null }
+notificationPausedUntil: {
+  type: Date,
+  default: null
+},
+notificationPauseMode: {
+  type: String,
+  enum: ['everyone', 'except_vips'],
+  default: 'everyone'
+},
+    vips: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   },
   { timestamps: true }
 );

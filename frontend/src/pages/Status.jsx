@@ -5,7 +5,7 @@ import axios from "axios";
 import { setSingleUser, setUser } from "../redux/userSlice"; 
 import { serverURL } from '../main'; 
 
-
+// --- Icons ---
 const SmileIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500">
     <circle cx="12" cy="12" r="10"></circle>
@@ -40,15 +40,17 @@ const Status = ({ onClose }) => {
     const dispatch = useDispatch();
     const expiryRef = useRef(null);
     const notifRef = useRef(null);
+    
     const user = useSelector((state) => state.user.user);
-    const singleUser=useSelector((state)=>state.user.singleUser)
+    const singleUser = useSelector((state) => state.user.singleUser);
     const workspaceName = "Koalaliving"; 
 
     const [statusText, setStatusText] = useState(user?.status?.text || "");
     const [statusIcon, setStatusIcon] = useState(user?.status?.emoji || null);
     
     const [expiry, setExpiry] = useState("1 hour");
-    const [pauseNotif, setPauseNotif] = useState("Do not pause");
+    const [pauseNotif, setPauseNotif] = useState(user?.status?.pauseNotifications ? "Pause notifications for everyone" : "Do not pause");
+    
     const [isLoading, setIsLoading] = useState(false);
     const [isExpiryOpen, setIsExpiryOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -71,6 +73,17 @@ const Status = ({ onClose }) => {
         "Do not pause", "Pause notifications for everyone", "Pause except VIPs"
     ];
 
+    // Helper to get Auth Config
+    const getAuthConfig = () => {
+        const token = localStorage.getItem("token");
+        return {
+            headers: { 
+                Authorization: token?.startsWith("Bearer") ? token : `Bearer ${token}`,
+                "Content-Type": "application/json"
+            }
+        };
+    };
+
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (expiryRef.current && !expiryRef.current.contains(event.target)) {
@@ -90,14 +103,26 @@ const Status = ({ onClose }) => {
         setExpiry(preset.defaultTime);
     };
 
-    const clearStatus = () => {
-        setStatusText("");
-        setStatusIcon(null);
-        setExpiry("1 hour");
-        setPauseNotif("Do not pause");
+    const handleClearStatusBackend = async () => {
+        setIsLoading(true);
+        try {
+            const res = await axios.delete(`${serverURL}/api/user/status`, getAuthConfig());
+            if (res.data.success) {
+                dispatch(setUser(res.data.user));
+                if (singleUser && singleUser._id === res.data.user._id) {
+                    dispatch(setSingleUser(res.data.user));
+                }
+                onClose();
+            }
+        } catch (err) {
+            console.error("Failed to clear status:", err);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSaveStatus = async () => {
+        if (!hasStatus) return;
         setIsLoading(true);
         let expiryDate = null;
         const now = new Date();
@@ -118,27 +143,22 @@ const Status = ({ onClose }) => {
           default: expiryDate = null; 
         }
 
+        let pauseMode = 'everyone';
+        if (pauseNotif === "Pause except VIPs") pauseMode = 'except_vips';
+
         const payload = {
           text: statusText,
           emoji: statusIcon || "💬",
           expiryTime: expiryDate,
-          pauseNotifications: pauseNotif !== "Do not pause" 
+          pauseNotifications: pauseNotif !== "Do not pause",
+          pauseMode: pauseMode
         };
 
         try {
-          const token = localStorage.getItem("token");
-          if (!token) return;
-
-          const config = {
-            headers: { 
-              Authorization: token.startsWith("Bearer") ? token : `Bearer ${token}`,
-              "Content-Type": "application/json"
-            }
-          };
-          const res = await axios.post(`${serverURL}/api/user/status`, payload, config);
+          const res = await axios.post(`${serverURL}/api/user/status`, payload, getAuthConfig());
           if(res.data.success) {
               dispatch(setUser(res.data.user)); 
-               if (singleUser && singleUser._id === res.data.user._id) {
+              if (singleUser && singleUser._id === res.data.user._id) {
                   dispatch(setSingleUser(res.data.user));
               }
               onClose(); 
@@ -151,7 +171,6 @@ const Status = ({ onClose }) => {
         }
     };
 
-   
     return createPortal(
       <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 font-sans animate-in fade-in duration-200">
         <div className="bg-white w-[520px] rounded-lg shadow-2xl relative flex flex-col max-h-[90vh]">
@@ -164,7 +183,7 @@ const Status = ({ onClose }) => {
               </button>
           </div>
   
-          {/* Scrollable Body */}
+          {/* Body */}
           <div className="px-6 pb-2 min-h-[300px]">
               
               {/* Input Field */}
@@ -183,14 +202,14 @@ const Status = ({ onClose }) => {
                   />
 
                   {hasStatus && (
-                      <button onClick={clearStatus} className="absolute right-3 top-3.5 hover:opacity-70">
+                      <button onClick={handleClearStatusBackend} className="absolute right-3 top-3.5 hover:opacity-70">
                           <XCircleIcon />
                       </button>
                   )}
               </div>
   
               {!hasStatus ? (
-                  /* 1. SUGGESTIONS LIST */
+                  /* SUGGESTIONS LIST */
                   <div className="mb-2">
                       <h3 className="text-xs font-bold text-gray-500 tracking-wide mb-2 uppercase">For {workspaceName}</h3>
                       <ul className="space-y-0.5">
@@ -206,14 +225,6 @@ const Status = ({ onClose }) => {
                               </li>
                           ))}
                       </ul>
-                      
-                      <div className="mt-4 pt-4 border-t border-gray-100">
-                          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Automatically updates</h3>
-                          <div className="flex items-center gap-3 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-100 text-gray-400 cursor-not-allowed">
-                              <span className="w-6 h-6 flex items-center justify-center bg-gray-200 text-gray-500 rounded text-xs font-bold">31</span>
-                              <span className="text-sm font-medium text-gray-700">In a meeting <span className="text-gray-400 font-normal">— Based on your Google Calendar</span></span>
-                          </div>
-                      </div>
                   </div>
               ) : (
                   <div className="space-y-4 mb-4"> 
@@ -236,7 +247,7 @@ const Status = ({ onClose }) => {
                                             onClick={() => { setExpiry(opt); setIsExpiryOpen(false); }}
                                             className={`px-4 py-1.5 text-sm cursor-pointer hover:bg-[#1264a3] hover:text-white flex items-center gap-2 ${expiry === opt ? 'bg-[#1264a3] text-white' : 'text-gray-700'}`}
                                         >
-                                           <span className={expiry === opt ? 'ml-0 font-bold' : 'ml-4'}>{opt}</span>
+                                           <span className={expiry === opt ? 'font-bold' : 'ml-0'}>{opt}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -262,7 +273,7 @@ const Status = ({ onClose }) => {
                                             onClick={() => { setPauseNotif(opt); setIsNotifOpen(false); }}
                                             className={`px-4 py-1.5 text-sm cursor-pointer hover:bg-[#1264a3] hover:text-white flex items-center gap-2 ${pauseNotif === opt ? 'bg-[#1264a3] text-white' : 'text-gray-700'}`}
                                         >
-                                           <span className={pauseNotif === opt ? 'ml-0 font-bold' : 'ml-4'}>{opt}</span>
+                                           <span className={pauseNotif === opt ? 'font-bold' : 'ml-0'}>{opt}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -272,6 +283,7 @@ const Status = ({ onClose }) => {
               )}
           </div>
   
+          {/* Footer */}
           <div className="flex justify-end items-center gap-3 px-6 py-4 bg-white rounded-b-lg border-t border-gray-200 mt-auto">
               <button 
                   onClick={onClose}
