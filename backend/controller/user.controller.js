@@ -266,46 +266,41 @@ export const clearStatus=async(req,res)=>{
 
 export const pauseNotifications = async (req, res) => {
   try {
-    const userId = req.userId; // Provided by your auth middleware
+    const userId = req.userId; 
     const { duration, customIsoDate, mode, pauseMode } = req.body;
 
     let updateData = {};
 
-    // 1. Check if the user wants to RESUME (Turn off DND)
+
     if (mode === "resume") {
       updateData = {
         notificationPausedUntil: null,
-        notificationPauseMode: "everyone", // Reset to default
+        notificationPauseMode: "everyone", 
       };
     } 
-    // 2. Otherwise, we are PAUSING
+   
     else {
       let untilDate = null;
 
       if (duration) {
-        // duration is expected in minutes (e.g., 30, 60, 120)
         untilDate = new Date(Date.now() + duration * 60 * 1000);
       } else if (customIsoDate) {
-        // specific ISO string (e.g., "2023-12-31T09:00:00.000Z")
         untilDate = new Date(customIsoDate);
       } else {
-        // Fallback: If no duration/date provided, default to 1 hour
         untilDate = new Date(Date.now() + 60 * 60 * 1000);
       }
 
       updateData = {
         notificationPausedUntil: untilDate,
-        // pauseMode should be 'everyone' or 'except_vips'
         notificationPauseMode: pauseMode || "everyone", 
       };
     }
 
-    // 3. Update the user document
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
-      { new: true } // Return the updated document
-    ).select("-password"); // Exclude password for security
+      { new: true } 
+    ).select("-password");
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -314,7 +309,6 @@ export const pauseNotifications = async (req, res) => {
       });
     }
 
-    // 4. Send success response
     return res.status(200).json({
       success: true,
       message: mode === "resume" ? "Notifications resumed" : "Notifications paused",

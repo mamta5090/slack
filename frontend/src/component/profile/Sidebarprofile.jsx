@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,6 +7,48 @@ import Avatar from "../Avatar";
 import { serverURL } from '../../main';
 import Status from "../../pages/Status"; 
 import Prefrences from "../../pages/Prefrences";
+
+// --- Helper Functions ---
+
+/**
+ * Checks if current time is outside the user's notification schedule
+ */
+export const isOutsideNotificationSchedule = (preferences) => {
+  if (!preferences || !preferences.notifications?.schedule) return false;
+
+  const { schedule } = preferences.notifications;
+  const now = new Date();
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const currentDayName = days[now.getDay()];
+
+  // Find today's schedule
+  const todaySchedule = schedule.days?.find(d => d.day === currentDayName);
+  if (!todaySchedule) return false;
+
+  const parseTime = (timeStr) => {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+    const d = new Date();
+    d.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+    return d;
+  };
+
+  const startTime = parseTime(todaySchedule.start);
+  const endTime = parseTime(todaySchedule.end);
+
+  // Return true if current time is BEFORE start or AFTER end
+  return now < startTime || now > endTime;
+};
+
+/**
+ * Checks if a manual pause is currently active
+ */
+export const isManualPauseActive = (user) => {
+  if (!user || !user.notificationPausedUntil) return false;
+  return new Date(user.notificationPausedUntil) > new Date();
+};
 
 // --- Icons ---
 const SmileIcon = () => (
@@ -38,6 +80,8 @@ const Sidebarprofile = () => {
   const [showStatusModal, setShowStatusModal] = useState(false); 
   const [openCustomNotification, setOpenCustomNotification] = useState(false);
   const [openPreferences, setOpenPrefrences] = useState(false);
+  const [userPrefs, setUserPrefs] = useState(null);
+
   // Custom Modal States
   const [customDate, setCustomDate] = useState("2025-12-26");
   const [customTime, setCustomTime] = useState("13:00");
@@ -49,12 +93,27 @@ const Sidebarprofile = () => {
 
   const user = useSelector((state) => state.user.user);
   const { onlineUsers = [] } = useSelector((state) => state.socket) || {};
-  const currentUser = useSelector((state) => state.user.user) || {};
   const isOnline = user && onlineUsers.includes(user._id);
   const workspaceName = "Koalaliving"; 
   const profileRouteValue = user?.username || user?._id || "me";
 
-  const isDNDActive = user?.notificationPausedUntil && new Date(user.notificationPausedUntil) > new Date();
+  // --- Fetch Preferences for Schedule logic ---
+  useEffect(() => {
+    const fetchPrefs = async () => {
+      try {
+        const res = await axios.get(`${serverURL}/api/preferences/${user._id}`);
+        setUserPrefs(res.data);
+      } catch (err) {
+        console.error("Error fetching preferences", err);
+      }
+    };
+    if (user?._id) fetchPrefs();
+  }, [user?._id, openPreferences]); // Refresh if preferences are closed (updated)
+
+  // --- DND Logic Calculation ---
+  const manualPause = useMemo(() => isManualPauseActive(user), [user]);
+  const schedulePause = useMemo(() => isOutsideNotificationSchedule(userPrefs), [userPrefs]);
+  const isDNDActive = manualPause || schedulePause;
 
   // --- API HANDLER ---
   const handleSetDND = async (type, value, pauseMode = 'everyone') => {
@@ -85,7 +144,6 @@ const Sidebarprofile = () => {
   };
 
   const handleCustomSave = () => {
-    // Combine date and time into an ISO string
     const combinedDateTime = new Date(`${customDate}T${customTime}:00`).toISOString();
     handleSetDND('date', combinedDateTime);
   };
@@ -147,6 +205,13 @@ const Sidebarprofile = () => {
       >
         <Avatar user={user} size="md" />
         <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${isOnline ? "bg-green-500" : "bg-gray-500"}`} />
+        {isDNDActive && (
+          <div className="absolute -top-1 -right-1 bg-white rounded-full p-0.5 shadow-sm border border-gray-100">
+             <div className="w-2.5 h-2.5 bg-black rounded-full flex items-center justify-center">
+                <div className="w-1.5 h-0.5 bg-white rounded-full"></div>
+             </div>
+          </div>
+        )}
       </button>
 
       {showStatusModal && <Status onClose={() => setShowStatusModal(false)} />}
@@ -185,10 +250,14 @@ const Sidebarprofile = () => {
             >
               <div className="flex flex-col">
                 <span>{isDNDActive ? "Notifications Paused" : "Pause notifications"}</span>
-                {isDNDActive && (
+                {manualPause ? (
                   <span className="text-xs opacity-80">
                     Until {new Date(user.notificationPausedUntil).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
+                ) : schedulePause ? (
+                  <span className="text-xs opacity-80">On a schedule</span>
+                ) : (
+                  <span className="text-xs opacity-80">On</span>
                 )}
               </div>
               <ChevronRight />
@@ -196,12 +265,38 @@ const Sidebarprofile = () => {
 
            {showNotifications && (
               <div className="absolute left-full bottom-[-140px] w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden text-gray-800">
-                <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center text-gray-900">
+                
+                {/* DO NOT DISTURB BANNER (From Image Reference) */}
+                {schedulePause && !manualPause && (
+                  <div className="bg-[#1d1c1d] p-5 text-white relative overflow-hidden">
+                      <div className="flex justify-between items-start z-10 relative">
+                          <div className="flex flex-col gap-1">
+                              <span className="font-bold text-sm">Do not disturb</span>
+                              <span className="text-xs text-gray-300">Notifications paused until {userPrefs?.notifications?.schedule?.days?.find(d => d.day === ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][new Date().getDay()])?.start}</span>
+                          </div>
+                          <span className="text-2xl">🎧</span>
+                      </div>
+                      <div className="mt-4 flex flex-col gap-2.5 z-10 relative">
+                          <button onClick={() => handleSetDND('resume')} className="text-left text-sm font-bold text-[#e01e5a] hover:underline">
+                              Resume notifications
+                          </button>
+                          <button onClick={() => { setOpenPrefrences(true); setShowNotifications(false); }} className="text-left text-xs text-gray-300 hover:underline">
+                              Adjust time
+                          </button>
+                          <button onClick={() => { setOpenPrefrences(true); setShowNotifications(false); }} className="text-left text-xs text-gray-300 hover:underline">
+                              Set a notification schedule
+                          </button>
+                      </div>
+                      <div className="absolute -right-4 -bottom-4 opacity-10 text-7xl rotate-12">🎧</div>
+                  </div>
+                )}
+
+                <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center text-gray-900 bg-white">
                     <span className="font-bold text-sm">Pause notifications...</span>
                     <HelpCircle />
                 </div>
-                <div className="py-2">
-                    {isDNDActive && (
+                <div className="py-2 bg-white">
+                    {manualPause && (
                         <button onClick={() => handleSetDND('resume')} className="w-full text-left px-5 py-1.5 text-sm font-bold text-green-600 hover:bg-blue-600 hover:text-white transition-colors">
                             Resume notifications
                         </button>
@@ -214,7 +309,7 @@ const Sidebarprofile = () => {
                     <button onClick={() => setOpenCustomNotification(true)} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Custom...</button>
                 </div>
 
-                <div className="py-2 border-t border-gray-100">
+                <div className="py-2 border-t border-gray-100 bg-white">
                      <button 
                         onClick={() => handleSetDND('duration', 60, 'except_vips')} 
                         className="w-full text-left px-5 py-2 hover:bg-blue-600 group transition-colors"
@@ -231,23 +326,33 @@ const Sidebarprofile = () => {
 
           <div className="py-2 border-t border-gray-100">
             <button onClick={() => { navigate(`/profile/${profileRouteValue}`); setOpen(false); }} className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Profile</button>
-<button 
-  onClick={() => { setOpenPrefrences(true)}} 
-  className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
->
-  Preferences
-</button>
+            <button 
+              onClick={() => { setOpenPrefrences(true); setOpen(false); }} 
+              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+            >
+              Preferences
+            </button>
           </div>
 
- {openPreferences && <Prefrences onClose={() => setOpenPrefrences(false)} />}
+          {openPreferences && (
+            <Prefrences 
+              userId={user?._id} 
+              onClose={() => setOpenPrefrences(false)} 
+            />
+          )}
+
           <div className="py-2 border-t border-gray-100">
-            <button onClick={() => { handleLogout(); setOpen(false); }}
-              userId={currentUser._id}  className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors">Sign out of {workspaceName}</button>
+           <button 
+              onClick={() => { handleLogout(); setOpen(false); }}
+              className="w-full text-left px-5 py-1.5 text-sm hover:bg-blue-600 hover:text-white transition-colors"
+            >
+              Sign out of {workspaceName}
+            </button>
           </div>
         </div>
       )}
 
-      {/* CUSTOM DND MODAL - PLACED AT ROOT FOR BETTER OVERLAY HANDLING */}
+      {/* CUSTOM DND MODAL */}
       {openCustomNotification && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-[1px]">
           <div className="w-full max-w-[440px] rounded-lg bg-white p-8 shadow-2xl relative">
