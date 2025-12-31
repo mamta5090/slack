@@ -1,8 +1,7 @@
 import User from "../models/User.js"; 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-
+import UserPreferences from "../models/UserPreferences.js";
 
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -41,8 +40,6 @@ export const register = async (req, res) => {
   }
 };
 
-
-
 export const login = async (req, res) => {
   try {
     console.log(">>> LOGIN HIT - body:", req.body);
@@ -79,9 +76,6 @@ export const login = async (req, res) => {
   }
 };
 
-
-
-
 export const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.userId).select("-password");
@@ -95,8 +89,6 @@ export const getMe = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-
 
 export const logOut = async (req, res) => {
   try {
@@ -112,8 +104,6 @@ export const logOut = async (req, res) => {
     res.status(500).json({ message: "Error logging out" });
   }
 };
-
-
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -162,8 +152,6 @@ export const getSingleUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
-
 
 export const editProfile = async (req, res) => {
     try {
@@ -238,60 +226,56 @@ export const setStatus=async(req,res)=>{
   }
 }
 
-export const clearStatus=async(req,res)=>{
-  try{
-    const {userId}=req.user;
-    const user=await User.findById(userId);
-    if(!user) return res.status(404).json({message:"user not found"})
+export const clearStatus = async (req, res) => {
+  try {
+    const userId = req.userId || req.user.id; 
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "user not found" });
 
-      user.status = {
-      text: "",
-      emoji: "",
-      expiryTime: null,
-      pauseNotifications: false
-    };
-
+    // Clear everything: Status, Manual Pause, and Schedule Overrides
+    user.status = { text: "", emoji: "", expiryTime: null, pauseNotifications: false };
+    user.notificationPausedUntil = null;
+    user.notificationScheduleOverrideUntil = null; // Clear override
+    user.notificationPauseMode = "everyone";
+    
     await user.save();
 
+    const preferences = await UserPreferences.findOne({ userId });
 
     res.status(200).json({ 
       success: true, 
-      message: "Status cleared", 
-      user 
+      message: "Status cleared and notifications resumed", 
+      user,
+      preferences 
     });
-  }catch (error) {
+  } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }
-}
+};
+
 
 export const pauseNotifications = async (req, res) => {
   try {
     const userId = req.userId; 
-    const { duration, customIsoDate, mode, pauseMode } = req.body;
+    const { duration, customIsoDate, mode, pauseMode, scheduleOverrideUntil } = req.body;
 
     let updateData = {};
-
 
     if (mode === "resume") {
       updateData = {
         notificationPausedUntil: null,
+        // If the frontend calculated a time to ignore the schedule until, save it here
+        notificationScheduleOverrideUntil: scheduleOverrideUntil || null, 
         notificationPauseMode: "everyone", 
       };
-    } 
-   
-    else {
-      let untilDate = null;
-
-      if (duration) {
-        untilDate = new Date(Date.now() + duration * 60 * 1000);
-      } else if (customIsoDate) {
-        untilDate = new Date(customIsoDate);
-      } else {
-        untilDate = new Date(Date.now() + 60 * 60 * 1000);
-      }
+    } else {
+      let untilDate = duration 
+        ? new Date(Date.now() + duration * 60 * 1000)
+        : (customIsoDate ? new Date(customIsoDate) : new Date(Date.now() + 60 * 60 * 1000));
 
       updateData = {
         notificationPausedUntil: untilDate,
+        notificationScheduleOverrideUntil: null, // Reset override when manually pausing
         notificationPauseMode: pauseMode || "everyone", 
       };
     }
@@ -302,25 +286,15 @@ export const pauseNotifications = async (req, res) => {
       { new: true } 
     ).select("-password");
 
-    if (!updatedUser) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    const preferences = await UserPreferences.findOne({ userId });
 
     return res.status(200).json({
       success: true,
       message: mode === "resume" ? "Notifications resumed" : "Notifications paused",
       user: updatedUser,
+      preferences
     });
-
   } catch (error) {
-    console.error("Error in pauseNotifications controller:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message,
-    });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };

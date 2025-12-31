@@ -1,67 +1,69 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import axios from "axios";
+import { serverURL } from "../main";
+import { isManualPauseActive, isOutsideNotificationSchedule } from "../../../backend/config/notificationHelper.js";
 
 const NOTIFICATION_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; 
 
 const useListenMessages = () => {
   const { socket } = useSelector((state) => state.socket);
   const { user } = useSelector((state) => state.user); 
+  const [preferences, setPreferences] = useState(null);
+
+  // Fetch preferences when user changes to get the "muteAll" and "schedule" settings
+  useEffect(() => {
+    const fetchPrefs = async () => {
+      try {
+        if (user?._id) {
+          const res = await axios.get(`${serverURL}/api/preferences/${user._id}`);
+          setPreferences(res.data);
+        }
+      } catch (err) {
+        console.error("Hook: Error fetching preferences", err);
+      }
+    };
+    fetchPrefs();
+  }, [user?._id]);
 
   useEffect(() => {
     if (!socket || !user) return;
     
     const handleNotificationSound = (payload) => {
-        // --- DEBUG LOGS ---
-        console.log("🔔 Incoming Message Payload:", payload);
-        console.log("👤 Current User DND Info:", {
-            pausedUntil: user.notificationPausedUntil,
-            mode: user.notificationPauseMode,
-            statusPause: user.status?.pauseNotifications
-        });
-
         const now = new Date().getTime();
-        const pausedUntilTime = user.notificationPausedUntil ? new Date(user.notificationPausedUntil).getTime() : 0;
         
-        // 1. Determine if DND is active (Time check + Boolean check)
-        // We check both the date and the boolean in user.status for extra safety
-        const isTimePaused = pausedUntilTime > now;
-        const isDNDActive = isTimePaused || user.status?.pauseNotifications;
+        // --- 1. PREFERENCE CHECK: MUTE ALL ---
+        const isMutedByPreference = preferences?.notifications?.sounds?.muteAll === true;
+        if (isMutedByPreference) {
+            console.log("🔕 Muted: User enabled 'Mute all messaging sounds' in preferences.");
+            return;
+        }
 
-        if (isDNDActive) {
-            // 2. Logic for "Pause for Everyone"
-            // We use '|| !user.notificationPauseMode' as a fallback in case it's not set
-            if (!user.notificationPauseMode || user.notificationPauseMode === 'everyone') {
-                console.log("🔕 Muted: DND is active for everyone.");
-                return; 
-            }
+        // --- 2. SCHEDULE CHECK ---
+        const isOutsideSchedule = isOutsideNotificationSchedule(preferences);
+        
+        // --- 3. MANUAL PAUSE (DND) CHECK ---
+        const isManualPaused = isManualPauseActive(user);
 
-            // 3. Logic for "Pause except VIPs"
-            if (user.notificationPauseMode === 'except_vips') {
-                // Determine sender ID carefully from various payload structures
-                // newMessage structure (DM): payload.newMessage.sender._id
-                // channelNotification structure: payload.senderId or payload.sender._id
-                const senderId = 
-                    payload.newMessage?.sender?._id || 
-                    payload.newMessage?.sender || 
-                    payload.senderId || 
-                    payload.sender?._id;
-                
-                const isVIP = user.vips?.some(vipId => String(vipId) === String(senderId));
-                
-                if (!isVIP) {
-                    console.log("🔕 Muted: Sender is not a VIP.");
-                    return; 
-                }
-                console.log("🌟 Sound playing: Sender is a VIP!");
+        // --- 4. VIP EXCEPTION LOGIC ---
+        // Even if paused, play if it's a VIP and the user wants VIP notifications
+        const isVipMessageSettingOn = preferences?.notifications?.messagingDefaults?.vipMessages === true;
+        const senderId = payload.newMessage?.sender?._id || payload.newMessage?.sender || payload.senderId;
+        const isSenderVip = user.vips?.some(vipId => String(vipId) === String(senderId));
+
+        if (isOutsideSchedule || isManualPaused) {
+            if (isVipMessageSettingOn && isSenderVip) {
+                console.log("🌟 VIP Sound playing despite DND/Schedule.");
+            } else {
+                console.log("🔕 Muted: User is outside schedule or in manual DND.");
+                return;
             }
         }
 
-        // 4. Final check: Only play if NOT in the current active chat 
-        // (Optional: You might want to prevent sound if the user is already looking at the message)
-        
+        // --- 5. PLAY SOUND ---
         console.log("🔊 Playing Sound...");
         const sound = new Audio(NOTIFICATION_SOUND_URL);
-        sound.play().catch(err => console.error("Audio Error (Browser likely blocked auto-play):", err));
+        sound.play().catch(err => console.error("Audio blocked:", err));
     };
 
     socket.on("newMessage", handleNotificationSound);
@@ -71,7 +73,7 @@ const useListenMessages = () => {
         socket.off("newMessage", handleNotificationSound);
         socket.off("channelNotification", handleNotificationSound);
     };
-  }, [socket, user]); // Crucial: Re-runs when user object (DND settings) updates in Redux
+  }, [socket, user, preferences]); // Re-run if preferences change
 };
 
 export default useListenMessages;
