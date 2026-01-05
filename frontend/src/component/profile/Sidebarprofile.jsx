@@ -107,7 +107,7 @@ const Sidebarprofile = () => {
   const scheduleOverride = useMemo(() => isScheduleOverrideActive(user), [user]);
 
   // Notifications are "Silent" if: (Manually Paused OR Outside Schedule) AND NO ACTIVE RESUME OVERRIDE
- const isDNDActive = (manualPause || schedulePause) && !scheduleOverride;
+const isDNDActive = (manualPause || schedulePause) && !scheduleOverride;
 
   const handleClearStatus = async () => {
     try {

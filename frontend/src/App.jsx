@@ -45,7 +45,7 @@ import NotificationToast from "./component/NotificationToast";
 import Directories from "./pages/Directories.jsx";
 import DraftsSend from "./pages/DraftsSend.jsx";
 import Huddles from "./component/Huddles.jsx";
-
+import {updateMessage} from './redux/messageSlice.js'
 
 const App = () => {
   const navigate = useNavigate();
@@ -75,28 +75,25 @@ const [notifications, setNotifications] = useState([]);
 
 
 useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-        try {
-          const res = await axios.get(`${serverURL}/api/slack/me`);
-          if (res.data?.user) {
-            dispatch(setUser(res.data.user));
-          } else {
-            delete axios.defaults.headers.common["Authorization"];
-            localStorage.removeItem("token");
-          }
-        } catch (error) {
-          console.error("Authentication check failed", error);
-          delete axios.defaults.headers.common["Authorization"];
-          localStorage.removeItem("token");
+  const initAuth = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      try {
+        // Use the /profile endpoint as it returns the full user with DND fields
+        const res = await axios.get(`${serverURL}/api/user/profile`);
+        if (res.data?.user) {
+          dispatch(setUser(res.data.user)); // This sets the override in Redux
         }
+      } catch (error) {
+        console.error("Auth failed", error);
+        localStorage.removeItem("token");
       }
-      setAuthChecked(true);
-    };
-    initAuth();
-  }, [dispatch]);
+    }
+    setAuthChecked(true);
+  };
+  initAuth();
+}, [dispatch]);
 
 
 
@@ -147,6 +144,11 @@ useEffect(() => {
       fetchAndStoreNotifications();
       refreshConversationsAndChannels();
     });
+
+   socketIo.on("messageUpdate", (updatedMessage) => {
+  console.log("✅ Socket received reaction update:", updatedMessage._id);
+  dispatch(updateMessage(updatedMessage));
+});
 
     socketIo.on("reconnect", () => {
       console.log("socket reconnected");

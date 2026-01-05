@@ -4,7 +4,7 @@ const fileSchema = new mongoose.Schema({
   name: String,
   url: String,
   mimetype: String,
-  key: String, // S3 key (if you have it)
+  key: String, 
 });
 
 const messageSchema = new mongoose.Schema({
@@ -28,7 +28,6 @@ const messageSchema = new mongoose.Schema({
     default: "" ,
     trim: true,
   },
-  // Backwards compatible single-image fields (you already use these)
   image: {
     type: String,
     default: "",
@@ -37,11 +36,16 @@ const messageSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
-  // New files array - holds images & docs
   files: {
     type: [fileSchema],
     default: []
   },
+  reactions: [
+  {
+    emoji: String,
+    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+  }
+],
   isDeleted: {
     type: Boolean,
     default: false,

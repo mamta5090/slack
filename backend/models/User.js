@@ -39,29 +39,25 @@ notificationPauseMode: {
 );
 
 
-userSchema.methods.cleanExpiredStatus = async function () {
-  let isModified = false;
-  const now = new Date();
+userSchema.methods.cleanExpiredStatus = function() {
+    const now = new Date();
 
-  // 1. Clean Status
-  if (this.status && this.status.expiryTime && now > new Date(this.status.expiryTime)) {
-    this.status.text = "";
-    this.status.emoji = "";
-    this.status.expiryTime = null;
-    isModified = true;
-  }
+    // Clear status if expired
+    if (this.status && this.status.expiryTime && this.status.expiryTime < now) {
+        this.status = { text: "", emoji: "", expiryTime: null, pauseNotifications: false };
+    }
 
-  // 2. Clean Notification Pause
-  if (this.notificationPausedUntil && now > new Date(this.notificationPausedUntil)) {
-    this.notificationPausedUntil = null;
-    this.status.pauseNotifications = false; // Sync the boolean
-    isModified = true;
-  }
+    // Clear manual pause if expired
+    if (this.notificationPausedUntil && this.notificationPausedUntil < now) {
+        this.notificationPausedUntil = null;
+    }
 
-  if (isModified) {
-    await this.save();
-  }
-  return this;
+    // Clear schedule override ONLY if the override date (tomorrow 9am) has passed
+    if (this.notificationScheduleOverrideUntil && this.notificationScheduleOverrideUntil < now) {
+        this.notificationScheduleOverrideUntil = null;
+    }
+
+    return this.save();
 };
 
 const User = mongoose.model("User", userSchema);

@@ -43,12 +43,12 @@ router.get('/:userId', async (req, res) => {
 router.patch('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { notifications, resumeNotifications, scheduleOverrideUntil } = req.body;
+    const { resumeNotifications, scheduleOverrideUntil } = req.body;
 
     let updatedUser = null;
 
-    // 1. Handle Resume Logic
     if (resumeNotifications === true) {
+      // Update the user model to set the override
       updatedUser = await User.findByIdAndUpdate(userId, {
         $set: { 
           notificationPausedUntil: null, 
@@ -58,17 +58,16 @@ router.patch('/:userId', async (req, res) => {
       }, { new: true }).select("-password");
     }
 
-    // 2. Update Preference Logic
     const updatedPrefs = await UserPreferences.findOneAndUpdate(
-      { userId: userId },
+      { userId },
       { $set: req.body }, 
       { new: true, upsert: true }
     );
 
-    // Return BOTH so frontend can update everything
+    // CRITICAL: Return both. The frontend needs 'user' to update Redux.
     res.json({
       preferences: updatedPrefs,
-      user: updatedUser // This allows Redux to clear the "z" icon
+      user: updatedUser 
     });
   } catch (err) {
     res.status(400).json({ message: err.message });

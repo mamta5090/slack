@@ -34,7 +34,8 @@ export const removeSocketForUser = (userId, socketId) => {
 };
 
 export const getSocketIdsForUser = (userId) => {
-  return Array.from(userSocketMap.get(String(userId)) || []);
+  const key = String(userId);
+  return Array.from(userSocketMap.get(key) || []);
 };
 
 export const getSocketId = (userId) => {

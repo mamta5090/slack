@@ -1,11 +1,12 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { serverURL } from "../main";
-// Added Redux imports to update global user state
+// Added Redux to update the global user state so the "z" icon disappears immediately
 import { useSelector, useDispatch } from "react-redux";
 import { setUser } from "../redux/userSlice";
 
 // --- HELPER FUNCTIONS FOR DETECTION ---
+// These allow the Preferences panel to know if notifications are currently silenced
 const isManualPauseActive = (user) => {
   if (!user || !user.notificationPausedUntil) return false;
   const pausedUntil = new Date(user.notificationPausedUntil);
@@ -20,6 +21,7 @@ const isOutsideNotificationSchedule = (preferences) => {
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const currentDayName = days[now.getDay()];
   const todaySchedule = schedule.days?.find(d => d.day === currentDayName);
+  
   if (!todaySchedule || todaySchedule.enabled === false) return true;
 
   const parseTime = (timeStr) => {
@@ -41,7 +43,7 @@ const isOutsideNotificationSchedule = (preferences) => {
 
 const Preferences = ({ onClose, userId }) => {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.user.user); // Get current user for DND status
+  const user = useSelector((state) => state.user.user); // Get user for live pause status
   const [activeTab, setActiveTab] = useState("Notifications");
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -113,6 +115,7 @@ const Preferences = ({ onClose, userId }) => {
       try {
         setLoading(true);
         const res = await axios.get(`${serverURL}/api/preferences/${userId}`);
+        
         if (res.data && res.data.notifications) {
           setSettings({
             ...defaultSettingsSkeleton,
@@ -129,35 +132,39 @@ const Preferences = ({ onClose, userId }) => {
         setLoading(false);
       }
     };
+
     if (userId) {
       fetchSettings();
     }
   }, [userId]);
 
-  // --- RESUME LOGIC ---
-  const handleResumeFromPrefs = async () => {
-    try {
-      const isOutside = isOutsideNotificationSchedule({ notifications: settings });
-      let payload = { resumeNotifications: true };
+  // --- NEW RESUME FUNCTION FOR PREFERENCES ---
+const handleResumeFromPrefs = async () => {
+  try {
+    // 1. Check if we are outside work hours
+    const isOutside = isOutsideNotificationSchedule({ notifications: settings });
+    let payload = { resumeNotifications: true };
 
-      if (isOutside) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(9, 0, 0, 0);
-        payload.scheduleOverrideUntil = tomorrow.toISOString();
-      }
-
-      const res = await axios.patch(`${serverURL}/api/preferences/${userId}`, payload);
-      
-      if (res.data.user) {
-        dispatch(setUser(res.data.user)); // Update Redux to remove "z" icon
-        setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 2000);
-      }
-    } catch (err) {
-      console.error("Resume error:", err);
+    if (isOutside) {
+      // 2. Set override until tomorrow morning 9AM
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0);
+      payload.scheduleOverrideUntil = tomorrow.toISOString();
     }
-  };
+
+    const res = await axios.patch(`${serverURL}/api/preferences/${userId}`, payload);
+    
+    // 3. Update Redux immediately
+    if (res.data.user) {
+      dispatch(setUser(res.data.user)); // This clears the "z" badge globally
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    }
+  } catch (err) {
+    console.error("Resume error:", err);
+  }
+};
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -165,6 +172,7 @@ const Preferences = ({ onClose, userId }) => {
       await axios.patch(`${serverURL}/api/preferences/${userId}`, {
         notifications: settings
       });
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
@@ -212,7 +220,7 @@ const Preferences = ({ onClose, userId }) => {
           <div className="flex-1 overflow-y-auto p-10 pt-14 custom-scrollbar text-left">
             {activeTab === "Notifications" ? (
                 <>
-                  {/* RESUME BANNER */}
+                  {/* RESUME BANNER: Shows only if DND is active either manually or by schedule */}
                   {(isManualPauseActive(user) || isOutsideNotificationSchedule({ notifications: settings })) && (
                     <div className="mb-8 flex items-center justify-between rounded-md bg-[#fdf2d0] p-4 border border-[#f3d371]">
                       <div className="flex items-center gap-3">
@@ -271,6 +279,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
 
   return (
     <div className="space-y-10 text-[#1d1c1d]">
+      {/* 1. Messaging Defaults */}
       <section>
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black">Messaging defaults</h3>
@@ -307,6 +316,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
         </div>
       </section>
 
+      {/* 2. Channel Keywords */}
       <section>
         <h4 className="font-bold text-[15px] mb-1">Channel keywords</h4>
         <p className="text-sm text-gray-500 mb-2">These act like mentions, but can be set for topics that are important to you. <span className="text-[#1264a3] cursor-pointer hover:underline">Learn more.</span></p>
@@ -319,6 +329,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
         <p className="text-xs text-gray-400 mt-1">Use commas to separate each keyword. Keywords are not case sensitive.</p>
       </section>
 
+      {/* 3. Notification Schedule */}
       <section className="pt-8 border-t border-gray-200">
         <h3 className="text-lg font-black mb-4">Notification schedule</h3>
         <div className="mb-4">
@@ -348,6 +359,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
         </div>
       </section>
 
+      {/* 4. Reminder & Desktop Activity */}
       <section className="pt-8 border-t border-gray-200 space-y-8">
         <div>
             <h4 className="font-bold text-[15px] mb-2">Set a default time for reminder notifications:</h4>
@@ -370,6 +382,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
         </div>
       </section>
 
+      {/* 5. Sounds & Appearance */}
       <section className="pt-8 border-t border-gray-200">
         <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-black">Sounds & appearance</h3>
@@ -419,6 +432,7 @@ const NotificationSettings = ({ settings, setSettings }) => {
   );
 };
 
+// Reusable Sub-components
 const Checkbox = ({ label, checked, onChange }) => (
   <label className="flex items-start gap-3 cursor-pointer group">
     <div className="relative flex items-center mt-[3px]">

@@ -11,7 +11,8 @@ import Invite from "./Invite";
 const Koalaliving = () => {
   const dropdownRef = useRef(null);
   const [dropdown, setDropdown] = useState(false);
-  
+  const [openInvite, setOpenInvite] = useState(false);
+  const workspaceName = "Koalaliving";
   const dispatch = useDispatch();
   const navigate = useNavigate() ;
 
@@ -110,7 +111,10 @@ const Koalaliving = () => {
         Invite people to {workspaceName}
       </button>
       {openInvite && (
-<Invite/>
+<Invite
+ isOpen={setOpenInvite} 
+ onClick={() => setOpenInvite(false)}
+/>
       )}
 
             <button

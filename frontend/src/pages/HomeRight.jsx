@@ -41,6 +41,7 @@ import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
 import FilteredMsgFiles from "../component/filePage/FilteredMsgFiles.jsx";
 import FilterMsgPage from "../component/filePage/FilterMsgPage.jsx";
+import ShareModal from "./ShareModal.jsx";
 
 
 const HomeRight = () => {
@@ -70,6 +71,8 @@ const HomeRight = () => {
   const [openFilePage,setOpenFilePage]=useState(false);
 const [showPopover, setShowPopover] = useState(false);
 const [view, setView] = useState("messages");
+const [isShareOpen, setIsShareOpen] = useState(false);
+  const [forwardData, setForwardData] = useState(null);
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -97,7 +100,31 @@ const [view, setView] = useState("messages");
     }
   };
 
-  useClickOutside(plusMenuRef, () => setPlusOpen(false));
+const handleForwardSubmit = async (targetUserId) => {
+  if (!forwardData || !targetUserId) return;
+  
+  try {
+    const payload = {
+      originalMessageId: forwardData.messageId, 
+      receiverId: targetUserId 
+    };
+
+    const res = await axios.post(`${serverURL}/api/message/forward`, payload, authHeaders());
+    
+    if (String(targetUserId) === String(id)) {
+      // Optional: Manually add to local state if socket is slow
+      // dispatch(setMessages([...allMessages, res.data])); 
+    }
+    
+    alert("Message forwarded!");
+    setIsShareOpen(false);
+  } catch (error) {
+    console.error("Forwarding failed", error);
+    alert("Failed to forward message.");
+  }
+};
+
+  useClickOutside(plusMenuRef, () => setPlusOpen(false));  
 
   const { allUsers = [] } = useSelector((state) => state.user);
   const singleUser = useSelector((state) => state.user.singleUser);
@@ -157,11 +184,7 @@ const [view, setView] = useState("messages");
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 
-  // =========================================================================
-  // LOGIC TO RESET NOTIFICATIONS
-  // =========================================================================
 
-  // 1. Find the conversation object for the current chat
 const currentConversation = useMemo(() => {
     if (!conversations || !id || !user?._id) return null;
     return conversations.find(c => 
@@ -303,6 +326,11 @@ const currentConversation = useMemo(() => {
     setAddConversation(false);
     setSelectedUsers([]);
     setSearchQuery("");
+  };
+
+    const handleForwardClick = (data) => {
+    setForwardData(data);
+    setIsShareOpen(true);
   };
 
 //  const handleNotificationClick = async () => {
@@ -593,35 +621,45 @@ const currentConversation = useMemo(() => {
   )}
 </div>
 
+ <ShareModal 
+          isOpen={isShareOpen} 
+          onClose={() => setIsShareOpen(false)}
+          fileData={forwardData}
+          usersList={allUsers || []} 
+           onForward={handleForwardSubmit}
+        />
 
 {/* --- MAIN CONTENT SWITCHER --- */}
 
 {/* SCENARIO A: SHOW MESSAGES */}
 {view === 'messages' && (
-  <>
-    <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
-      {messages.map((msg, idx) => {
-        const isMine = String(msg.sender?._id) === String(user._id);
-        const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-        return isMine ? (
-          <SenderMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            image={msg.image}
-            messageId={msg._id}
-          />
-        ) : (
-          <ReceiverMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            image={msg.image}
-            isDeleted={msg.isDeleted}
-          />
-        );
-      })}
-      <div ref={listEndRef} />
+          <>
+            <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
+           {messages.map((msg) => {
+  const isSentByMe = String(msg.sender?._id || msg.sender) === String(user._id);
+  return isSentByMe ? (
+    <SenderMessage 
+      key={msg._id} 
+      messageId={msg._id}
+      reactions={msg.reactions} // THIS MUST COME FROM msg
+      message={msg.message}
+      createdAt={msg.createdAt}
+      image={msg.image}
+      onForward={handleForwardClick}
+    />
+  ) : (
+    <ReceiverMessage 
+      key={msg._id} 
+      messageId={msg._id}
+      reactions={msg.reactions} // THIS MUST COME FROM msg
+      message={msg.message}
+      createdAt={msg.createdAt}
+      image={msg.image}
+      onForward={handleForwardClick}
+    />
+  );
+})}
+        <div ref={listEndRef} />
     </div>
     
     {/* Message Input Area */}

@@ -1,7 +1,8 @@
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 import User from "../models/User.js"; 
-import { getSocketId, io } from "../socket.js";
+//import { getSocketId, io } from "../socket.js";
+import { getSocketId, getSocketIdsForUser, io } from "../socket.js";
 import { deleteFromS3 } from '../config/s3.js';
 import { createActivity } from './activity.controller.js'; 
 import { createAndSendNotification } from '../config/notification.service.js';
@@ -259,5 +260,154 @@ export const markAsRead = async (req, res) => {
   } catch (error) {
     console.error("markAsRead error:", error);
     return res.status(500).json({ message: error.message });
+  }
+};
+
+export const forwardMessage = async (req, res) => {
+  try {
+    const senderId = req.userId;
+    const { originalMessageId, receiverIds } = req.body;
+
+    if (!originalMessageId || !receiverIds || !Array.isArray(receiverIds) || receiverIds.length === 0) {
+      return res.status(400).json({ 
+        message: "Original message ID and an array of Receiver IDs are required." 
+      });
+    }
+
+    const originalMessage = await Message.findById(originalMessageId);
+    if (!originalMessage) {
+      return res.status(404).json({ message: "Original message not found." });
+    }
+
+    const sender = await User.findById(senderId).select("name");
+
+    const forwardResults = await Promise.all(
+      receiverIds.map(async (receiverId) => {
+        const newMessage = await Message.create({
+          sender: senderId,
+          receiver: receiverId,
+          message: originalMessage.message || "",
+          files: originalMessage.files || [],
+          image: originalMessage.image,
+          imageKey: originalMessage.imageKey,
+          isForwarded: true,
+        });
+
+        const updatedConversation = await Conversation.findOneAndUpdate(
+          { participants: { $all: [senderId, receiverId] } },
+          {
+            $push: { messages: newMessage._id },
+            $inc: { [`unreadCounts.${receiverId}`]: 1 },
+            lastNotificationSentAt: new Date(),
+            updatedAt: new Date(),
+          },
+          { upsert: true, new: true }
+        ).populate("participants", "name email profilePic");
+
+        const populatedNewMessage = await Message.findById(newMessage._id)
+          .populate("sender", "name email profilePic");
+
+        const receiverSocketId = getSocketId(receiverId);
+        const senderSocketId = getSocketId(senderId);
+
+        const socketPayload = {
+          newMessage: populatedNewMessage,
+          updatedConversation,
+        };
+
+        if (senderSocketId) io.to(senderSocketId).emit("newMessage", socketPayload);
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit("newMessage", socketPayload);
+        } else {
+          // --- FIX: Wrapped in try-catch and changed notification type ---
+          try {
+            if (sender) {
+              await createAndSendNotification({
+                userId: receiverId,
+                // CHANGE "personal_message" to "message" or whatever your enum allows
+                type: "message", 
+                actorId: senderId,
+                title: `${sender.name} forwarded a message`,
+                body: populatedNewMessage.message || "Sent a file",
+              });
+            }
+          } catch (notificationError) {
+            console.error("Notification failed to send, but message was created:", notificationError.message);
+            // We don't throw the error here so the loop continues
+          }
+        }
+
+        return populatedNewMessage;
+      })
+    );
+
+    return res.status(201).json({
+      success: true,
+      messages: forwardResults,
+    });
+
+  } catch (error) {
+    console.error("forwardMessage error:", error);
+    return res.status(500).json({ 
+      message: `Forward error: ${error.message}` 
+    });
+  }
+};
+
+// controller/message.controller.js
+
+export const reactToMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.userId;
+
+    const message = await Message.findById(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+
+    // Find if this emoji already exists in reactions
+    const reactionIndex = message.reactions.findIndex(r => r.emoji === emoji);
+
+    if (reactionIndex > -1) {
+      const userIndex = message.reactions[reactionIndex].users.indexOf(userId);
+      if (userIndex > -1) {
+        // User already reacted -> Remove them (Toggle off)
+        message.reactions[reactionIndex].users.splice(userIndex, 1);
+        if (message.reactions[reactionIndex].users.length === 0) {
+          message.reactions.splice(reactionIndex, 1);
+        }
+      } else {
+        // Emoji exists but user hasn't reacted -> Add them
+        message.reactions[reactionIndex].users.push(userId);
+      }
+    } else {
+      // New emoji reaction
+      message.reactions.push({ emoji, users: [userId] });
+    }
+
+    await message.save();
+
+    // Populate sender and reactions so frontend has all info to re-render
+    const populatedMsg = await Message.findById(messageId)
+      .populate("sender", "name email profilePic")
+      .lean();
+
+    // Find conversation to find all participants to notify
+    const convo = await Conversation.findOne({ messages: messageId });
+    
+    if (convo) {
+      convo.participants.forEach(pId => {
+        // Now using the imported function to get ALL socket IDs for the user (handles multiple tabs)
+        const socketIds = getSocketIdsForUser(pId.toString()); 
+        socketIds.forEach(sid => {
+          io.to(sid).emit("messageUpdate", populatedMsg);
+        });
+      });
+    }
+
+    res.status(200).json(populatedMsg);
+  } catch (error) {
+    console.error("React error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
