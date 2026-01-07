@@ -105,6 +105,7 @@ export const sendMessage = async (req, res) => {
         await createAndSendNotification({
           userId: receiverId,
           type: "personal_message",
+          
           actorId: senderId,
           title: `New message from ${sender.name}`,
           body: message || "Sent a file",

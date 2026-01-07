@@ -11,8 +11,22 @@ import { BiMessageRoundedDetail } from "react-icons/bi";
 import Status from "./Status";
 import EmojiPicker from 'emoji-picker-react';
 import { serverURL } from "../main";
+import ThreadPanel from "./ThreadPanel";
 
-const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, onForward, isForwarded, reactions = [], onEmojiClick, ...props }) => {
+const SenderMessage = memo(({ 
+  message, 
+  createdAt, 
+  image, 
+  messageId, 
+  channelId, 
+  onForward, 
+  isForwarded, 
+  reactions = [], 
+  onEmojiClick, 
+  onThreadClick, 
+  replyCount = 0, 
+  ...props 
+}) => {
   const user = useSelector((state) => state.user.user); // Current logged in user
   const { onlineUsers = [] } = useSelector((state) => state.socket);
   const dispatch = useDispatch();
@@ -22,6 +36,7 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [openThread,setOpenThread]=useState()
 
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
@@ -52,7 +67,6 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " local time";
   };
 
-  // Toggle reaction when clicking a pill
   const handlePillClick = (emoji) => {
     handleReactionSelect({ emoji });
   };
@@ -107,11 +121,14 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
       <div className="relative w-full text-left" ref={profileCardRef}>
         <div className="flex items-center gap-2 p-1 rounded-md -ml-1 select-none w-full">
           <div className="flex flex-row gap-3 items-start w-full">
-            <div className="mt-1"><Avatar user={user} size="md" /></div>
+            <div className="mt-1">
+              <Avatar user={user} size="md" />
+            </div>
             <div className="flex flex-col w-full text-left">
               <div className="flex items-baseline gap-2">
                 <h1 className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline"
-                  onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}
+                  onMouseEnter={handleMouseEnter} 
+                  onMouseLeave={handleMouseLeave}
                   onClick={() => setShowProfileCard(!showProfileCard)}>
                   {user?.name || "Unknown"}
                 </h1>
@@ -124,8 +141,41 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
                 </div>
               )}
 
-              {image && <img src={image} alt="Sent" className="rounded-md mt-2 max-w-[360px] max-h-[300px] object-cover border border-gray-200" />}
-              {message && <p className="text-[15px] text-gray-800 mt-0.5 leading-relaxed">{message}</p>}
+              {image && (
+                <img 
+                  src={image} 
+                  alt="Sent" 
+                  className="rounded-md mt-2 max-w-[360px] max-h-[300px] object-cover border border-gray-200" 
+                />
+              )}
+
+              {message && (
+                <p className="text-[15px] text-gray-800 mt-0.5 leading-relaxed">
+                  {message}
+                </p>
+              )}
+
+              {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
+              {replyCount > 0 && (
+                <div 
+                  onClick={onThreadClick}
+                  className="mt-2 flex items-center gap-2 cursor-pointer group/thread"
+                >
+                  <div className="flex -space-x-1">
+                     <Avatar user={user} size="xs" />
+                  </div>
+                  <span className="text-[13px] font-black text-[#1264a3] hover:underline">
+                    {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                  </span>
+                  <span className="text-[11px] text-gray-400 opacity-0 group-hover/thread:opacity-100 transition-opacity"
+                  onClick={()=>setOpenThread(true)}>
+                    View thread
+                  </span>
+                </div>
+              )}
+
+              {openThread &&
+               <ThreadPanel onClose={()=>setOpenThread(false)} messageId={messageId} channelId={channelId} />}
 
               {/* --- REACTION PILLS SECTION --- */}
               <div className="flex flex-wrap gap-1 mt-1.5 items-center">
@@ -147,8 +197,8 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
                   );
                 })}
 
-                {/* Small Add Reaction Icon (Visible on hover or when reactions exist) */}
-                {(reactions.length > 0 || isHovered) && (
+                {/* Small Add Reaction Icon (Visible on hover) */}
+                {isHovered && (
                    <button 
                     onClick={() => setShowReactionPicker(true)}
                     className="p-1 px-2 rounded-full bg-gray-100 hover:bg-gray-200 border border-transparent hover:border-gray-300 text-gray-500 transition-all flex items-center justify-center h-[24px]"
@@ -161,9 +211,13 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
           </div>
         </div>
 
+        {/* Profile Card Hover Modal */}
         {showProfileCard && (
-          <div className="absolute top-[30px] left-0 w-[300px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[100]"
-            onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+          <div 
+            className="absolute top-[30px] left-0 w-[300px] bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden z-[100]"
+            onMouseEnter={handleMouseEnter} 
+            onMouseLeave={handleMouseLeave}
+          >
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
                 <Avatar user={user} size="lg" />
@@ -176,8 +230,10 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
                 <CiClock2 className="text-xl" />
                 <span className="text-sm font-medium">{getLocalTime()}</span>
               </div>
-              <button onClick={() => isMe && setShowStatusModal(true)}
-                className="w-full py-1.5 px-4 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-800 font-semibold text-sm">
+              <button 
+                onClick={() => isMe && setShowStatusModal(true)}
+                className="w-full py-1.5 px-4 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-800 font-semibold text-sm"
+              >
                 {isMe ? "Set a status" : "View full profile"}
               </button>
             </div>
@@ -187,11 +243,15 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
 
       {showStatusModal && <Status onClose={() => setShowStatusModal(false)} />}
 
-     {(isHovered || showMenu || showReactionPicker) && (
+      {/* --- FLOATING TOOLBAR --- */}
+      {(isHovered || showMenu || showReactionPicker) && (
         <div className="absolute -top-4 right-4 bg-white border border-gray-300 shadow-sm rounded-lg flex items-center p-0.5 z-[60] h-9">
           
           <div className="relative" ref={reactionPickerRef}>
-              <button onClick={() => setShowReactionPicker(!showReactionPicker)} className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors">
+              <button 
+                onClick={() => setShowReactionPicker(!showReactionPicker)} 
+                className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              >
                 <MdAddReaction size={18}/>
               </button>
               <Tooltip label="Add reaction" />
@@ -202,9 +262,17 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
               )}
           </div>
 
-          <ActionIcon icon={<BiMessageRoundedDetail size={18}/>} label="Reply in thread" />
+          {/* Corrected ActionIcon with onClick passing */}
+          <ActionIcon 
+            icon={<BiMessageRoundedDetail size={18}/>} 
+            label="Reply in thread" 
+            onClick={onThreadClick} 
+          />
           
-          <button onClick={triggerForward} className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors group/tool">
+          <button 
+            onClick={triggerForward} 
+            className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors group/tool relative"
+          >
             <MdShare size={18} />
             <Tooltip label="Forward message" />
           </button>
@@ -212,8 +280,10 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
           <ActionIcon icon={<MdBookmarkBorder size={18}/>} label="Save" />
 
           <div className="relative group/tooltip" ref={menuRef}>
-            <button className={`p-2 rounded-md transition-colors ${showMenu ? 'bg-gray-100 text-black' : 'hover:bg-gray-100 text-gray-600'}`}
-              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}>
+            <button 
+              className={`p-2 rounded-md transition-colors ${showMenu ? 'bg-gray-100 text-black' : 'hover:bg-gray-100 text-gray-600'}`}
+              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+            >
               <MdMoreVert size={18} />
             </button>
             {!showMenu && <Tooltip label="More actions" />}
@@ -221,7 +291,10 @@ const SenderMessage =memo( ({ message, createdAt, image, messageId, channelId, o
               <div className="absolute right-0 top-10 w-64 bg-white border border-gray-200 shadow-xl rounded-lg py-2 z-[70] text-sm text-gray-700">
                 <div className="px-4 py-1.5 hover:bg-[#1264a3] hover:text-white cursor-pointer transition-colors text-left">Copy link</div>
                 {isMe && (
-                    <div onClick={handleDelete} className="px-4 py-1.5 hover:bg-[#e01e5a] hover:text-white text-[#e01e5a] cursor-pointer flex justify-between font-medium">
+                    <div 
+                      onClick={handleDelete} 
+                      className="px-4 py-1.5 hover:bg-[#e01e5a] hover:text-white text-[#e01e5a] cursor-pointer flex justify-between font-medium"
+                    >
                         <span>Delete message...</span> <span className="text-xs opacity-80">delete</span>
                     </div>
                 )}
@@ -243,11 +316,16 @@ const Tooltip = ({ label }) => (
   </div>
 );
 
-const ActionIcon = ({ icon, label }) => (
+const ActionIcon = ({ icon, label, onClick }) => (
   <div className="relative group/tooltip">
-    <button className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors">{icon}</button>
+    <button 
+      onClick={onClick} 
+      className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+    >
+      {icon}
+    </button>
     <Tooltip label={label} />
   </div>
 );
 
-export default memo(SenderMessage);
+export default SenderMessage;
