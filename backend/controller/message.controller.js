@@ -412,3 +412,104 @@ export const reactToMessage = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const sendReply=async(req,res)=>{
+  try{
+    const senderId=req.userId
+    const {receiverId}=req.params
+    const {message,parentId}=req.body
+    if(!parentId){
+      return res.status(400).json({message:"parentId is required for a reply"})
+    }
+    const filesArray=[];
+    if(req.file){
+      filesArray.push({
+        name:req.file.originalname||req.file.key||"file",
+        url:req.file.location||req.file.path||"",
+        mimetype:req.file.mimetype||"",
+        key:req.file.key||"",
+      });
+    }
+    if(req.files && Array.isArray(req.files)){
+      req.files.forEach(f=>filesArray.push({
+        name:f.originalname||f.key||"file",
+        url:f.location||f.path||"",
+        mimetype:f.mimetype||"",
+        key:f.key||"",
+      }))
+    }
+    const docToCreate={
+      sender:senderId,
+      receiver:receiverId,
+      message:message||'',
+      files:filesArray,
+      parentId:parentId
+    }
+     if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith("image/")) {
+      docToCreate.image = filesArray[0].url;
+      docToCreate.imageKey = filesArray[0].key || "";
+    }
+     const newReply = await Message.create(docToCreate);
+     await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 } });
+      const updatedConversation = await Conversation.findOneAndUpdate(
+      { participants: { $all: [senderId, receiverId] } },
+      { 
+        $push: { messages: newReply._id }, 
+        updatedAt: new Date() 
+      },
+      { new: true }
+    ).populate("participants", "name email profilePic");
+
+    const populatedReply = await Message.findById(newReply._id)
+      .populate("sender", "name email profilePic");
+
+  const receiverSocketId = getSocketId(receiverId);
+    const senderSocketIds = getSocketIdsForUser(senderId);
+
+    const payload = {
+      newMessage: populatedReply,
+      updatedConversation,
+      parentId: parentId // Useful for frontend to know it's a thread update
+    };
+
+    // Notify sender (all tabs)
+senderSocketIds.forEach(sid => io.to(sid).emit("newMessage", payload));
+if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", payload);
+
+    // Notify receiver
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", payload);
+    } else {
+        // Optional: Send push notification for thread reply
+        const senderUser = await User.findById(senderId).select("name");
+        await createAndSendNotification({
+            userId: receiverId,
+            type: "personal_message",
+            actorId: senderId,
+            title: `Reply from ${senderUser.name}`,
+            body: message || "Sent a file in thread",
+        });
+    }
+
+    return res.status(201).json(populatedReply);
+  } catch (error) {
+    console.error("sendReply error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 2. Get all replies for a specific message thread
+export const getThreadMessages = async (req, res) => {
+  try {
+    const { parentId } = req.params;
+
+    const replies = await Message.find({ parentId })
+      .populate("sender", "name email profilePic")
+      .sort({ createdAt: 1 }); // Sort by oldest first for threads
+
+    return res.status(200).json(replies);
+  } catch (error) {
+    console.error("getThreadMessages error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};

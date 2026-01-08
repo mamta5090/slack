@@ -7,7 +7,7 @@ import axios from "axios";
 import { setSocket, setOnlineUsers, clearSocket } from "./redux/SocketSlice";
 import { setUser } from "./redux/userSlice";
 import { upsertConversation, fetchConversations } from "./redux/conversationSlice";
-import { addMessage } from "./redux/messageSlice";
+import { addMessage ,incrementReplyCount} from "./redux/messageSlice";
 import { setAllChannels } from "./redux/channelSlice";
 import Registration from "./component/Registration";
 import Login from "./component/Login";
@@ -214,12 +214,25 @@ useEffect(() => {
       console.warn("call-error", payload);
     });
 
-   socketIo.on("newMessage", (payload) => {
-        const { newMessage, updatedConversation } = payload;
+  socketIo.on("newMessage", (payload) => {
+  const { newMessage, updatedConversation, parentId } = payload;
 
-        if (newMessage) {
-          dispatch(addMessage(newMessage));
-        }
+  if (newMessage) {
+    // 1. If it's a thread reply (has parentId)
+    if (parentId) {
+      console.log("🧵 New thread reply received for parent:", parentId);
+      // Increment the count on the parent message in the main list
+      dispatch(incrementReplyCount(parentId));
+      
+      // OPTIONAL: If you want replies to also be stored in the main message array
+      // (Even if they are filtered out in HomeRight UI), add them here:
+      dispatch(addMessage(newMessage));
+    } 
+    // 2. If it's a standard message
+    else {
+      dispatch(addMessage(newMessage));
+    }
+  }
 
         if (updatedConversation) {
           const currentPath = window.location.pathname;

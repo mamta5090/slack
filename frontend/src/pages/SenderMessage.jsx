@@ -11,7 +11,8 @@ import { BiMessageRoundedDetail } from "react-icons/bi";
 import Status from "./Status";
 import EmojiPicker from 'emoji-picker-react';
 import { serverURL } from "../main";
-import ThreadPanel from "./ThreadPanel";
+import ThreadPanel from "./MessagethreadPanel";
+//import ThreadPanel from "./MessagethreadPanel";
 
 const SenderMessage = memo(({ 
   message, 
@@ -21,9 +22,9 @@ const SenderMessage = memo(({
   channelId, 
   onForward, 
   isForwarded, 
+   onThreadClick, 
   reactions = [], 
   onEmojiClick, 
-  onThreadClick, 
   replyCount = 0, 
   ...props 
 }) => {
@@ -162,7 +163,7 @@ const SenderMessage = memo(({
                   className="mt-2 flex items-center gap-2 cursor-pointer group/thread"
                 >
                   <div className="flex -space-x-1">
-                     <Avatar user={user} size="xs" />
+                     <Avatar user={user} size="sm" />
                   </div>
                   <span className="text-[13px] font-black text-[#1264a3] hover:underline">
                     {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
@@ -245,7 +246,7 @@ const SenderMessage = memo(({
 
       {/* --- FLOATING TOOLBAR --- */}
       {(isHovered || showMenu || showReactionPicker) && (
-        <div className="absolute -top-4 right-4 bg-white border border-gray-300 shadow-sm rounded-lg flex items-center p-0.5 z-[60] h-9">
+ <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
           
           <div className="relative" ref={reactionPickerRef}>
               <button 
@@ -277,7 +278,9 @@ const SenderMessage = memo(({
             <Tooltip label="Forward message" />
           </button>
 
-          <ActionIcon icon={<MdBookmarkBorder size={18}/>} label="Save" />
+  <div className="hidden sm:flex">
+             <ActionIcon icon={<MdBookmarkBorder size={18}/>} label="Save" />
+        </div>
 
           <div className="relative group/tooltip" ref={menuRef}>
             <button 

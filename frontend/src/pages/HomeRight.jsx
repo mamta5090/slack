@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { serverURL } from '../main.jsx';
 
-import { setSingleUser,setUser,setUsers } from "../redux/userSlice.js";
-import { setMessages, clearMessages } from "../redux/messageSlice.js";
+import { setSingleUser, setUser, setUsers } from "../redux/userSlice.js";
+import { setMessages, clearMessages,incrementReplyCount  } from "../redux/messageSlice.js";
 import { fetchConversations, markMessagesAsRead, selectAllConversations } from "../redux/conversationSlice.js";
 import { setNotifications } from "../redux/notification.js";
 
@@ -41,7 +41,8 @@ import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from 'emoji-picker-react';
 import FilteredMsgFiles from "../component/filePage/FilteredMsgFiles.jsx";
 import FilterMsgPage from "../component/filePage/FilterMsgPage.jsx";
-import ThreadPanel from "./ThreadPanel.jsx";
+import ThreadPanel from "./MessagethreadPanel.jsx";
+import MessageInput from "./MessageInput.jsx";
 
 const HomeRight = () => {
   const { id } = useParams();
@@ -51,7 +52,6 @@ const HomeRight = () => {
   const imageRef = useRef();
   const plusMenuRef = useRef(null); 
 
- 
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
   const [openEdit, setOpenEdit] = useState(false);
@@ -68,10 +68,9 @@ const HomeRight = () => {
   const [plusOpen, setPlusOpen] = useState(false); 
   const [openFilter,setOpenFilter]=useState(false);
   const [openFilePage,setOpenFilePage]=useState(false);
-const [showPopover, setShowPopover] = useState(false);
-const [view, setView] = useState("messages");
- const [activeThread, setActiveThread] = useState(null);
-
+  const [showPopover, setShowPopover] = useState(false);
+  const [view, setView] = useState("messages");
+  const [activeThread, setActiveThread] = useState(null);
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -79,9 +78,10 @@ const [view, setView] = useState("messages");
   };
 
   useEffect(() => {
-  setView("messages");
-  setShowPopover(false);
-}, [id]);
+    setView("messages");
+    setShowPopover(false);
+    setActiveThread(null); // Close thread when switching chats
+  }, [id]);
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -99,7 +99,7 @@ const [view, setView] = useState("messages");
     }
   };
 
-    const handleOpenThread = (msg) => {
+  const handleOpenThread = (msg) => {
     setActiveThread({
       messageId: msg._id,
       text: msg.message,
@@ -107,7 +107,9 @@ const [view, setView] = useState("messages");
       image: msg.image
     });
   };
+
   
+
   useClickOutside(plusMenuRef, () => setPlusOpen(false));
 
   const { allUsers = [] } = useSelector((state) => state.user);
@@ -132,10 +134,8 @@ const [view, setView] = useState("messages");
     toggleVideo
   } = useWebRTC(socket, singleUser);
 
-
   const otherUserForCall = callState === 'receiving' ? incomingCallFrom : singleUser;
 
-  // Memoized values
   const isOnline = useMemo(() => {
     if (!singleUser?._id) return false;
     return onlineUsers.some(onlineId => String(onlineId) === String(singleUser._id));
@@ -145,8 +145,9 @@ const [view, setView] = useState("messages");
     if (!user?._id || !id) return [];
     return allMessages.filter(
       (msg) =>
-        (String(msg.sender?._id) === String(user._id) && String(msg.receiver) === String(id)) ||
-        (String(msg.sender?._id) === String(id) && String(msg.receiver) === String(user._id))
+        !msg.parentId && // IMPORTANT: Hide thread replies from main chat
+        ((String(msg.sender?._id) === String(user._id) && String(msg.receiver) === String(id)) ||
+        (String(msg.sender?._id) === String(id) && String(msg.receiver) === String(user._id)))
     );
   }, [allMessages, user?._id, id]);
 
@@ -168,12 +169,7 @@ const [view, setView] = useState("messages");
     return { headers: { Authorization: `Bearer ${token}` } };
   };
 
-  // =========================================================================
-  // LOGIC TO RESET NOTIFICATIONS
-  // =========================================================================
-
-  // 1. Find the conversation object for the current chat
-const currentConversation = useMemo(() => {
+  const currentConversation = useMemo(() => {
     if (!conversations || !id || !user?._id) return null;
     return conversations.find(c => 
       c.participants?.some(p => (p._id || p) === id) && 
@@ -181,36 +177,24 @@ const currentConversation = useMemo(() => {
     );
   }, [conversations, id, user?._id]);
 
-  // 2. Mark as read on Mount or ID Change
   useEffect(() => {
     if (currentConversation?._id && user?._id) {
-       // Always attempt to mark as read when entering the page
-       // This syncs the database to 0
        dispatch(markMessagesAsRead(currentConversation._id));
     }
   }, [id, user?._id, currentConversation?._id, dispatch]);
 
-  // 3. Mark as read on Real-time Message (Backup Sync)
   useEffect(() => {
     if(!socket || !currentConversation?._id) return;
-
     const handleNewMessageWhileOpen = (payload) => {
         const convo = payload.updatedConversation;
-        // If message is for this chat
         if (convo && convo._id === currentConversation._id) {
-             // Call API to ensure DB is updated to 0
              dispatch(markMessagesAsRead(currentConversation._id));
         }
     };
-
-
     socket.on("newMessage", handleNewMessageWhileOpen);
     return () => socket.off("newMessage", handleNewMessageWhileOpen);
   }, [socket, currentConversation, dispatch]);
 
-  // =========================================================================
-
-  // Side effects
   useEffect(() => {
     if (singleUser) {
       setTopic(singleUser.conversationTopic || "");
@@ -230,7 +214,6 @@ const currentConversation = useMemo(() => {
   useEffect(() => {
     listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
 
   const fetchUser = async () => {
     if (!id) return;
@@ -252,6 +235,17 @@ const currentConversation = useMemo(() => {
       console.error("Error fetching messages", error);
     }
   };
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleSocketMessage = (payload) => {
+        if (payload.parentId) {
+            dispatch(incrementReplyCount(payload.parentId));
+        }
+    };
+    socket.on("newMessage", handleSocketMessage);
+    return () => socket.off("newMessage", handleSocketMessage);
+}, [socket, dispatch]);
 
   const sendMessage = async (e) => {
     e.preventDefault();
@@ -289,7 +283,7 @@ const currentConversation = useMemo(() => {
     setSaving(true);
     try {
       const payload = { topic };
-      const res = await axios.put(`/api/conversation/topic/with/${singleUser._id}`, payload, authHeaders());
+      const res = await axios.put(`${serverURL}/api/conversation/topic/with/${singleUser._id}`, payload, authHeaders());
       if (res.data) console.log("Topic updated successfully", res.data);
       setOpenEditTopic(false);
     } catch (error) {
@@ -316,27 +310,30 @@ const currentConversation = useMemo(() => {
     setSearchQuery("");
   };
 
-//  const handleNotificationClick = async () => {
-//     try {
-//       const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
-//       dispatch(setNotifications(result.data));
-//     } catch (err) { // Now the catch block correctly follows the try block.
-//       console.error("Notification click error:", err);
-//     }
-//   };
-
-//   const handleMarkNotification=async()=>{
-//     try{
-//       const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
-//       dispatch(setNotifications(result.data));
-//     }catch(error){
-//       console.error("Error marking notification as read:", error);
-//     }
-//   }
-
   const handleCreateGroupConversation = async () => {
     // Implement group creation if needed
   };
+
+  // Keep your commented out notification code as per original
+  /*
+  const handleNotificationClick = async () => {
+    try {
+      const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
+      dispatch(setNotifications(result.data));
+    } catch (err) {
+      console.error("Notification click error:", err);
+    }
+  };
+
+  const handleMarkNotification=async()=>{
+    try{
+      const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
+      dispatch(setNotifications(result.data));
+    }catch(error){
+      console.error("Error marking notification as read:", error);
+    }
+  }
+  */
 
   const renderContent = () => {
     switch (activeTab) {
@@ -352,66 +349,45 @@ const currentConversation = useMemo(() => {
                 <button className="text-sm text-blue-600 font-semibold" onClick={() => { setOpenEdit(false); setOpenEditTopic(true); }}>Edit</button>
               </div>
             </div>
-
             <div className="mt-4 shadow rounded-lg py-3 px-4 bg-white">
               <div className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   <CiClock2 className="font-extrabold text-xl" />
                   <span>{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} local time</span>
                 </div>
-
                 <div className="flex flex-row gap-3 items-center">
                   <RiPhoneLine className='text-lg' />
                   <p className="text-blue-700 text-sm">{singleUser?.number || '112'}</p>
                 </div>
-
                 {singleUser?.email && (
                   <div className="flex items-center gap-2 text-sm">
                     <MdOutlineForwardToInbox className='text-lg' />
                     <p className="text-blue-600">{singleUser.email}</p>
                   </div>
                 )}
-
-                <p
-                  className="text-blue-600 font-medium mt-2 cursor-pointer text-sm"
-                  onClick={() => {
-                    setOpenEdit(false);
-                    navigate('/profilepage');
-                  }}
-                >
+                <p className="text-blue-600 font-medium mt-2 cursor-pointer text-sm" onClick={() => { setOpenEdit(false); navigate('/profilepage'); }}>
                   View full profile
                 </p>
               </div>
             </div>
-
-            <div
-              className="bg-white mt-4 rounded-xl font-semibold p-3 shadow flex flex-row cursor-pointer hover:bg-gray-50 text-sm"
-              onClick={() => { setOpenEdit(false); setAddConversation(true); }}
-            >
+            <div className="bg-white mt-4 rounded-xl font-semibold p-3 shadow flex flex-row cursor-pointer hover:bg-gray-50 text-sm" onClick={() => { setOpenEdit(false); setAddConversation(true); }}>
               Add people to this conversation
             </div>
-
             <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
               <span>Channel ID:</span>
               <span className="font-mono text-gray-700">{singleUser._id || "D098X21T2VC"}</span>
-              <button
-                type="button"
-                onClick={() => { navigator.clipboard?.writeText(singleUser._id || ""); alert("Channel ID copied"); }}
-                className="ml-auto"
-              >
+              <button type="button" onClick={() => { navigator.clipboard?.writeText(singleUser._id || ""); alert("Channel ID copied"); }} className="ml-auto">
                 <BsCopy />
               </button>
             </div>
           </div>
         );
-
       case 'tabs':
         return (
           <div className="px-6 bg-[#f8f8f8] py-4 max-h-[340px] overflow-auto">
             <div className="bg-white rounded-lg shadow p-4">
               <p className='font-semibold text-md'>Manage tabs</p>
               <p className='text-gray-900 text-sm'>Reorder, add, remove and hide the tabs that everyone sees in this channel.</p>
-
               <div className='mt-4 flex flex-col gap-3'>
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
@@ -419,7 +395,6 @@ const currentConversation = useMemo(() => {
                     <p>Messages</p>
                   </div>
                 </div>
-
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <LuFile className='text-lg' />
@@ -431,21 +406,18 @@ const currentConversation = useMemo(() => {
                     <IoIosArrowRoundDown />
                   </div>
                 </div>
-
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <FaRegFolderClosed className='text-lg text-gray-700' />
                     <p>slack</p>
                   </div>
                 </div>
-
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <IoIosDocument className='text-lg text-gray-700' />
                     <p>Untitled</p>
                   </div>
                 </div>
-
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <BsLightning className='text-lg' />
@@ -453,7 +425,6 @@ const currentConversation = useMemo(() => {
                   </div>
                   <p className='text-sm text-gray-500'>Hidden</p>
                 </div>
-
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2'>
                     <BsPin className='text-lg' />
@@ -462,7 +433,6 @@ const currentConversation = useMemo(() => {
                   <p className='text-sm text-gray-500'>Hidden</p>
                 </div>
               </div>
-
               <div className='flex items-center gap-2 mt-4 pt-4 border-t cursor-pointer'>
                 <BsPlusLg className='text-lg text-gray-900' />
                 <p className='text-gray-900'>New Tab</p>
@@ -470,7 +440,6 @@ const currentConversation = useMemo(() => {
             </div>
           </div>
         );
-
       case 'integrations':
         return (
           <div className="px-6 bg-[#f8f8f8] py-4 min-h-[340px]">
@@ -485,7 +454,6 @@ const currentConversation = useMemo(() => {
             </div>
           </div>
         );
-
       default:
         return null;
     }
@@ -519,123 +487,92 @@ const currentConversation = useMemo(() => {
         />
       )}
 
-      <div className={`w-full h-full flex flex-col bg-white overflow-hidden pt-[58px] ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-4 h-[49px] flex-shrink-0">
-          <div onClick={() => setOpenEdit(true)} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md -ml-1">
-            <div className="relative">
-              <Avatar user={singleUser} size="sm" />
-              <div
-                className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${isOnline ? "bg-[#2bac76]" : "hidden"
-                  }`}
-              />
-            </div>
-            <p className="font-bold text-lg">{singleUser.name}</p>
-                        <p className="font-bold text-lg">{singleUser?.status?.emoji}</p>
-          </div>
-
-
-
-          <div className="flex items-center gap-1 text-gray-600">
-            <div className="flex flex-row border rounded-md items-center">
-
-              <div
-                onClick={startCall} // ⬅️ THIS IS THE TRIGGER
-                className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center"
-                title="Start a huddle"
-              >
-                <CiHeadphones className="text-xl" />
+      {/* WRAPPER TO SUPPORT SIDE-BY-SIDE VIEW */}
+ <div className={`flex h-full w-full bg-white overflow-hidden pt-[58px] ${callState !== 'idle' ? 'filter blur-sm' : ''}`}>
+        
+        {/* MAIN CHAT AREA */}
+  <div className={`flex flex-col flex-1 h-full min-w-0 border-r border-gray-200 ${activeThread ? 'hidden md:flex' : 'flex'}`}>
+          
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-4 h-[49px] flex-shrink-0">
+            <div onClick={() => setOpenEdit(true)} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md -ml-1">
+              <div className="relative">
+                <Avatar user={singleUser} size="sm" />
+                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${isOnline ? "bg-[#2bac76]" : "hidden"}`} />
               </div>
-              <div className="h-5 w-[1px] bg-gray-300"></div>
-              <div className="hover:bg-gray-100 rounded-r-md p-1 cursor-pointer h-8 flex items-center justify-center">
-                <RiArrowDropDownLine className="text-xl" />
+              <p className="font-bold text-lg">{singleUser.name}</p>
+              <p className="font-bold text-lg">{singleUser?.status?.emoji}</p>
+            </div>
+            <div className="flex items-center gap-1 text-gray-600">
+              <div className="flex flex-row border rounded-md items-center">
+                <div onClick={startCall} className="hover:bg-gray-100 rounded-l-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center" title="Start a huddle">
+                  <CiHeadphones className="text-xl" />
+                </div>
+                <div className="h-5 w-[1px] bg-gray-300"></div>
+                <div className="hover:bg-gray-100 rounded-r-md p-1 cursor-pointer h-8 flex items-center justify-center">
+                  <RiArrowDropDownLine className="text-xl" />
+                </div>
+              </div>
+              <div className="hover:bg-gray-100 rounded-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center ml-2">
+                <IoMdMore className="text-xl" />
               </div>
             </div>
-
-            <div className="hover:bg-gray-100 rounded-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center ml-2">
-              <IoMdMore className="text-xl" />
-            </div>
           </div>
-        </div>
 
-      {/* --- TABS HEADER SECTION --- */}
-<div className="border-b border-gray-300 flex flex-row gap-[25px] px-[15px] pb-[10px] relative z-20"> 
-  
-  {/* 1. MESSAGE TAB (Clicking this switches back to messages) */}
-  <div 
-    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'messages' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
-    onClick={() => setView("messages")}
-  >
-    <FiMessageCircle /><p>Message</p>
-  </div>
-  
-  {/* 2. FILES TAB (Hover = Popover, Click = Full Page) */}
-  <div 
-    className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'files' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
-    
-    // Logic: Only show popover if we aren't already looking at the full file page
-    onMouseEnter={() => { if (view !== 'files') setShowPopover(true); }} 
-    
-    // Logic: Close popover when leaving the tab area
-    onMouseLeave={() => setShowPopover(false)} 
+          {/* TABS HEADER SECTION */}
+  <div className="border-b border-gray-300 flex flex-row gap-[15px] px-[15px] pb-[10px] overflow-x-auto no-scrollbar relative z-20"> 
+            <div className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'messages' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`} onClick={() => setView("messages")}>
+              <FiMessageCircle /><p>Message</p>
+            </div>
+            <div className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${view === 'files' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`} onMouseEnter={() => { if (view !== 'files') setShowPopover(true); }} onMouseLeave={() => setShowPopover(false)} onClick={() => { setView("files"); setShowPopover(false); }}>
+              <LiaFile /><p>Files</p>
+            </div>
+            <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><LuFolder /><p>slack</p></div>
+            <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><CgFileAdd /><p>Untitled</p></div>
+            <div className="font-semibold text-2xl"><div>+</div></div>
+            {showPopover && view !== 'files' && (
+              <div className="absolute top-[40px] left-[80px] z-50" onMouseEnter={() => setShowPopover(true)} onMouseLeave={() => setShowPopover(false)}>
+                <FilteredMsgFiles receiverId={id} onClose={() => setShowPopover(false)} />
+              </div>
+            )}
+          </div>
 
-    // Logic: Switch to full page view and hide popover
-    onClick={() => { setView("files"); setShowPopover(false); }}
-  >
-    <LiaFile /><p>Files</p>
-  </div>
-  
-  <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><LuFolder /><p>slack</p></div>
-  <div className="flex flex-row items-center gap-[5px] font-semibold text-gray-500"><CgFileAdd /><p>Untitled</p></div>
-  <div className="font-semibold text-2xl"><div>+</div></div>
-
-  {/* 3. POPOVER (Rendered absolutely inside the relative container) */}
-  {showPopover && view !== 'files' && (
-    <div 
-      className="absolute top-[40px] left-[80px] z-50"
-      onMouseEnter={() => setShowPopover(true)} // Keep open if user moves mouse into the popover
-      onMouseLeave={() => setShowPopover(false)}
-    >
-      <FilteredMsgFiles 
-        receiverId={id} 
-        onClose={() => setShowPopover(false)}
-      />
-    </div>
-  )}
-</div>
-
-
-{/* --- MAIN CONTENT SWITCHER --- */}
-
-{/* SCENARIO A: SHOW MESSAGES */}
-{view === 'messages' && (
-  <>
-    <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
-      {messages.map((msg, idx) => {
-        const isMine = String(msg.sender?._id) === String(user._id);
-        const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-        return isMine ? (
-          <SenderMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            image={msg.image}
-            messageId={msg._id}
-          />
-        ) : (
-          <ReceiverMessage
-            key={key}
-            message={msg.message}
-            createdAt={msg.createdAt}
-            image={msg.image}
-            isDeleted={msg.isDeleted}
-          />
-        );
-      })}
-      <div ref={listEndRef} />
-    </div>
-    
-    {/* Message Input Area */}
+          {/* MAIN CONTENT SWITCHER */}
+          {view === 'messages' && (
+            <>
+              <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
+                {messages.map((msg, idx) => {
+                  const isMine = String(msg.sender?._id) === String(user._id);
+                  const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+                  return isMine ? (
+                    <SenderMessage
+                      key={key}
+                      message={msg.message}
+                      createdAt={msg.createdAt}
+                      image={msg.image}
+                      messageId={msg._id}
+                      onThreadClick={() => handleOpenThread(msg)}
+                      replyCount={msg.replyCount || 0}
+                    />
+                  ) : (
+                    <ReceiverMessage
+                      key={key}
+                      message={msg.message}
+                      createdAt={msg.createdAt}
+                      image={msg.image}
+                      isDeleted={msg.isDeleted}
+                      onThreadClick={() => handleOpenThread(msg)}
+                      replyCount={msg.replyCount || 0}
+                    />
+                  );
+                })}
+                <div ref={listEndRef} />
+              </div>
+              
+              {/* Message Input Area */}
+              <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
+               
+                   {/* Message Input Area */}
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
           <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
             <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
@@ -680,7 +617,6 @@ const currentConversation = useMemo(() => {
                   </div>
                 </div>
               )}
-
               <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
                 <div className="flex items-center gap-3 text-gray-600">
                   <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
@@ -720,15 +656,36 @@ const currentConversation = useMemo(() => {
           </div>
         </div>
 
-  </>
-)}
+ 
 
-{/* SCENARIO B: SHOW FULL FILE PAGE */}
-{view === 'files' && (
-  <div className="flex-1 overflow-hidden bg-white">
-    <FilterMsgPage receiverId={id} />
-  </div>
-)}
+
+  {/* <MessageInput 
+        value={newMsg}
+        onChange={setNewMsg}
+        onSend={sendMessage}
+        placeholder={`Message ${singleUser?.name}`}
+        loading={loading}
+    /> */}
+              </div>
+            </>
+          )}
+
+          {view === 'files' && (
+            <div className="flex-1 overflow-hidden bg-white">
+              <FilterMsgPage receiverId={id} />
+            </div>
+          )}
+        </div>
+
+        {/* THREAD PANEL SIDE-BY-SIDE */}
+        {activeThread && (
+          <ThreadPanel 
+            parentMessage={activeThread} 
+            onClose={() => setActiveThread(null)} 
+            currentUser={user}
+            receiverId={id} 
+          />
+        )}
 
         {/* Modals */}
         {openEdit && (
@@ -736,21 +693,19 @@ const currentConversation = useMemo(() => {
             <div className="bg-white w-full max-w-lg rounded-lg shadow-lg relative">
               <div>
                 <button className="absolute top-4 right-4 text-xl text-gray-600 cursor-pointer p-6" onClick={() => setOpenEdit(false)}><RxCross2 /></button>
-
                 <div className="flex flex-row gap-4 p-6">
                   <Avatar user={singleUser} size="lg" />
                   <div className="flex p-6 flex-col justify-center gap-2">
                     <h1 className="text-3xl font-bold">{singleUser.name}</h1>
                      {singleUser?.status?.text && (
-                                <div className="flex items-center justify-center gap-2 mt-1">
-                                    <span className="text-sm">{singleUser.status.emoji}</span>
-                                    <span className="text-xs text-gray-500 truncate">{singleUser.status.text}</span>
-                                </div>
-                              )}
+                        <div className="flex items-center justify-center gap-2 mt-1">
+                            <span className="text-sm">{singleUser.status.emoji}</span>
+                            <span className="text-xs text-gray-500 truncate">{singleUser.status.text}</span>
+                        </div>
+                      )}
                     <p className="font-semibold">{singleUser.role}</p>
                   </div>
                 </div>
-
                 <div className="mt-6 px-6 flex gap-2 flex-wrap">
                   <div className="border h-[40px] w-[75px] rounded flex items-center justify-center"><CiStar className="h-[20px] w-[20px]" /><MdKeyboardArrowDown className="h-[20px] w-[20px]" /></div>
                   <button className="px-2 border rounded flex items-center gap-2"><IoIosNotificationsOutline />Mute</button>
@@ -758,13 +713,11 @@ const currentConversation = useMemo(() => {
                   <button className="px-2 py-2 border rounded flex items-center"><MdPersonSearch />Hide</button>
                   <button className="px-1 border rounded flex items-center gap-2"><CiHeadphones /> Huddle ▾</button>
                 </div>
-
                 <div className="mt-6 px-6 flex flex-row gap-6 border-b-2">
                   <button className={`font-semibold pb-2 ${activeTab === 'about' ? 'border-b-2 border-black' : 'text-gray-500'}`} onClick={() => setActiveTab('about')}>About</button>
                   <button className={`font-semibold pb-2 ${activeTab === 'tabs' ? 'border-b-2 border-black' : 'text-gray-500'}`} onClick={() => setActiveTab('tabs')}>Tabs</button>
                   <button className={`font-semibold pb-2 ${activeTab === 'integrations' ? 'border-b-2 border-black' : 'text-gray-500'}`} onClick={() => setActiveTab('integrations')}>Integrations</button>
                 </div>
-
                 {renderContent()}
               </div>
             </div>
@@ -776,7 +729,7 @@ const currentConversation = useMemo(() => {
             <div className="bg-white w-[600px] rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
               <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b">
                 <h2 className="text-xl font-bold">Edit topic</h2>
-                <button onClick={() => setOpenEditTopic(false)} className="text-xl text-gray-600" aria-label="Close edit modal"><RxCross2 /></button>
+                <button onClick={() => setOpenEditTopic(false)} className="text-xl text-gray-600"><RxCross2 /></button>
               </div>
               <div className="flex flex-col p-6 space-y-5 overflow-y-auto">
                 <input type="text" value={topic} onChange={handleTopicChange} className="border rounded-xl p-2 hover:bg-[#f8f8f8]" />
@@ -795,7 +748,7 @@ const currentConversation = useMemo(() => {
             <div className="bg-white w-full max-w-lg rounded-lg shadow-lg flex flex-col max-h-[85vh] overflow-hidden">
               <div className="px-6 py-4 flex items-center justify-between flex-shrink-0 border-b">
                 <h2 className="text-xl font-bold">Add people to this conversation</h2>
-                <button onClick={handleCloseModal} className="text-xl text-gray-600" aria-label="Close modal"><RxCross2 /></button>
+                <button onClick={handleCloseModal} className="text-xl text-gray-600"><RxCross2 /></button>
               </div>
               <div className="flex flex-col p-6 space-y-4 overflow-y-auto">
                 {selectedUsers.length > 0 && (
@@ -808,18 +761,13 @@ const currentConversation = useMemo(() => {
                     ))}
                   </div>
                 )}
-
                 <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="e.g., Vijay or @vijay" className="border rounded-md p-2 w-full focus:ring-2 focus:ring-blue-500 outline-none" />
-
                 {searchQuery.length > 0 && (
                   <div className="border rounded-md max-h-60 overflow-y-auto">
                     {searchResults.length > 0 ? (
                       searchResults.map(result => (
                         <div key={result._id} onClick={() => handleSelectUser(result)} className="flex items-center gap-3 p-3 hover:bg-blue-100 cursor-pointer">
-                          <div className="relative">
-                            <Avatar user={result} size="sm" />
-                            {isOnline && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />}
-                          </div>
+                          <Avatar user={result} size="sm" />
                           <span className="font-semibold">{result.name}</span>
                         </div>
                       ))
@@ -829,7 +777,6 @@ const currentConversation = useMemo(() => {
                   </div>
                 )}
               </div>
-
               <div className="flex justify-end p-4 border-t bg-gray-50">
                 <button type="button" onClick={handleCreateGroupConversation} className="px-4 py-2 bg-green-600 text-white font-semibold rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed" disabled={selectedUsers.length === 0}>
                   Next
@@ -839,7 +786,6 @@ const currentConversation = useMemo(() => {
           </div>
         )}
 
-    
       </div>
     </>
   );

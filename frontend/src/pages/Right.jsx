@@ -539,39 +539,13 @@ const Right = () => {
 
       {/* Message Input Area */}
       <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white ">
-        <div className="border border-gray-300 rounded-lg overflow-hidden">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2">
-            <FiBold className="cursor-pointer" /><FiItalic className="cursor-pointer" /><FaStrikethrough className="cursor-pointer" /><GoLink className="cursor-pointer" /><AiOutlineOrderedList className="cursor-pointer" /><FaListUl className="cursor-pointer" /><GoQuote className="cursor-pointer" /><FaCode className="cursor-pointer" /><RiCodeBlock className="cursor-pointer" />
-          </div>
-
-          <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }}>
-            <textarea
-              value={newMsg}
-              onChange={(e) => setNewMsg(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message ${singleUser?.name}`}
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
-
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
-              <div className="flex items-center gap-3 text-gray-600">
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file"><IoAddSharp /></button>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji"><BsEmojiSmile /></button>
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Mention">@</button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || !newMsg.trim()}>
-                  <IoSend />
-                </button>
-
-                <div className="h-5 w-px bg-gray-300" />
-                <button type="button" className="p-1 rounded hover:bg-gray-200"><MdKeyboardArrowDown className="text-2xl" /></button>
-              </div>
-            </div>
-          </form>
-        </div>
+        <MessageInput 
+        value={newMsg}
+        onChange={setNewMsg}
+        onSend={sendMessage}
+        placeholder={`Message ${singleUser?.name}`}
+        loading={loading}
+    />
       </div>
     </div>
   );

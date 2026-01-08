@@ -8,6 +8,8 @@ import {
   markAsRead,
   forwardMessage,
   reactToMessage,
+  getThreadMessages,
+  sendReply,
 } from "../controller/message.controller.js";
 import {upload} from '../middleware/multer.js'
 import { uploadImage } from "../config/s3.js";
@@ -21,4 +23,6 @@ router.delete("/delete/:messageId", auth, deleteMessageController);
 router.post("/mark-read",auth,markAsRead);
 router.post("/forward", auth, forwardMessage);
 router.post("/react/:messageId", auth, reactToMessage);
+router.post("/reply/:receiverId", auth, uploadImage.single('image'), sendReply);
+router.get("/thread/:parentId", auth, getThreadMessages);
 export default router;

@@ -40,6 +40,15 @@ const messageSchema = new mongoose.Schema({
     type: [fileSchema],
     default: []
   },
+  parentId:{
+type:mongoose.Schema.Types.ObjectId,
+ref:'Message',
+default:null
+  },
+  replyCount:{
+    type:Number,
+    default:0
+  },
   reactions: [
   {
     emoji: String,

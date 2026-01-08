@@ -14,12 +14,15 @@ const messageSlice = createSlice({
     setMessages: (state, action) => {
       state.messages = action.payload;
     },
-    addMessage: (state, action) => {
+     addMessage: (state, action) => {
+    // Prevent duplicates
+    const exists = state.messages.find(m => m._id === action.payload._id);
+    if (!exists) {
       state.messages.push(action.payload);
-    },
+    }
+  },
   updateMessage: (state, action) => {
   const updatedMsg = action.payload;
-  // This creates a brand new array, which tells React "Something changed!"
   state.messages = state.messages.map(m => 
     m._id === updatedMsg._id ? updatedMsg : m
   );
@@ -32,10 +35,21 @@ const messageSlice = createSlice({
     clearMessages: (state) => {
       state.messages = [];
     },
+       incrementReplyCount: (state, action) => {
+      const parentId = action.payload;
+      const messageIndex = state.messages.findIndex(m => m._id === parentId);
+      if (messageIndex !== -1) {
+        const msg = state.messages[messageIndex];
+        state.messages[messageIndex] = {
+          ...msg,
+          replyCount: (msg.replyCount || 0) + 1
+        };
+      }
+    },
   },
 });
 
-export const { setMessages, updateMessage,addMessage,removeMessage, clearMessages, setSingleUser } =
+export const { setMessages, updateMessage,addMessage,removeMessage, clearMessages, setSingleUser ,incrementReplyCount } =
   messageSlice.actions;
 
 export default messageSlice.reducer;
