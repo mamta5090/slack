@@ -25,4 +25,5 @@ router.post("/forward", auth, forwardMessage);
 router.post("/react/:messageId", auth, reactToMessage);
 router.post("/reply/:receiverId", auth, uploadImage.single('image'), sendReply);
 router.get("/thread/:parentId", auth, getThreadMessages);
+
 export default router;

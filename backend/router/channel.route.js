@@ -1,5 +1,5 @@
 import express from 'express'
-import {addMember, createChannel, leaveChannel,getAllChannels, getChannelById, getChannelMessages, sendMessageToChannel, deleteMessageFromChannel, markChannelAsRead, getChannelFiles, joinChannel} from '../controller/channel.controller.js'
+import {addMember, createChannel, leaveChannel,getAllChannels, getChannelById, getChannelMessages, sendMessageToChannel, deleteMessageFromChannel, markChannelAsRead, getChannelFiles, joinChannel, getChannelThreadMessages, sendChannelReply} from '../controller/channel.controller.js'
 import auth from '../middleware/auth.js'
 import User from '../models/User.js'
 import { uploadImage } from '../config/s3.js'
@@ -16,6 +16,8 @@ channelRouter.post('/:channelId/messages',auth,uploadImage.single('image'), send
 channelRouter.delete('/:channelId/messages/:messageId',auth,deleteMessageFromChannel);
 channelRouter.get('/:channelId/files',auth,getChannelFiles)
 channelRouter.post('/join', auth, joinChannel); 
+channelRouter.post('/:channelId/messages/:parentId/reply', auth, uploadImage.single('image'), sendChannelReply);
+channelRouter.get('/messages/:parentId/replies', auth, getChannelThreadMessages);
 
 export default channelRouter
 

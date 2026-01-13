@@ -22,34 +22,34 @@ const messageSlice = createSlice({
     }
   },
   updateMessage: (state, action) => {
-  const updatedMsg = action.payload;
-  state.messages = state.messages.map(m => 
-    m._id === updatedMsg._id ? updatedMsg : m
-  );
-},
-      removeMessage: (state, action) => {
-      state.messages = state.messages.filter(
-        (m) => m._id !== action.payload
+      const updatedMsg = action.payload;
+      state.messages = state.messages.map(m => 
+        m._id === updatedMsg._id ? updatedMsg : m
       );
     },
+    // UNCOMMENT AND FIX THIS:
+    incrementReplyCount: (state, action) => {
+  const { parentId, replyId } = action.payload; 
+  const message = state.messages.find((m) => m._id === parentId);
+
+  if (message) {
+    // Create a tracking array if it doesn't exist
+    if (!message.countedReplies) {
+      message.countedReplies = [];
+    }
+
+    // ONLY increment if this replyId hasn't been counted yet
+    if (!message.countedReplies.includes(replyId)) {
+      message.replyCount = (message.replyCount || 0) + 1;
+      message.countedReplies.push(replyId); // Mark this ID as "counted"
+    }
+  }
+},
     clearMessages: (state) => {
       state.messages = [];
-    },
-       incrementReplyCount: (state, action) => {
-      const parentId = action.payload;
-      const messageIndex = state.messages.findIndex(m => m._id === parentId);
-      if (messageIndex !== -1) {
-        const msg = state.messages[messageIndex];
-        state.messages[messageIndex] = {
-          ...msg,
-          replyCount: (msg.replyCount || 0) + 1
-        };
-      }
     },
   },
 });
 
-export const { setMessages, updateMessage,addMessage,removeMessage, clearMessages, setSingleUser ,incrementReplyCount } =
-  messageSlice.actions;
-
+export const { setMessages, updateMessage, addMessage, removeMessage, clearMessages, setSingleUser, incrementReplyCount } = messageSlice.actions;
 export default messageSlice.reducer;

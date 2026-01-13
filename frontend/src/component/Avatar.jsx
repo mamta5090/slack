@@ -15,6 +15,7 @@ const getImageUrl = (path) => {
 };
 
 const Avatar = ({ user, size = 'md' }) => {
+   
     const sizeClasses = {
         sm: 'w-8 h-8',
         md: 'w-10 h-10',
@@ -29,6 +30,7 @@ const Avatar = ({ user, size = 'md' }) => {
     
 
     const imageUrl = getImageUrl(user.profileImage);
+// const imageUrl = getImageUrl(user.profilePic);
 
     return (
         <div className={`flex items-center justify-center ${sizeClasses[size]} bg-gray-400 text-white rounded-full font-bold`}>

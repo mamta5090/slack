@@ -218,17 +218,14 @@ useEffect(() => {
   const { newMessage, updatedConversation, parentId } = payload;
 
   if (newMessage) {
-    // 1. If it's a thread reply (has parentId)
     if (parentId) {
       console.log("🧵 New thread reply received for parent:", parentId);
-      // Increment the count on the parent message in the main list
-      dispatch(incrementReplyCount(parentId));
-      
-      // OPTIONAL: If you want replies to also be stored in the main message array
-      // (Even if they are filtered out in HomeRight UI), add them here:
+     dispatch(incrementReplyCount({ 
+      parentId: parentId, 
+      replyId: newMessage._id 
+    }));
       dispatch(addMessage(newMessage));
     } 
-    // 2. If it's a standard message
     else {
       dispatch(addMessage(newMessage));
     }

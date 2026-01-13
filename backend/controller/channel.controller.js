@@ -392,3 +392,63 @@ export const joinChannel=async(req,res)=>{
     res.status(500).json({message:'server error while joining channel'})
   }
 }
+
+// 1. Send a reply to a specific message in a channel
+export const sendChannelReply = async (req, res) => {
+  try {
+    const senderId = req.userId;
+    const { channelId, parentId } = req.params;
+    const { message } = req.body;
+    const image = req.file ? req.file.location : null;
+
+    if (!parentId) return res.status(400).json({ message: "parentId is required" });
+
+    // 1. Create the reply message
+    const newReply = await Message.create({
+      sender: senderId,
+      channel: channelId,
+      message: message || '',
+      image: image,
+      parentId: parentId // Links it to the thread
+    });
+
+    // 2. Increment reply count on the parent message
+    await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 } });
+
+    // 3. Populate for frontend
+    const populatedReply = await Message.findById(newReply._id)
+      .populate("sender", "name profilePic profileImage");
+
+    // 4. Socket Broadcast to the whole channel
+    // We reuse the 'newChannelMessage' event but include parentId
+    const channel = await Channel.findById(channelId).populate("members");
+    
+    channel.members.forEach(member => {
+      const memberSocketId = getSocketId(member._id.toString());
+      if (memberSocketId) {
+        io.to(memberSocketId).emit("newChannelMessage", {
+          message: populatedReply,
+          channelId: channelId,
+          parentId: parentId // Frontend uses this to update thread window
+        });
+      }
+    });
+
+    res.status(201).json(populatedReply);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 2. Get all replies for a channel thread
+export const getChannelThreadMessages = async (req, res) => {
+  try {
+    const { parentId } = req.params;
+    const replies = await Message.find({ parentId })
+      .populate("sender", "name profilePic profileImage")
+      .sort({ createdAt: 1 });
+    res.status(200).json(replies);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

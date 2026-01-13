@@ -5,11 +5,12 @@ import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
 
 import { resetChannelUnread } from "../redux/channelSlice.js"; 
-import { setChannelMessages, addChannelMessage, clearChannelMessages } from "../redux/channelMessageSlice";
+import { setChannelMessages, addChannelMessage, clearChannelMessages, incrementChannelReplyCount } from "../redux/channelMessageSlice";
 
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
 import ChannelSubPage from "../component/channelPage/ChannelSubPage.jsx";
+import ThreadPanel from "./MessagethreadPanel.jsx";
 
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
@@ -26,8 +27,8 @@ import { RiCodeBlock } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
 import ChannelFilteredFiles from "../component/filePage/ChannelFilteredFiles.jsx";
 import ChannelFilterPage from "../component/filePage/ChannelFilterPage.jsx";
-const Channel = () => {
 
+const Channel = () => {
   const { channelId } = useParams();
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
@@ -44,82 +45,73 @@ const Channel = () => {
   const [frontendImage, setFrontendImage] = useState(null);
   const [backendImage, setBackendImage] = useState(null);
   const [plusOpen, setPlusOpen] = useState(false);
-   const [openChannelFileTab, setOpenChannelFileTab] = useState(false);
-   const [openChannelFilePage, setOpenChannelFilePage] = useState(false);
-const [showPopover, setShowPopover] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const [activeThread, setActiveThread] = useState(null);
 
   const user = useSelector((state) => state.user.user);
-  const me = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
   const selectedChannel = useSelector((state) => state.channel.selectedChannelId);
   const socket = useSelector((state) => state.socket?.socket);
+  const allUsers = useSelector((state) => state.user.allUsers);
+  const singleUser = useSelector((state) => state.user.singleUser);
 
+  
+  // 1. Mark channel as read on entry
   useEffect(() => {
-    if (!channelId || !me?._id) return;
-
+    if (!channelId || !user?._id) return;
     const markRead = async () => {
       try {
         await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
-        dispatch(resetChannelUnread({ 
-            channelId, 
-            userId: me._id 
-        }));
-
+        dispatch(resetChannelUnread({ channelId, userId: user._id }));
       } catch (error) {
         console.error("Error marking channel read:", error);
       }
     };
     markRead();
-  }, [channelId, me?._id, dispatch]);
+  }, [channelId, user?._id, dispatch]);
 
-   useEffect(() => {
+  // 2. Tab cleanup on channel change
+  useEffect(() => {
     setActiveTab("messages");
     setShowPopover(false);
+    setActiveThread(null); // Close thread when switching channels
   }, [channelId]);
 
- 
- useEffect(() => {
-    if (!socket || !channelId || !me?._id) return;
+  // 3. Unified Real-time Socket Handler
+  useEffect(() => {
+    if (!socket || !channelId || !user?._id) return;
 
     const handler = async (payload) => {
       const message = payload?.message || payload;
       const incomingChannelId = payload?.channel?._id || payload?.channel || payload?.channelId;
+      const parentId = payload?.parentId;
 
-      // 1. If message is for a DIFFERENT channel, ignore it (Sidebar handles the badge)
-      if (String(incomingChannelId) !== String(channelId)) {
-          return; 
-      }
+      if (String(incomingChannelId) !== String(channelId)) return;
 
-     
-      const exists = allMessages.some(m => String(m._id) === String(message._id));
-      if (!exists) {
-        dispatch(addChannelMessage(message));
-      }
-      try {
-          await axios.post(`/api/channel/${channelId}/read`, {}, { withCredentials: true });
-          dispatch(resetChannelUnread({ 
-              channelId, 
-              userId: me._id 
-          }));
-      } catch (err) {
-          console.error("Error marking active channel read:", err);
+      if (parentId) {
+        // Increment reply count in real-time
+        dispatch(incrementChannelReplyCount({ parentId }));
+      } else {
+        // Add new main message
+        const exists = allMessages.some(m => String(m._id) === String(message._id));
+        if (!exists) {
+          dispatch(addChannelMessage(message));
+        }
       }
     };
 
     socket.on('newChannelMessage', handler);
     return () => socket.off('newChannelMessage', handler);
-  }, [socket, channelId, dispatch, allMessages, me?._id]);
+  }, [socket, channelId, dispatch, allMessages, user?._id]);
 
-
+  // 4. Fetch initial messages
   useEffect(() => {
     const fetchMessages = async () => {
       try {
         if (!channelId) return;
         setLoading(true);
         dispatch(clearChannelMessages());
-        const res = await axios.get(`/api/channel/${channelId}/messages`, {
-           withCredentials: true 
-        });
+        const res = await axios.get(`/api/channel/${channelId}/messages`, { withCredentials: true });
         dispatch(setChannelMessages(res.data));
       } catch (error) {
         console.error("Error fetching channel messages:", error);
@@ -127,11 +119,10 @@ const [showPopover, setShowPopover] = useState(false);
         setLoading(false);
       }
     };
-
     fetchMessages();
   }, [channelId, dispatch]);
 
-
+  // 5. Join Socket Room
   useEffect(() => {
     if (!socket || !channelId) return;
     socket.emit('joinChannel', channelId);
@@ -140,16 +131,44 @@ const [showPopover, setShowPopover] = useState(false);
     };
   }, [socket, channelId]);
 
-
- 
+  // 6. Scroll to bottom
   useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    listEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMessages]);
+
+  const handler = async (payload) => {
+    const message = payload?.message || payload;
+    const incomingChannelId = payload?.channel?._id || payload?.channel || payload?.channelId;
+    const parentId = payload?.parentId; // Check if it's a thread reply
+
+    if (String(incomingChannelId) !== String(channelId)) return;
+
+    if (parentId) {
+        // It's a thread reply: Just update the count in the main list
+        dispatch(incrementChannelReplyCount({ parentId }));
+        // Note: The ThreadPanel has its own listener to add the message to the sidebar
+    } else {
+        // It's a normal message: Add to main list
+        const exists = allMessages.some(m => String(m._id) === String(message._id));
+        if (!exists) dispatch(addChannelMessage(message));
+    }
+};
+
+
+ const handleOpenThread = (msg) => {
+  setActiveThread({
+    messageId: msg._id,
+    text: msg.text,
+    sender: msg.sender,          // ✅ FULL OBJECT
+    senderName: msg.sender?.name // ✅ ADD THIS
+  });
+};
+
 
 
 
   const onEmojiClick = (emojiData) => {
-    setNewMsg(prevNewMsg => prevNewMsg + emojiData.emoji);
+    setNewMsg(prev => prev + emojiData.emoji);
     setShowPicker(false);
   };
 
@@ -162,36 +181,30 @@ const [showPopover, setShowPopover] = useState(false);
     }
   };
 
-  const cancelImage = async () => {
+  const cancelImage = () => {
     setBackendImage(null);
     setFrontendImage(null);
-    if (imageRef.current) {
-      imageRef.current.value = "";
-    }
+    if (imageRef.current) imageRef.current.value = "";
   };
 
   const sendMessage = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!newMsg.trim() && !backendImage) return;
 
     setLoading(true);
     const formData = new FormData();
     formData.append("message", newMsg);
-    if (backendImage) {
-      formData.append("image", backendImage); 
-    }
+    if (backendImage) formData.append("image", backendImage); 
 
     try {
       await axios.post(`/api/channel/${channelId}/messages`, formData, {
         withCredentials: true,
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       setNewMsg("");
       cancelImage();
     } catch (error) {
       console.error("Error sending message:", error);
-      alert("Failed to send message");
     } finally {
       setLoading(false);
     }
@@ -208,20 +221,14 @@ const [showPopover, setShowPopover] = useState(false);
     setSaving(true);
     try {
       const payload = { topic };
-      const res = await axios.put(`/api/conversation/topic/with/${user._id}`, payload);
-      if (res.data) console.log("Topic updated successfully", res.data);
+      await axios.put(`/api/conversation/topic/with/${user._id}`, payload);
       setOpenEditTopic(false);
     } catch (error) {
       console.error("Error updating topic:", error);
-      alert("Failed to update topic.");
     } finally {
       setSaving(false);
     }
   };
-
-  const handleTopicChange = (e) => setTopic(e.target.value);
-  const handleCancel = () => { setOpenEditTopic(false); };
-
 
   if (!selectedChannel) {
     return (
@@ -231,108 +238,101 @@ const [showPopover, setShowPopover] = useState(false);
     );
   }
 
+ return (
+<div className="flex h-full w-full bg-white overflow-hidden pt-[40px]">
+      {/* ================= LEFT CHAT ================= */}
+       <div className="flex flex-1 min-w-0"></div>
+<div
+  className={`
+    flex flex-col h-full min-w-0 border-r border-gray-200
+    ${activeThread ? 'hidden md:flex md:w-[60%]' : 'flex w-full'}
+  `}
+>
 
-  return (
-    <div className="w-full h-full flex flex-col bg-white py-[40px]">
-    
-      <header className="sticky top-0 z-20 bg-white border-b">
-        <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="cursor-pointer">
-               <p onClick={() => setIsSubPageOpen(true)} className="font-bold text-lg truncate">
-                 # {selectedChannel.name}
-               </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center border rounded-md p-1.5 cursor-pointer h-8">
+        {/* HEADER */}
+        <header className="border-b p-4 flex justify-between items-center">
+          <p
+            className="font-bold text-lg cursor-pointer"
+            onClick={() => setIsSubPageOpen(true)}
+          >
+            # {selectedChannel.name}
+          </p>
+
+          <div className="flex items-center gap-3">
+                       <div className="flex items-center border rounded-md p-1.5 cursor-pointer h-8">
               <p className="font-semibold text-sm mr-2">{selectedChannel.members?.length || 0}</p>
               <FaUserFriends className="text-lg" />
             </div>
-            <div className="hover:bg-gray-100 rounded-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center">
+
+                       <div className="hover:bg-gray-100 rounded-md p-1.5 cursor-pointer h-8 w-8 flex items-center justify-center">
               <IoMdMore className="text-xl" />
             </div>
+
           </div>
-        </div>
+        </header>
 
-        {isSubPageOpen && (
-          <ChannelSubPage
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            channel={selectedChannel} 
-            onClose={() => setIsSubPageOpen(false)} 
-          />
-        )}
-
-               <div className="hidden sm:flex items-center gap-3 ml-4 text-xs text-gray-600 relative z-30">
-          
-          {/* MESSAGES TAB */}
-          <button 
-             onClick={() => setActiveTab("messages")} 
-                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'messages' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
+        {/* TABS */}
+        <div className="flex gap-4 px-4 py-2 text-sm border-b">
+          <button
+            onClick={() => setActiveTab("messages")}
+            className={activeTab === "messages" ? "font-bold" : ""}
           >
-            <FiMessageCircle /><span>Message</span>
+            <FiMessageCircle /> Messages
           </button>
-          
-          {/* FILES TAB (Hover & Click Logic) */}
-          <div 
-                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'files' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
-             onMouseEnter={() => { if(activeTab !== 'files') setShowPopover(true); }}
-             onMouseLeave={() => setShowPopover(false)}
+
+          <button
+            onClick={() => setActiveTab("files")}
+            onMouseEnter={() => setShowPopover(true)}
+            onMouseLeave={() => setShowPopover(false)}
           >
-            <button 
-               onClick={() => { setActiveTab("files"); setShowPopover(false); }} 
-               className={`flex items-center gap-2 px-3 py-1 rounded-md ${activeTab === "files" ? "bg-gray-100 text-black font-medium" : "hover:bg-gray-50"}`}
-            >
-              <LiaFile /><span>Files</span>
-            </button>
+            <LiaFile /> Files
+          </button>
 
+          <button onClick={() => setActiveTab("page")}>
+            <LuFolder /> Pages
+          </button>
 
-
-          {/* POPOVER */}
-          {showPopover && activeTab !== 'page' && (
-             <div 
-               className="absolute top-[35px] left-[100px] z-50"
-               onMouseEnter={() => setShowPopover(true)}
-               onMouseLeave={() => setShowPopover(false)}
-             >
-                <ChannelFilteredFiles channelId={channelId} onClose={() => setShowPopover(false)} />
-             </div>
-          )}
+          <button onClick={() => setActiveTab("untitled")}>
+            <CgFileAdd /> Untitled
+          </button>
         </div>
- <button 
-             onClick={() => setActiveTab("page")} 
-                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'page' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
-          ><LuFolder /><span>Pages</span></button>
- <button 
-             onClick={() => setActiveTab("Untitled")} 
-                className={`flex flex-row items-center gap-[5px] font-semibold cursor-pointer pb-1 ${activeTab === 'Untitled' ? 'border-b-2 border-green-700 text-black' : 'text-gray-500 border-b-2 border-transparent'}`}
-          ><CgFileAdd /><span>Untitled</span></button>
-      </div>
-      </header>
 
-     
-      <div className="flex-1 overflow-hidden relative w-full bg-gray-50">
-        
-    
-        {activeTab === 'messages' && (
-          <div className="h-full flex flex-col">
-              {/* Scrollable Message List */}
-              <main className="flex-1 overflow-y-auto p-4">
-                <div className="max-w-[900px] mx-auto w-full">
-                  {allMessages.length === 0 ? (
-                    <div className="py-12 text-center text-sm text-gray-500">No messages yet — say hello</div>
-                  ) : (
-                    allMessages.map((msg, idx) => {
-                      const isMine = String(msg.sender?._id) === String(user?._id);
-                      const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-                      return isMine ? <SenderMessage key={key} message={msg.message} createdAt={msg.createdAt} image={msg.image} messageId={msg._id} channelId={channelId} /> : <ReceiverMessage key={key} message={msg.message} createdAt={msg.createdAt} user={msg.sender} image={msg.image} />;
-                    })
-                  )}
-                  <div ref={listEndRef} />
-                </div>
-              </main>
+        {/* BODY */}
+        {activeTab === "messages" && (
+          <>
+            <main className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              {allMessages.map((msg) => {
+                const isMine =
+                  String(msg.sender?._id) === String(user?._id);
+                return isMine ? (
+                  <SenderMessage
+                    key={msg._id}
+                    {...msg}
+                    onThreadClick={() => handleOpenThread(msg)}
+                  />
+                ) : (
+                <ReceiverMessage
+  key={msg._id}
+  message={msg.text}
+  createdAt={msg.createdAt}
+  messageId={msg._id}
+  channelId={channelId}
+  image={msg.image}
+  reactions={msg.reactions}
+  replyCount={msg.replyCount}
+  sender={msg.sender}          // ✅ correct
+  onThreadClick={() => handleOpenThread(msg)}
+/>
 
-              {/* Fixed Input Area */}
+
+
+                );
+              })}
+              <div ref={listEndRef} />
+            </main>
+
+
+{/* Fixed Input Area */}
                <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
@@ -346,8 +346,9 @@ const [showPopover, setShowPopover] = useState(false);
             <FaCode className="cursor-pointer" />
             <RiCodeBlock className="cursor-pointer" />
           </div>
-      
-          <form onSubmit={sendMessage} className="flex flex-col order-2">
+
+            {/* INPUT */}
+                     <form onSubmit={sendMessage} className="flex flex-col order-2">
             <textarea
               value={newMsg}
               onChange={(e) => setNewMsg(e.target.value)}
@@ -403,15 +404,16 @@ const [showPopover, setShowPopover] = useState(false);
               </div>
             </div>
           </form>
-      
-          {showPicker && (
+
+
+                 {showPicker && (
             <div className='absolute bottom-[80px] left-[20px] lg:left-[50px] shadow z-10'>
               <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
             </div>
           )}
         </div>
       </div>
-          </div>
+          </>
         )}
 
         {/* VIEW: FILES */}
@@ -442,9 +444,28 @@ const [showPopover, setShowPopover] = useState(false);
         </div>
       )}
 
-      {/* Message Input Area */}
-     
+
+      {/* ================= THREAD PANEL ================= */}
+      {activeThread && (
+  <div className="flex w-full md:w-[40%] border-l">
+    <ThreadPanel
+      parentMessage={activeThread}
+      receiverId={channelId}
+      isChannel
+      onClose={() => setActiveThread(null)}
+    />
+  </div>
+)}
+
+
+      {isSubPageOpen && (
+        <ChannelSubPage
+          channel={selectedChannel}
+          onClose={() => setIsSubPageOpen(false)}
+        />
+      )}
     </div>
+   
   );
 };
 

@@ -42,7 +42,8 @@ import EmojiPicker from 'emoji-picker-react';
 import FilteredMsgFiles from "../component/filePage/FilteredMsgFiles.jsx";
 import FilterMsgPage from "../component/filePage/FilterMsgPage.jsx";
 import ThreadPanel from "./MessagethreadPanel.jsx";
-import MessageInput from "./MessageInput.jsx";
+//import MessageInput from "./MessageInput.jsx";
+//import ReceiverThreadReply from "./ReciverThreadReply.jsx";
 
 const HomeRight = () => {
   const { id } = useParams();
@@ -678,14 +679,37 @@ const HomeRight = () => {
         </div>
 
         {/* THREAD PANEL SIDE-BY-SIDE */}
-        {activeThread && (
-          <ThreadPanel 
-            parentMessage={activeThread} 
-            onClose={() => setActiveThread(null)} 
-            currentUser={user}
-            receiverId={id} 
-          />
-        )}
+       {/* {activeThread && (
+  activeThread.senderId === user?._id ? (
+   
+    <ThreadPanel
+      parentMessage={activeThread}
+      onClose={() => setActiveThread(null)}
+      currentUser={user}
+      receiverId={id}
+    />
+  ) : (
+   
+    <ReceiverThreadReply
+      parentMessage={activeThread}
+      onClose={() => setActiveThread(null)}
+      currentUser={user}
+      receiverId={id}
+    />
+  )
+)} */}
+
+{activeThread && (
+
+   
+    <ThreadPanel
+      parentMessage={activeThread}
+      onClose={() => setActiveThread(null)}
+      currentUser={user}
+      receiverId={id}
+    />
+  )
+}
 
         {/* Modals */}
         {openEdit && (

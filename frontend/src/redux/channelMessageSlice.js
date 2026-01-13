@@ -18,6 +18,13 @@ const channelMessageSlice = createSlice({
         (msg) => msg._id !== action.payload
       );
     },
+    incrementChannelReplyCount: (state, action) => {
+  const { parentId } = action.payload;
+  const msg = state.channelMessages.find(m => String(m._id) === String(parentId));
+  if (msg) {
+    msg.replyCount = (msg.replyCount || 0) + 1;
+  }
+},
     clearChannelMessages: (state) => {
       state.channelMessages = [];
     },
@@ -30,6 +37,7 @@ export const {
   addChannelMessage,
   removeChannelMessage,   // ← MUST BE HERE
   clearChannelMessages,
+  incrementChannelReplyCount,
 } = channelMessageSlice.actions;
 
 export default channelMessageSlice.reducer;

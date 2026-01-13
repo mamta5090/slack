@@ -413,85 +413,71 @@ export const reactToMessage = async (req, res) => {
   }
 };
 
-export const sendReply=async(req,res)=>{
-  try{
-    const senderId=req.userId
-    const {receiverId}=req.params
-    const {message,parentId}=req.body
-    if(!parentId){
-      return res.status(400).json({message:"parentId is required for a reply"})
+export const sendReply = async (req, res) => {
+  try {
+    const senderId = req.userId;
+    const { receiverId } = req.params;
+    const { message, parentId } = req.body;
+
+    if (!parentId) {
+      return res.status(400).json({ message: "parentId is required for a reply" });
     }
-    const filesArray=[];
-    if(req.file){
+
+    const filesArray = [];
+    if (req.file) {
       filesArray.push({
-        name:req.file.originalname||req.file.key||"file",
-        url:req.file.location||req.file.path||"",
-        mimetype:req.file.mimetype||"",
-        key:req.file.key||"",
+        name: req.file.originalname,
+        url: req.file.location || req.file.path,
+        mimetype: req.file.mimetype,
       });
     }
-    if(req.files && Array.isArray(req.files)){
-      req.files.forEach(f=>filesArray.push({
-        name:f.originalname||f.key||"file",
-        url:f.location||f.path||"",
-        mimetype:f.mimetype||"",
-        key:f.key||"",
-      }))
-    }
-    const docToCreate={
-      sender:senderId,
-      receiver:receiverId,
-      message:message||'',
-      files:filesArray,
-      parentId:parentId
-    }
-     if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith("image/")) {
+
+    const docToCreate = {
+      sender: senderId,
+      receiver: receiverId,
+      message: message || '',
+      files: filesArray,
+      parentId: parentId
+    };
+
+    if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith("image/")) {
       docToCreate.image = filesArray[0].url;
-      docToCreate.imageKey = filesArray[0].key || "";
     }
-     const newReply = await Message.create(docToCreate);
-     await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 } });
-      const updatedConversation = await Conversation.findOneAndUpdate(
+
+    // 1. Create the reply
+    const newReply = await Message.create(docToCreate);
+
+    // 2. Increment parent reply count in DB
+    await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 } });
+
+    // 3. Update conversation timestamp
+    const updatedConversation = await Conversation.findOneAndUpdate(
       { participants: { $all: [senderId, receiverId] } },
-      { 
-        $push: { messages: newReply._id }, 
-        updatedAt: new Date() 
-      },
+      { $push: { messages: newReply._id }, updatedAt: new Date() },
       { new: true }
     ).populate("participants", "name email profilePic");
 
+    // 4. Populate reply for frontend
     const populatedReply = await Message.findById(newReply._id)
       .populate("sender", "name email profilePic");
 
-  const receiverSocketId = getSocketId(receiverId);
+    // 5. Get Socket IDs
     const senderSocketIds = getSocketIdsForUser(senderId);
+    const receiverSocketIds = getSocketIdsForUser(receiverId);
 
     const payload = {
       newMessage: populatedReply,
       updatedConversation,
-      parentId: parentId // Useful for frontend to know it's a thread update
+      parentId: String(parentId) // Ensure this is a string
     };
 
-    // Notify sender (all tabs)
-senderSocketIds.forEach(sid => io.to(sid).emit("newMessage", payload));
-if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", payload);
+    // 6. EMIT SOCKET EVENTS (MUST happen before return)
+    senderSocketIds.forEach(sid => io.to(sid).emit("newMessage", payload));
+    receiverSocketIds.forEach(sid => io.to(sid).emit("newMessage", payload));
 
-    // Notify receiver
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", payload);
-    } else {
-        // Optional: Send push notification for thread reply
-        const senderUser = await User.findById(senderId).select("name");
-        await createAndSendNotification({
-            userId: receiverId,
-            type: "personal_message",
-            actorId: senderId,
-            title: `Reply from ${senderUser.name}`,
-            body: message || "Sent a file in thread",
-        });
-    }
-
+    // 7. FINAL RESPONSE
     return res.status(201).json(populatedReply);
+
   } catch (error) {
     console.error("sendReply error:", error);
     return res.status(500).json({ message: error.message });
