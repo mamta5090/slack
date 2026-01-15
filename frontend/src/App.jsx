@@ -13,7 +13,7 @@ import Registration from "./component/Registration";
 import Login from "./component/Login";
 import Home from "./component/Home";
 import Right from "./pages/Right";
-import Channel from "./pages/Channel";
+import Channel from "./component/channelPage/Channel.jsx";
 import WelcomeScreen from "./pages/WelcomeScreen";
 import "./index.css";
 import Signin from "./slack/Signin";

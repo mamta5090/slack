@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RxCross2 } from "react-icons/rx";
 import axios from "axios";
-import { serverURL } from "../main";
+import { serverURL } from "../../main";
 
 import { useSelector } from "react-redux";
 import { FiBold, FiItalic, FiMessageCircle } from "react-icons/fi";
@@ -15,9 +15,9 @@ import { MdKeyboardArrowDown } from "react-icons/md";
 
 import { CgFileAdd } from "react-icons/cg";
 import EmojiPicker from "emoji-picker-react";
-import Avatar from "../component/Avatar";
-import SenderMessage from "./SenderMessage";
-import ReceiverMessage from "./ReceiverMessage";
+import Avatar from "../Avatar";
+import SenderMessage from "../../pages/SenderMessage";
+import ReceiverMessage from "../../pages/ReceiverMessage";
 
 
 const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChannel }) => {

@@ -4,12 +4,12 @@ import { useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import EmojiPicker from 'emoji-picker-react';
 
-import { resetChannelUnread } from "../redux/channelSlice.js"; 
-import { setChannelMessages, addChannelMessage, clearChannelMessages, incrementChannelReplyCount } from "../redux/channelMessageSlice";
+import { resetChannelUnread } from "../../redux/channelSlice.js"; 
+import { setChannelMessages, addChannelMessage, clearChannelMessages, incrementChannelReplyCount } from "../../redux/channelMessageSlice";
 
-import SenderMessage from "./SenderMessage";
-import ReceiverMessage from "./ReceiverMessage";
-import ChannelSubPage from "../component/channelPage/ChannelSubPage.jsx";
+import SenderMessage from "../../pages/SenderMessage.jsx";
+import ReceiverMessage from "../../pages/ReceiverMessage.jsx";
+import ChannelSubPage from "./ChannelSubPage.jsx";
 // import ThreadPanel from "./MessagethreadPanel.jsx";
 import ChannelThread from './ChannelThread.jsx'
 
@@ -26,8 +26,9 @@ import { GoLink, GoQuote } from "react-icons/go";
 import { AiOutlineOrderedList } from "react-icons/ai";
 import { RiCodeBlock } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
-import ChannelFilteredFiles from "../component/filePage/ChannelFilteredFiles.jsx";
-import ChannelFilterPage from "../component/filePage/ChannelFilterPage.jsx";
+//import ChannelFilteredFiles from "../component/filePage/ChannelFilteredFiles.jsx";
+import ChannelFilterPage from '../../component/filePage/ChannelFilterPage.jsx';
+//import Avatar from "../../component/common/Avatar.jsx";
 
 const Channel = () => {
   const { channelId } = useParams();

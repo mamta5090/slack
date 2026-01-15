@@ -4,7 +4,7 @@ import HomePageSidebar from './sidebar/HomePageSidebar';
 import Topbar from '../pages/Topbar';
 import Sidebar from '../pages/Sidebar';
 import HomeRight from '../pages/HomeRight';
-import Channel from '../pages/Channel';
+import Channel from './channelPage/Channel';
 import Directories from '../pages/Directories'; 
 import DraftsSend from '../pages/DraftsSend';
 import Huddles from './Huddles';
