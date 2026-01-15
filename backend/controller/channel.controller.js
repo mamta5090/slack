@@ -416,8 +416,9 @@ export const sendChannelReply = async (req, res) => {
     await Message.findByIdAndUpdate(parentId, { $inc: { replyCount: 1 } });
 
     // 3. Populate for frontend
-    const populatedReply = await Message.findById(newReply._id)
-      .populate("sender", "name profilePic profileImage");
+const populatedReply = await Message.findById(newReply._id)
+  .populate("sender", "name profilePic profileImage");
+
 
     // 4. Socket Broadcast to the whole channel
     // We reuse the 'newChannelMessage' event but include parentId
@@ -426,11 +427,12 @@ export const sendChannelReply = async (req, res) => {
     channel.members.forEach(member => {
       const memberSocketId = getSocketId(member._id.toString());
       if (memberSocketId) {
-        io.to(memberSocketId).emit("newChannelMessage", {
-          message: populatedReply,
-          channelId: channelId,
-          parentId: parentId // Frontend uses this to update thread window
-        });
+       io.to(memberSocketId).emit("newChannelMessage", {
+  message: populatedReply,
+  channel: channel,          // 👈 add channel object
+  parentId: parentId
+});
+
       }
     });
 

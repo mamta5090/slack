@@ -10,7 +10,8 @@ import { setChannelMessages, addChannelMessage, clearChannelMessages, incrementC
 import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
 import ChannelSubPage from "../component/channelPage/ChannelSubPage.jsx";
-import ThreadPanel from "./MessagethreadPanel.jsx";
+// import ThreadPanel from "./MessagethreadPanel.jsx";
+import ChannelThread from './ChannelThread.jsx'
 
 import { LiaFile } from "react-icons/lia";
 import { LuFolder } from "react-icons/lu";
@@ -448,7 +449,7 @@ const Channel = () => {
       {/* ================= THREAD PANEL ================= */}
       {activeThread && (
   <div className="flex w-full md:w-[40%] border-l">
-    <ThreadPanel
+    <ChannelThread
       parentMessage={activeThread}
       receiverId={channelId}
       isChannel

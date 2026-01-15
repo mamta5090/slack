@@ -26,54 +26,64 @@ const useListenMessages = () => {
     fetchPrefs();
   }, [user?._id]);
 
-  useEffect(() => {
-    if (!socket || !user) return;
-    
-    const handleNotificationSound = (payload) => {
-        const now = new Date().getTime();
-        
-        // --- 1. PREFERENCE CHECK: MUTE ALL ---
-        const isMutedByPreference = preferences?.notifications?.sounds?.muteAll === true;
-        if (isMutedByPreference) {
-            console.log("🔕 Muted: User enabled 'Mute all messaging sounds' in preferences.");
-            return;
-        }
+useEffect(() => {
+  if (!socket || !user) return;
 
-        // --- 2. SCHEDULE CHECK ---
-        const isOutsideSchedule = isOutsideNotificationSchedule(preferences);
-        
-        // --- 3. MANUAL PAUSE (DND) CHECK ---
-        const isManualPaused = isManualPauseActive(user);
+  const handleNotificationSound = (payload) => {
+    // normalize message
+    const msg =
+      payload?.message ||
+      payload?.newMessage ||
+      payload;
 
-        // --- 4. VIP EXCEPTION LOGIC ---
-        // Even if paused, play if it's a VIP and the user wants VIP notifications
-        const isVipMessageSettingOn = preferences?.notifications?.messagingDefaults?.vipMessages === true;
-        const senderId = payload.newMessage?.sender?._id || payload.newMessage?.sender || payload.senderId;
-        const isSenderVip = user.vips?.some(vipId => String(vipId) === String(senderId));
+    if (!msg) return;
 
-        if (isOutsideSchedule || isManualPaused) {
-            if (isVipMessageSettingOn && isSenderVip) {
-                console.log("🌟 VIP Sound playing despite DND/Schedule.");
-            } else {
-                console.log("🔕 Muted: User is outside schedule or in manual DND.");
-                return;
-            }
-        }
+    // ❌ Don't play sound for own message
+    const senderId = msg?.sender?._id || msg?.sender || payload?.senderId;
+    if (String(senderId) === String(user._id)) return;
 
-        // --- 5. PLAY SOUND ---
-        console.log("🔊 Playing Sound...");
-        const sound = new Audio(NOTIFICATION_SOUND_URL);
-        sound.play().catch(err => console.error("Audio blocked:", err));
-    };
+    // 🔕 1. MUTE ALL
+    if (preferences?.notifications?.sounds?.muteAll) return;
 
-    socket.on("newMessage", handleNotificationSound);
-    socket.on("channelNotification", handleNotificationSound);
+    // 🔕 2. SCHEDULE CHECK
+    const outsideSchedule = isOutsideNotificationSchedule(preferences);
 
-    return () => {
-        socket.off("newMessage", handleNotificationSound);
-        socket.off("channelNotification", handleNotificationSound);
-    };
-  }, [socket, user, preferences]); // Re-run if preferences change
+    // 🔕 3. MANUAL DND
+    const manualPaused = isManualPauseActive(user);
+
+    // 🌟 4. VIP LOGIC
+    const vipEnabled =
+      preferences?.notifications?.messagingDefaults?.vipMessages;
+
+    const isVipSender = user?.vips?.some(
+      vipId => String(vipId) === String(senderId)
+    );
+
+    if ((outsideSchedule || manualPaused) && !(vipEnabled && isVipSender)) {
+      return;
+    }
+
+    // 🔊 5. PLAY SOUND
+    const audio = new Audio(NOTIFICATION_SOUND_URL);
+    audio.play().catch(() => {});
+  };
+
+  // ✅ DM MESSAGE SOUND
+  socket.on("newMessage", handleNotificationSound);
+
+  // ✅ CHANNEL MESSAGE SOUND (ADDED)
+  socket.on("newChannelMessage", handleNotificationSound);
+
+  // ✅ CHANNEL NOTIFICATION SOUND (KEPT)
+  socket.on("channelNotification", handleNotificationSound);
+
+  return () => {
+    socket.off("newMessage", handleNotificationSound);
+    socket.off("newChannelMessage", handleNotificationSound);
+    socket.off("channelNotification", handleNotificationSound);
+  };
+}, [socket, user, preferences]);
+
 };
 
 export default useListenMessages;

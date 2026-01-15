@@ -126,7 +126,7 @@ const ReceiverMessage = memo(({
         <div className="flex items-center gap-2 p-1 rounded-md -ml-1 select-none w-full">
           <div className="flex flex-row gap-3 items-start w-full">
             <div className="mt-1">
-              <Avatar user={sender || singleUser} size="md" />
+              <Avatar user={ sender} size="md" />
             </div>
             <div className="flex flex-col w-full text-left">
               <div className="flex items-baseline gap-2">
@@ -166,7 +166,7 @@ const ReceiverMessage = memo(({
                   className="mt-2 flex items-center gap-2 cursor-pointer group/thread"
                 >
                   <div className="flex -space-x-1">
-                     <Avatar user={sender || singleUser} size="sm" />
+                     <Avatar user={  sender} size="sm" />
                   </div>
                   <span className="text-[13px] font-black text-[#1264a3] hover:underline">
                     {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
@@ -224,7 +224,7 @@ const ReceiverMessage = memo(({
           >
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
-                <Avatar user={sender || singleUser} size="lg" />
+                <Avatar user={ singleUser} size="lg" />
                 <div className="flex flex-col flex-1 ml-4 mt-1">
                   <h3 className="font-bold text-lg text-gray-900 leading-tight">{singleUser?.name} </h3>
                   <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'} mt-1`}></div>

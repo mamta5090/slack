@@ -126,26 +126,30 @@ export const getAllMessages = async (req, res) => {
   try {
     const senderId = req.userId;
     const receiverId = req.params.receiverId;
+
     if (!senderId || !receiverId) {
-      return res
-        .status(400)
-        .json({ message: "senderId and receiverId are required" });
+      return res.status(400).json({ message: "senderId and receiverId are required" });
     }
+
     const conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
     }).populate({
       path: "messages",
-      populate: { path: "sender", select: "name email" },
+      populate: {                              
+        path: "sender",
+        select: "name email profilePic", // ✅ VERY IMPORTANT
+      },
     });
+
     if (!conversation) return res.status(200).json([]);
+
     return res.status(200).json(conversation.messages);
   } catch (error) {
     console.error("getAllMessages error:", error);
-    return res
-      .status(500)
-      .json({ message: `getAllMessages error ${error.message || error}` });
+    return res.status(500).json({ message: error.message });
   }
 };
+
 
 // export const getPreviousChat = async (req, res) => {
 //   try {

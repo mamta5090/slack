@@ -277,7 +277,7 @@ useEffect(() => {
         {/* Parent Message Bubble */}
         <div className="p-4  bg-gray-50/30">
           <div className="flex gap-3">
-<Avatar user={getAvatarUser (parentMessage.sender)} size="md" />
+<Avatar user={parentMessage.sender} size="md" />
 
             <div className="flex-1">
               <p className="font-black text-sm">{parentMessage?.senderName}</p>

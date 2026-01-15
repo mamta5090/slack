@@ -561,6 +561,7 @@ const HomeRight = () => {
                       message={msg.message}
                       createdAt={msg.createdAt}
                       image={msg.image}
+                       sender={msg.sender}  
                       isDeleted={msg.isDeleted}
                       onThreadClick={() => handleOpenThread(msg)}
                       replyCount={msg.replyCount || 0}
