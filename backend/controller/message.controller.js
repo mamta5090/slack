@@ -135,7 +135,7 @@ export const getAllMessages = async (req, res) => {
       participants: { $all: [senderId, receiverId] },
     }).populate({
       path: "messages",
-      populate: {                              
+      populate: {
         path: "sender",
         select: "name email profilePic", // ✅ VERY IMPORTANT
       },
@@ -149,6 +149,7 @@ export const getAllMessages = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
 
 
 // export const getPreviousChat = async (req, res) => {
