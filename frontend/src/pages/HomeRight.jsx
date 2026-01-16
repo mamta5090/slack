@@ -52,6 +52,8 @@ const HomeRight = () => {
   const listEndRef = useRef(null);
   const imageRef = useRef();
   const plusMenuRef = useRef(null); 
+  //const textareaRef = useRef(null);
+  const editorRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
@@ -72,6 +74,7 @@ const HomeRight = () => {
   const [showPopover, setShowPopover] = useState(false);
   const [view, setView] = useState("messages");
   const [activeThread, setActiveThread] = useState(null);
+  const [html, setHtml] = useState("");
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -248,26 +251,40 @@ const HomeRight = () => {
     return () => socket.off("newMessage", handleSocketMessage);
 }, [socket, dispatch]);
 
-  const sendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMsg.trim() && !backendImage) return;
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("message", newMsg);
-      if (backendImage) {
-        formData.append("image", backendImage);
-      }
-      await axios.post(`${serverURL}/api/message/send/${singleUser._id}`, formData, authHeaders());
-      setNewMsg("");
-      cancelImage();
-      setFrontendImage(null);
-    } catch (error) {
-      console.error("Error sending message", error);
-    } finally {
-      setLoading(false);
+ const sendMessage = async (e) => {
+  e.preventDefault();
+
+  if (!html.trim() && !backendImage) return;
+
+  setLoading(true);
+  try {
+    const formData = new FormData();
+    formData.append("message", html);
+
+    if (backendImage) {
+      formData.append("image", backendImage);
     }
-  };
+
+    await axios.post(
+      `${serverURL}/api/message/send/${singleUser._id}`,
+      formData,
+      authHeaders()
+    );
+
+    // ✅ CLEAR EDITOR HERE
+    editorRef.current.innerHTML = "";
+    setHtml("");
+    cancelImage();
+
+  } catch (error) {
+    console.error("Error sending message", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -310,6 +327,61 @@ const HomeRight = () => {
     setSelectedUsers([]);
     setSearchQuery("");
   };
+
+//   const applyFormat = (type) => {
+//   const textarea = textareaRef.current;
+//   if (!textarea) return;
+
+//   const start = textarea.selectionStart;
+//   const end = textarea.selectionEnd;
+
+//   if (start === end) return; // no selection
+
+//   const selectedText = newMsg.slice(start, end);
+
+//   let formatted = selectedText;
+
+//   switch (type) {
+//     case "bold":
+//       formatted = `**${selectedText}**`;
+//       break;
+//     case "italic":
+//       formatted = `_${selectedText}_`;
+//       break;
+//     case "strike":
+//       formatted = `~~${selectedText}~~`;
+//       break;
+//     case "code":
+//       formatted = `\`${selectedText}\``;
+//       break;
+//     case "quote":
+//       formatted = `> ${selectedText}`;
+//       break;
+//     default:
+//       return;
+//   }
+
+//   const updated =
+//     newMsg.slice(0, start) + formatted + newMsg.slice(end);
+
+//   setNewMsg(updated);
+
+//   // restore cursor position
+//   setTimeout(() => {
+//     textarea.focus();
+//     textarea.setSelectionRange(
+//       start + formatted.length,
+//       start + formatted.length
+//     );
+//   }, 0);
+// };
+
+const formatText = (command, value = null) => {
+  editorRef.current.focus();
+  document.execCommand(command, false, value);
+};
+
+
 
   const handleCreateGroupConversation = async () => {
     // Implement group creation if needed
@@ -577,27 +649,81 @@ const HomeRight = () => {
                    {/* Message Input Area */}
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
           <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-            <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-              <FiBold className="cursor-pointer" />
-              <FiItalic className="cursor-pointer" />
-              <FaStrikethrough className="cursor-pointer" />
-              <GoLink className="cursor-pointer" />
-              <AiOutlineOrderedList className="cursor-pointer" />
-              <FaListUl className="cursor-pointer" />
-              <GoQuote className="cursor-pointer" />
-              <FaCode className="cursor-pointer" />
-              <RiCodeBlock className="cursor-pointer" />
-            </div>
+          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+  <FiBold
+   onMouseDown={(e) => { e.preventDefault(); formatText("bold"); }}
+    className="cursor-pointer"
+  />
+
+ <FiItalic
+   onMouseDown={(e) => { e.preventDefault(); formatText("italic"); }}
+    className="cursor-pointer"
+  />
+
+  <FaStrikethrough
+   onMouseDown={(e) => { e.preventDefault(); formatText("strikeThrough"); }}
+    className="cursor-pointer"
+  />
+<GoLink
+  onMouseDown={(e) => {
+    e.preventDefault();
+    const url = prompt("Enter link URL");
+    if (!url) return;
+    formatText("createLink", url);
+  }}
+  className="cursor-pointer hover:text-black"
+/>
+
+<AiOutlineOrderedList
+  onMouseDown={(e) => {
+    e.preventDefault();
+    formatText("insertOrderedList");
+  }}
+  className="cursor-pointer hover:text-black"
+/>
+
+<FaListUl
+  onMouseDown={(e) => {
+    e.preventDefault();
+    formatText("insertUnorderedList");
+  }}
+  className="cursor-pointer hover:text-black"
+/>
+
+   <FaCode
+    onMouseDown={(e) => {
+      e.preventDefault();
+      formatText("insertHTML", "`code`");
+    }}
+    className="cursor-pointer"
+  />
+
+ <GoQuote
+ onMouseDown={(e) => { e.preventDefault(); formatText("formatBlock", "blockquote"); }}
+  className="cursor-pointer"
+/>
+<RiCodeBlock
+  onMouseDown={(e) => {
+    e.preventDefault();
+    formatText("formatBlock", "pre");
+  }}
+  className="cursor-pointer hover:text-black"
+/>
+
+</div>
+
 
             <form onSubmit={sendMessage} className="flex flex-col order-2">
-              <textarea
-                value={newMsg}
-                onChange={(e) => setNewMsg(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Message ${singleUser?.name}`}
-                className="w-full p-3 min-h-[60px] outline-none resize-none"
-                disabled={loading}
-              />
+             <div
+  ref={editorRef}
+  contentEditable
+  className="w-full p-3 min-h-[60px] outline-none"
+  onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+  suppressContentEditableWarning
+></div>
+
+
+
 
               {frontendImage && (
                 <div className="p-2">
@@ -639,7 +765,11 @@ const HomeRight = () => {
                 )}
 
                 <div className="flex items-center gap-2">
-                  <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!newMsg.trim() && !backendImage)}>
+                  <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={
+  loading ||
+  (!html.replace(/<[^>]*>/g, "").trim() && !backendImage)
+}
+>
                     <IoSend />
                   </button>
                   <div className="h-5 w-px bg-gray-300" />

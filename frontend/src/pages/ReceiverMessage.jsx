@@ -13,6 +13,7 @@ import EmojiPicker from 'emoji-picker-react';
 import { serverURL } from "../main";
 import ThreadPanel from "./MessagethreadPanel";
 //import ThreadPanel from "./MessagethreadPanel";
+import ReactMarkdown from "react-markdown";
 
 const ReceiverMessage = memo(({ 
   message, 
@@ -154,9 +155,9 @@ const ReceiverMessage = memo(({
               )}
 
               {message && (
-                <p className="text-[15px] text-gray-800 mt-0.5 leading-relaxed">
-                  {message}
-                </p>
+               <ReactMarkdown>
+  {message}
+</ReactMarkdown>
               )}
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
@@ -224,7 +225,7 @@ const ReceiverMessage = memo(({
           >
             <div className="p-5">
               <div className="flex items-start justify-between mb-4">
-                <Avatar user={ singleUser} size="lg" />
+                <Avatar user={ singleUser || sender} size="lg" />
                 <div className="flex flex-col flex-1 ml-4 mt-1">
                   <h3 className="font-bold text-lg text-gray-900 leading-tight">{singleUser?.name} </h3>
                   <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'} mt-1`}></div>

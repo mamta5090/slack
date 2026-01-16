@@ -13,6 +13,7 @@ import EmojiPicker from 'emoji-picker-react';
 import { serverURL } from "../main";
 import ThreadPanel from "./MessagethreadPanel";
 //import ThreadPanel from "./MessagethreadPanel";
+import ReactMarkdown from "react-markdown";
 
 const SenderMessage = memo(({ 
   message, 
@@ -151,9 +152,11 @@ const SenderMessage = memo(({
               )}
 
               {message && (
-                <p className="text-[15px] text-gray-800 mt-0.5 leading-relaxed">
-                  {message}
-                </p>
+               <div
+  dangerouslySetInnerHTML={{ __html: message.message }}
+  className="prose prose-sm"
+></div>
+
               )}
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
