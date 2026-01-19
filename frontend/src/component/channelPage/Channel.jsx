@@ -233,27 +233,24 @@ const Channel = () => {
 };
 
 const iconClass = (command) =>
-  `cursor-pointer transition-colors  ${
-    activeFormats[command]
-      ? "text-blue-600 bg-gray-300 "
-      : "text-gray-600 hover:text-gray-900"
+  `cursor-pointer transition-colors ${
+    activeFormats[command] ? "text-blue-600 bg-gray-300" : "text-gray-600 hover:text-gray-900"
   }`;
 
-  const toggleFormat = (command, value = null) => {
+const toggleFormat = (command, value = null) => {
   document.execCommand(command, false, value);
-
-  setActiveFormats((prev) => ({
-    ...prev,
-    [command]: !prev[command],
-  }));
+  setActiveFormats((prev) => ({ ...prev, [command]: !prev[command] }));
+  editorRef.current.focus();
+  setHtml(editorRef.current.innerHTML);
 };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(e);
-    }
-  };
+const handleKeyDown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(e);
+  }
+};
+
 
   const formatText = (command, value = null) => {
   editorRef.current.focus();
@@ -377,124 +374,120 @@ const iconClass = (command) =>
             </main>
 
 
-{/* Fixed Input Area */}
-               <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
-        <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-        
-          <FiBold
-            onClick={() => toggleFormat("bold")}
-            className={iconClass("bold")}
-          />
-        
-          <FiItalic
-            onClick={() => toggleFormat("italic")}
-            className={iconClass("italic")}
-          />
-        
-          <FaStrikethrough
-            onClick={() => toggleFormat("strikeThrough")}
-            className={iconClass("strikeThrough")}
-          />
-        
-          <GoLink
-            onClick={() => toggleFormat("createLink", prompt("Enter link"))}
-            className={iconClass("createLink")}
-          />
-        
-          <AiOutlineOrderedList
-            onClick={() => toggleFormat("insertOrderedList")}
-            className={iconClass("insertOrderedList")}
-          />
-        
-          <FaListUl
-            onClick={() => toggleFormat("insertUnorderedList")}
-            className={iconClass("insertUnorderedList")}
-          />
-        
-          <GoQuote
-            onClick={() => toggleFormat("formatBlock", "blockquote")}
-            className={iconClass("formatBlock")}
-          />
-        
-          <FaCode
-            onClick={() => toggleFormat("insertHTML", "<code>")}
-            className={iconClass("insertHTML")}
-          />
-        
-          <RiCodeBlock
-            onClick={() => toggleFormat("formatBlock", "pre")}
-            className={iconClass("pre")}
-          />
+{/* ================= Channel Input Area ================= */}
+<div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
+  <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
+
+    {/* Toolbar */}
+    <div className="flex flex-row items-center gap-3 bg-gray-100 px-3 py-2 order-1 flex-wrap">
+      <FiBold
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("bold"); }}
+        className={iconClass("bold")}
+      />
+      <FiItalic
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("italic"); }}
+        className={iconClass("italic")}
+      />
+      <FaStrikethrough
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("strikeThrough"); }}
+        className={iconClass("strikeThrough")}
+      />
+      <GoLink
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const url = prompt("Enter link");
+          if (url) toggleFormat("createLink", url);
+        }}
+        className={iconClass("createLink")}
+      />
+      <AiOutlineOrderedList
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("insertOrderedList"); }}
+        className={iconClass("insertOrderedList")}
+      />
+      <FaListUl
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("insertUnorderedList"); }}
+        className={iconClass("insertUnorderedList")}
+      />
+      <GoQuote
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("formatBlock", "blockquote"); }}
+        className={iconClass("formatBlock")}
+      />
+      <FaCode
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("insertHTML", "<code></code>"); }}
+        className={iconClass("insertHTML")}
+      />
+      <RiCodeBlock
+        onMouseDown={(e) => { e.preventDefault(); toggleFormat("formatBlock", "pre"); }}
+        className={iconClass("pre")}
+      />
+    </div>
+
+    {/* ContentEditable Editor */}
+    <form onSubmit={sendMessage} className="flex flex-col order-2">
+      <div
+        ref={editorRef}
+        contentEditable
+        onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+        onKeyDown={handleKeyDown}
+        data-placeholder={`Message #${selectedChannel.name}`}
+        className="w-full p-3 min-h-[60px] outline-none resize-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+      ></div>
+
+      {/* Preview Image */}
+      {frontendImage && (
+        <div className="p-2">
+          <div className="relative w-20 h-20">
+            <div className="group relative h-full w-full">
+              <img src={frontendImage} alt="Preview" className="h-full w-full rounded-md object-cover"/>
+              <button onClick={cancelImage} className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remove image">
+                <RxCross2 size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom controls */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
+        <div className="flex items-center gap-3 text-gray-600">
+          <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
+            <IoAddSharp />
+          </button>
+          <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
+            <BsEmojiSmile />
+          </button>
         </div>
 
-            {/* INPUT */}
-                     <form onSubmit={sendMessage} className="flex flex-col order-2">
-            <div
-  ref={editorRef}
-  contentEditable
-  onInput={(e) => setHtml(e.currentTarget.innerHTML)}
-  onKeyDown={handleKeyDown}
-  data-placeholder={`Message #${selectedChannel.name}`}
-  className="w-full p-3 min-h-[60px] outline-none resize-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
-></div>
-
-            
-            {frontendImage && (
-              <div className="p-2">
-                <div className="relative w-20 h-20">
-                  <div className="group relative h-full w-full">
-                    <img src={frontendImage} alt="Preview" className="h-full w-full rounded-md object-cover"/>
-                    <button onClick={cancelImage} className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100" aria-label="Remove image">
-                      <RxCross2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-      
-            <div className="flex items-center justify-between px-3 py-2 bg-gray-50 relative">
-              <div className="flex items-center gap-3 text-gray-600">
-                {/* Upload Button */}
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
-                  <IoAddSharp />
-                </button>
-                {/* Emoji Button */}
-                <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
-                  <BsEmojiSmile />
-                </button>
-              </div>
-      
-              {/* File Upload Dropup */}
-              {plusOpen && (
-                <div className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2 z-10">
-                  <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer whitespace-nowrap">
-                    Upload from your computer
-                    <input type="file" hidden accept="image/*" ref={imageRef} onChange={handleImage} />
-                  </div>
-                </div>
-              )}
-      
-              <div className="flex items-center gap-2">
-                <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!html.trim() && !backendImage)}>
-                  <IoSend />
-                </button>
-                <div className="h-5 w-px bg-gray-300" />
-                <button type="button" className="p-1 rounded hover:bg-gray-200">
-                  <MdKeyboardArrowDown className="text-2xl" />
-                </button>
-              </div>
+        {plusOpen && (
+          <div className="absolute bottom-full mb-2 bg-white shadow-lg rounded-md border p-2 z-10">
+            <div onClick={() => imageRef.current.click()} className="p-2 hover:bg-gray-100 rounded cursor-pointer whitespace-nowrap">
+              Upload from your computer
+              <input type="file" hidden accept="image/*,video/*" ref={imageRef} onChange={handleImage} />
             </div>
-          </form>
+          </div>
+        )}
 
-
-                 {showPicker && (
-            <div className='absolute bottom-[80px] left-[20px] lg:left-[50px] shadow z-10'>
-              <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!html.trim() && !backendImage)}>
+            <IoSend />
+          </button>
+          <div className="h-5 w-px bg-gray-300" />
+          <button type="button" className="p-1 rounded hover:bg-gray-200">
+            <MdKeyboardArrowDown className="text-2xl" />
+          </button>
         </div>
       </div>
+    </form>
+
+    {/* Emoji Picker */}
+    {showPicker && (
+      <div className='absolute bottom-[80px] left-[20px] lg:left-[50px] shadow z-10'>
+        <EmojiPicker width={350} height={450} className="shadow-lg" onEmojiClick={onEmojiClick} />
+      </div>
+    )}
+</div>
+</div>
+
           </>
         )}
 
