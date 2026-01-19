@@ -35,6 +35,7 @@ const Channel = () => {
   const dispatch = useDispatch();
   const listEndRef = useRef(null);
   const imageRef = useRef(null);
+  const editorRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
   const [newMsg, setNewMsg] = useState("");
@@ -49,6 +50,8 @@ const Channel = () => {
   const [plusOpen, setPlusOpen] = useState(false);
   const [showPopover, setShowPopover] = useState(false);
   const [activeThread, setActiveThread] = useState(null);
+  const [html, setHtml] = useState("");
+   const [activeFormats, setActiveFormats] = useState({});
 
   const user = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
@@ -169,10 +172,13 @@ const Channel = () => {
 
 
 
-  const onEmojiClick = (emojiData) => {
-    setNewMsg(prev => prev + emojiData.emoji);
-    setShowPicker(false);
-  };
+ const onEmojiClick = (emojiData) => {
+  editorRef.current.focus();
+  document.execCommand("insertText", false, emojiData.emoji);
+  setHtml(editorRef.current.innerHTML);
+  setShowPicker(false);
+};
+
 
   const handleImage = (e) => {
     const file = e.target.files[0];
@@ -190,27 +196,57 @@ const Channel = () => {
   };
 
   const sendMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (!newMsg.trim() && !backendImage) return;
+  if (e) e.preventDefault();
 
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("message", newMsg);
-    if (backendImage) formData.append("image", backendImage); 
+  // Prevent empty message
+  if (!html.trim() && !backendImage) return;
 
-    try {
-      await axios.post(`/api/channel/${channelId}/messages`, formData, {
-        withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      setNewMsg("");
-      cancelImage();
-    } catch (error) {
-      console.error("Error sending message:", error);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+
+  const formData = new FormData();
+  formData.append("message", html); // ✅ send formatted HTML
+  if (backendImage) {
+    formData.append("image", backendImage);
+  }
+
+  try {
+    await axios.post(`/api/channel/${channelId}/messages`, formData, {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    // ✅ Clear editor properly
+    if (editorRef.current) {
+      editorRef.current.innerHTML = "";
     }
-  };
+
+    setHtml("");
+    cancelImage();
+
+  } catch (error) {
+    console.error("Error sending message:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const iconClass = (command) =>
+  `cursor-pointer transition-colors  ${
+    activeFormats[command]
+      ? "text-blue-600 bg-gray-300 "
+      : "text-gray-600 hover:text-gray-900"
+  }`;
+
+  const toggleFormat = (command, value = null) => {
+  document.execCommand(command, false, value);
+
+  setActiveFormats((prev) => ({
+    ...prev,
+    [command]: !prev[command],
+  }));
+};
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -218,6 +254,13 @@ const Channel = () => {
       sendMessage(e);
     }
   };
+
+  const formatText = (command, value = null) => {
+  editorRef.current.focus();
+  document.execCommand(command, false, value);
+  setHtml(editorRef.current.innerHTML); // 🔥 critical
+};
+
 
   const handleSaveTopic = async () => {
     setSaving(true);
@@ -338,27 +381,64 @@ const Channel = () => {
                <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-            <FiBold className="cursor-pointer" />
-            <FiItalic className="cursor-pointer" />
-            <FaStrikethrough className="cursor-pointer" />
-            <GoLink className="cursor-pointer" />
-            <AiOutlineOrderedList className="cursor-pointer" />
-            <FaListUl className="cursor-pointer" />
-            <GoQuote className="cursor-pointer" />
-            <FaCode className="cursor-pointer" />
-            <RiCodeBlock className="cursor-pointer" />
-          </div>
+        
+          <FiBold
+            onClick={() => toggleFormat("bold")}
+            className={iconClass("bold")}
+          />
+        
+          <FiItalic
+            onClick={() => toggleFormat("italic")}
+            className={iconClass("italic")}
+          />
+        
+          <FaStrikethrough
+            onClick={() => toggleFormat("strikeThrough")}
+            className={iconClass("strikeThrough")}
+          />
+        
+          <GoLink
+            onClick={() => toggleFormat("createLink", prompt("Enter link"))}
+            className={iconClass("createLink")}
+          />
+        
+          <AiOutlineOrderedList
+            onClick={() => toggleFormat("insertOrderedList")}
+            className={iconClass("insertOrderedList")}
+          />
+        
+          <FaListUl
+            onClick={() => toggleFormat("insertUnorderedList")}
+            className={iconClass("insertUnorderedList")}
+          />
+        
+          <GoQuote
+            onClick={() => toggleFormat("formatBlock", "blockquote")}
+            className={iconClass("formatBlock")}
+          />
+        
+          <FaCode
+            onClick={() => toggleFormat("insertHTML", "<code>")}
+            className={iconClass("insertHTML")}
+          />
+        
+          <RiCodeBlock
+            onClick={() => toggleFormat("formatBlock", "pre")}
+            className={iconClass("pre")}
+          />
+        </div>
 
             {/* INPUT */}
                      <form onSubmit={sendMessage} className="flex flex-col order-2">
-            <textarea
-              value={newMsg}
-              onChange={(e) => setNewMsg(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message #${selectedChannel.name}`} 
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
+            <div
+  ref={editorRef}
+  contentEditable
+  onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+  onKeyDown={handleKeyDown}
+  data-placeholder={`Message #${selectedChannel.name}`}
+  className="w-full p-3 min-h-[60px] outline-none resize-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+></div>
+
             
             {frontendImage && (
               <div className="p-2">
@@ -396,7 +476,7 @@ const Channel = () => {
               )}
       
               <div className="flex items-center gap-2">
-                <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!newMsg.trim() && !backendImage)}>
+                <button type="submit" className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50" disabled={loading || (!html.trim() && !backendImage)}>
                   <IoSend />
                 </button>
                 <div className="h-5 w-px bg-gray-300" />

@@ -155,9 +155,10 @@ const ReceiverMessage = memo(({
               )}
 
               {message && (
-               <ReactMarkdown>
-  {message}
-</ReactMarkdown>
+                 <div
+ dangerouslySetInnerHTML={{ __html: message }}
+  className="prose prose-sm"
+></div>
               )}
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}

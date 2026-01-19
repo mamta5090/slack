@@ -24,6 +24,8 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const imageRef = useRef(null);
   const plusMenuRef = useRef(null);
   const listEndRef = useRef(null);
+  const editorRef = useRef(null);
+    const [html,setHtml]=useState("")
 
  
 
@@ -37,6 +39,8 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const [backendFile, setBackendFile] = useState(null); // actual File object
   const [plusOpen, setPlusOpen] = useState(false);
   const [fileType, setFileType] = useState("");
+    const [activeFormats, setActiveFormats] = useState({});
+    
    const singleUser = useSelector((state) => state.user.singleUser);
    const user = useSelector((state) => state.user.user);
  const isMe = user?._id === singleUser?._id;
@@ -192,6 +196,22 @@ useEffect(() => {
     }
   };
 
+  const toggleFormat = (command, value = null) => {
+  document.execCommand(command, false, value);
+
+  setActiveFormats((prev) => ({
+    ...prev,
+    [command]: !prev[command],
+  }));
+};
+
+const iconClass = (command) =>
+  `cursor-pointer transition-colors  ${
+    activeFormats[command]
+      ? "text-blue-600 bg-gray-300 "
+      : "text-gray-600 hover:text-gray-900"
+  }`;
+
   // Send reply
   // const handleSendReply = async (e) => {
   //   if (e && e.preventDefault) e.preventDefault();
@@ -303,16 +323,52 @@ useEffect(() => {
       {/* Common Message Input with Uploads */}
       <div className="p-4 border-t">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-            <FiBold className="cursor-pointer" />
-            <FiItalic className="cursor-pointer" />
-            <FaStrikethrough className="cursor-pointer" />
-            <GoLink className="cursor-pointer" />
-            <AiOutlineOrderedList className="cursor-pointer" />
-            <FaListUl className="cursor-pointer" />
-            <GoQuote className="cursor-pointer" />
-            <FaCode className="cursor-pointer" />
-            <RiCodeBlock className="cursor-pointer" />
+           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+          
+            <FiBold
+              onClick={() => toggleFormat("bold")}
+              className={iconClass("bold")}
+            />
+          
+            <FiItalic
+              onClick={() => toggleFormat("italic")}
+              className={iconClass("italic")}
+            />
+          
+            <FaStrikethrough
+              onClick={() => toggleFormat("strikeThrough")}
+              className={iconClass("strikeThrough")}
+            />
+          
+            <GoLink
+              onClick={() => toggleFormat("createLink", prompt("Enter link"))}
+              className={iconClass("createLink")}
+            />
+          
+            <AiOutlineOrderedList
+              onClick={() => toggleFormat("insertOrderedList")}
+              className={iconClass("insertOrderedList")}
+            />
+          
+            <FaListUl
+              onClick={() => toggleFormat("insertUnorderedList")}
+              className={iconClass("insertUnorderedList")}
+            />
+          
+            <GoQuote
+              onClick={() => toggleFormat("formatBlock", "blockquote")}
+              className={iconClass("formatBlock")}
+            />
+          
+            <FaCode
+              onClick={() => toggleFormat("insertHTML", "<code>")}
+              className={iconClass("insertHTML")}
+            />
+          
+            <RiCodeBlock
+              onClick={() => toggleFormat("formatBlock", "pre")}
+              className={iconClass("pre")}
+            />
           </div>
 
           <form onSubmit={handleSendReply} className="flex flex-col order-2">

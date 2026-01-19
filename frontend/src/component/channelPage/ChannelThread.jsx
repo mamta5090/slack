@@ -24,9 +24,9 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const imageRef = useRef(null);
   const plusMenuRef = useRef(null);
   const listEndRef = useRef(null);
-
+  const editorRef = useRef(null);
+  const [html,setHtml]=useState("")
  
-
   const { socket } = useSelector((state) => state.socket || {});
 
   const [replies, setReplies] = useState([]);
@@ -37,6 +37,9 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const [backendFile, setBackendFile] = useState(null); // actual File object
   const [plusOpen, setPlusOpen] = useState(false);
   const [fileType, setFileType] = useState("");
+  const [activeFormats, setActiveFormats] = useState({});
+
+
    const singleUser = useSelector((state) => state.user.singleUser);
    const user = useSelector((state) => state.user.user);
  const isMe = user?._id === singleUser?._id;
@@ -106,37 +109,53 @@ useEffect(() => {
   };
 
 
-   const handleSendReply = async (e) => {
-    if (e) e.preventDefault();
-    if (!replyText.trim() && !backendFile) return;
-    setLoading(true);
+  const handleSendReply = async (e) => {
+  if (e) e.preventDefault();
 
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("message", replyText);
-      formData.append("parentId", parentMessage.messageId);
-      if (backendFile) formData.append("image", backendFile);
+  // Prevent empty reply
+  if (!replyText.trim() && !backendFile) return;
 
-      const url = isChannel 
-          ? `${serverURL}/api/channel/${receiverId}/messages/${parentMessage.messageId}/reply`
-          : `${serverURL}/api/message/reply/${receiverId}`;
+  setLoading(true);
 
-      await axios.post(url, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
-      });
+  try {
+    const token = localStorage.getItem("token");
 
-      setReplyText("");
-      setBackendFile(null);
-      setFrontendImage(null);
-      setPlusOpen(false);
-      setShowPicker(false);
-    } catch (err) {
-      console.error("Reply failed:", err);
-    } finally {
-      setLoading(false);
+    const formData = new FormData();
+    formData.append("message", replyText); // ✅ supports formatted text later
+    formData.append("parentId", parentMessage.messageId);
+
+    if (backendFile) {
+      formData.append("image", backendFile); // ✅ image / video support
     }
-  };
+
+    // ✅ Correct API based on DM or Channel
+    const url = isChannel
+      ? `${serverURL}/api/channel/${receiverId}/messages/${parentMessage.messageId}/reply`
+      : `${serverURL}/api/message/reply/${receiverId}`;
+
+    await axios.post(url, formData, {
+      withCredentials: true,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    // ✅ Clean reset (important to prevent duplicate sends & UI bugs)
+    setReplyText("");
+    setBackendFile(null);
+    setFrontendImage(null);
+    setFileType("");
+    setPlusOpen(false);
+    setShowPicker(false);
+
+  } catch (error) {
+    console.error("Reply failed:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const getAvatarUser = (messageSender) => {
   if (!messageSender) return singleUser;
@@ -147,11 +166,14 @@ useEffect(() => {
 };
 
 
-  const onEmojiClick = (arg1, arg2) => {
-    const emoji = (arg2 && arg2.emoji) || (arg1 && arg1.emoji) || (arg1?.native || "");
-    setReplyText((prev) => prev + emoji);
-    setShowPicker(false);
-  };
+ const onEmojiClick = (emojiData) => {
+  editorRef.current.focus();
+  document.execCommand("insertText", false, emojiData.emoji);
+  setHtml(editorRef.current.innerHTML);
+  setShowPicker(false);
+};
+
+
 
  
   const handleImage = (e) => {
@@ -191,6 +213,29 @@ useEffect(() => {
       handleSendReply();
     }
   };
+
+  const formatText = (command, value = null) => {
+  editorRef.current.focus();
+  document.execCommand(command, false, value);
+  setHtml(editorRef.current.innerHTML); // 🔥 critical sync
+};
+
+const toggleFormat = (command, value = null) => {
+  document.execCommand(command, false, value);
+
+  setActiveFormats((prev) => ({
+    ...prev,
+    [command]: !prev[command],
+  }));
+};
+
+const iconClass = (command) =>
+  `cursor-pointer transition-colors  ${
+    activeFormats[command]
+      ? "text-blue-600 bg-gray-300 "
+      : "text-gray-600 hover:text-gray-900"
+  }`;
+
 
   // Send reply
   // const handleSendReply = async (e) => {
@@ -303,27 +348,65 @@ useEffect(() => {
       {/* Common Message Input with Uploads */}
       <div className="p-4 border-t">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-            <FiBold className="cursor-pointer" />
-            <FiItalic className="cursor-pointer" />
-            <FaStrikethrough className="cursor-pointer" />
-            <GoLink className="cursor-pointer" />
-            <AiOutlineOrderedList className="cursor-pointer" />
-            <FaListUl className="cursor-pointer" />
-            <GoQuote className="cursor-pointer" />
-            <FaCode className="cursor-pointer" />
-            <RiCodeBlock className="cursor-pointer" />
-          </div>
+        <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+
+  <FiBold
+    onClick={() => toggleFormat("bold")}
+    className={iconClass("bold")}
+  />
+
+  <FiItalic
+    onClick={() => toggleFormat("italic")}
+    className={iconClass("italic")}
+  />
+
+  <FaStrikethrough
+    onClick={() => toggleFormat("strikeThrough")}
+    className={iconClass("strikeThrough")}
+  />
+
+  <GoLink
+    onClick={() => toggleFormat("createLink", prompt("Enter link"))}
+    className={iconClass("createLink")}
+  />
+
+  <AiOutlineOrderedList
+    onClick={() => toggleFormat("insertOrderedList")}
+    className={iconClass("insertOrderedList")}
+  />
+
+  <FaListUl
+    onClick={() => toggleFormat("insertUnorderedList")}
+    className={iconClass("insertUnorderedList")}
+  />
+
+  <GoQuote
+    onClick={() => toggleFormat("formatBlock", "blockquote")}
+    className={iconClass("formatBlock")}
+  />
+
+  <FaCode
+    onClick={() => toggleFormat("insertHTML", "<code>")}
+    className={iconClass("insertHTML")}
+  />
+
+  <RiCodeBlock
+    onClick={() => toggleFormat("formatBlock", "pre")}
+    className={iconClass("pre")}
+  />
+</div>
+
 
           <form onSubmit={handleSendReply} className="flex flex-col order-2">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message ${singleUser?.name || ""}`}
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
+           <div
+  ref={editorRef}
+  contentEditable
+  onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+  onKeyDown={handleKeyDown}
+  data-placeholder={`Message ${singleUser?.name || ""}`}
+  className="w-full p-3 min-h-[60px] outline-none resize-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+></div>
+
 
             {/* Preview area for selected image/video */}
             {frontendImage && (
@@ -388,7 +471,8 @@ useEffect(() => {
                 <button
                   type="submit"
                   className="flex items-center gap-2 bg-[#007a5a] text-white px-3 py-1 rounded hover:bg-[#006a4e] disabled:opacity-50"
-                  disabled={loading || (!replyText.trim() && !backendFile)}
+      disabled={loading || (!html.trim() && !backendFile)}
+
                   aria-label="Send reply"
                 >
                   <IoSend />

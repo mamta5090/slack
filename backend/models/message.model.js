@@ -49,6 +49,7 @@ default:null
     type:Number,
     default:0
   },
+  
   reactions: [
   {
     emoji: String,

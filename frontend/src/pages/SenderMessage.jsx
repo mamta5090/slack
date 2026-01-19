@@ -153,7 +153,7 @@ const SenderMessage = memo(({
 
               {message && (
                <div
-  dangerouslySetInnerHTML={{ __html: message.message }}
+ dangerouslySetInnerHTML={{ __html: message }}
   className="prose prose-sm"
 ></div>
 

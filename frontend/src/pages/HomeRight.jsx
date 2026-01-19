@@ -75,6 +75,7 @@ const HomeRight = () => {
   const [view, setView] = useState("messages");
   const [activeThread, setActiveThread] = useState(null);
   const [html, setHtml] = useState("");
+   const [activeFormats, setActiveFormats] = useState({});
 
   const onEmojiClick = (emojiData) => {
     setNewMsg(prev => prev + emojiData.emoji);
@@ -251,12 +252,13 @@ const HomeRight = () => {
     return () => socket.off("newMessage", handleSocketMessage);
 }, [socket, dispatch]);
 
- const sendMessage = async (e) => {
+const sendMessage = async (e) => {
   e.preventDefault();
 
   if (!html.trim() && !backendImage) return;
 
   setLoading(true);
+
   try {
     const formData = new FormData();
     formData.append("message", html);
@@ -265,13 +267,13 @@ const HomeRight = () => {
       formData.append("image", backendImage);
     }
 
-    await axios.post(
+    const res = await axios.post(
       `${serverURL}/api/message/send/${singleUser._id}`,
       formData,
       authHeaders()
     );
 
-    // ✅ CLEAR EDITOR HERE
+    // ✅ CLEAR AFTER SEND
     editorRef.current.innerHTML = "";
     setHtml("");
     cancelImage();
@@ -286,12 +288,14 @@ const HomeRight = () => {
 
 
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(e);
-    }
-  };
+
+ const handleKeyDown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(e);
+  }
+};
+
 
   const handleTopicChange = (e) => setTopic(e.target.value);
   const handleCancel = () => { setOpenEdit(false); setOpenEditTopic(false); };
@@ -376,11 +380,46 @@ const HomeRight = () => {
 //   }, 0);
 // };
 
+const applyFormat = (command, value = null) => {
+  editorRef.current.focus();
+  document.execCommand(command, false, value);
+};
+ 
 const formatText = (command, value = null) => {
   editorRef.current.focus();
   document.execCommand(command, false, value);
 };
 
+const toggleFormat = (command, value = null) => {
+  document.execCommand(command, false, value);
+
+  setActiveFormats((prev) => ({
+    ...prev,
+    [command]: !prev[command],
+  }));
+};
+
+const iconClass = (command) =>
+  `cursor-pointer transition-colors  ${
+    activeFormats[command]
+      ? "text-blue-600 bg-gray-300 "
+      : "text-gray-600 hover:text-gray-900"
+  }`;
+
+  useEffect(() => {
+  const updateState = () => {
+    setActiveFormats({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      strikeThrough: document.queryCommandState("strikeThrough"),
+      insertOrderedList: document.queryCommandState("insertOrderedList"),
+      insertUnorderedList: document.queryCommandState("insertUnorderedList"),
+    });
+  };
+
+  document.addEventListener("selectionchange", updateState);
+  return () => document.removeEventListener("selectionchange", updateState);
+}, []);
 
 
   const handleCreateGroupConversation = async () => {
@@ -649,74 +688,76 @@ const formatText = (command, value = null) => {
                    {/* Message Input Area */}
         <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white mb-[10px]">
           <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-  <FiBold
-   onMouseDown={(e) => { e.preventDefault(); formatText("bold"); }}
-    className="cursor-pointer"
-  />
-
- <FiItalic
-   onMouseDown={(e) => { e.preventDefault(); formatText("italic"); }}
-    className="cursor-pointer"
-  />
-
-  <FaStrikethrough
-   onMouseDown={(e) => { e.preventDefault(); formatText("strikeThrough"); }}
-    className="cursor-pointer"
-  />
-<GoLink
+         <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+        
+          <FiBold
   onMouseDown={(e) => {
-    e.preventDefault();
-    const url = prompt("Enter link URL");
-    if (!url) return;
-    formatText("createLink", url);
+    e.preventDefault();   // 🔥 KEEP SELECTION
+    toggleFormat("bold");
   }}
-  className="cursor-pointer hover:text-black"
+  className={iconClass("bold")}
 />
 
-<AiOutlineOrderedList
+        
+          <FiItalic
   onMouseDown={(e) => {
     e.preventDefault();
-    formatText("insertOrderedList");
+    applyFormat("italic");
   }}
-  className="cursor-pointer hover:text-black"
+  className={iconClass("italic")}
+/>
+        
+          <FaStrikethrough
+  onMouseDown={(e) => {
+    e.preventDefault();
+    applyFormat("strikeThrough");
+  }}
+  className={iconClass("strikeThrough")}
+/>
+        
+          <GoLink
+            onClick={() => toggleFormat("createLink", prompt("Enter link"))}
+            className={iconClass("createLink")}
+          />
+        
+         <AiOutlineOrderedList
+  onMouseDown={(e) => {
+    e.preventDefault();
+    applyFormat("insertOrderedList");
+  }}
+  className={iconClass("insertOrderedList")}
 />
 
 <FaListUl
   onMouseDown={(e) => {
     e.preventDefault();
-    formatText("insertUnorderedList");
+    applyFormat("insertUnorderedList");
   }}
-  className="cursor-pointer hover:text-black"
+  className={iconClass("insertUnorderedList")}
 />
-
-   <FaCode
-    onMouseDown={(e) => {
-      e.preventDefault();
-      formatText("insertHTML", "`code`");
-    }}
-    className="cursor-pointer"
-  />
-
- <GoQuote
- onMouseDown={(e) => { e.preventDefault(); formatText("formatBlock", "blockquote"); }}
-  className="cursor-pointer"
-/>
-<RiCodeBlock
-  onMouseDown={(e) => {
-    e.preventDefault();
-    formatText("formatBlock", "pre");
-  }}
-  className="cursor-pointer hover:text-black"
-/>
-
-</div>
+        
+          <GoQuote
+            onClick={() => toggleFormat("formatBlock", "blockquote")}
+            className={iconClass("formatBlock")}
+          />
+        
+          <FaCode
+            onClick={() => toggleFormat("insertHTML", "<code>")}
+            className={iconClass("insertHTML")}
+          />
+        
+          <RiCodeBlock
+            onClick={() => toggleFormat("formatBlock", "pre")}
+            className={iconClass("pre")}
+          />
+        </div>
 
 
             <form onSubmit={sendMessage} className="flex flex-col order-2">
              <div
   ref={editorRef}
   contentEditable
+  onKeyDown={handleKeyDown}
   className="w-full p-3 min-h-[60px] outline-none"
   onInput={(e) => setHtml(e.currentTarget.innerHTML)}
   suppressContentEditableWarning

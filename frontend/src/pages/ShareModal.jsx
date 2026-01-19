@@ -56,33 +56,33 @@ const handleForwardClick = async () => {
   };
 
   // CORRECTED: Added the logic to call your backend API
-  const handleForward = async () => {
-    if (selectedUsers.length === 0 || !fileData?.messageId) return;
-    
-    setIsSending(true);
-    try {
-      const token = localStorage.getItem("token");
-      const payload = {
-        originalMessageId: fileData.messageId, // Taken from triggerForward in SenderMessage
-        receiverIds: selectedUsers.map(u => u._id),
-        additionalMessage: message 
-      };
+ const handleForward = async () => {
+  if (!selectedUsers.length || !fileData?.messageId) return;
 
-      await axios.post(`${serverURL}/api/message/forward`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+  setIsSending(true);
+  try {
+    const token = localStorage.getItem("token");
 
-     
-      onClose();
-      setSelectedUsers([]);
-      setMessage("");
-    } catch (error) {
-      console.error("Forwarding failed", error);
+    const payload = {
+      originalMessageId: fileData.messageId,
+      receiverIds: selectedUsers.map(u => u._id),
+      additionalMessage: message
+    };
 
-    } finally {
-      setIsSending(false);
-    }
-  };
+    await axios.post(`${serverURL}/api/message/forward`, payload, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    onClose();
+    setSelectedUsers([]);
+    setMessage("");
+  } catch (error) {
+    console.error("Forwarding failed", error);
+  } finally {
+    setIsSending(false);
+  }
+};
+
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-[2px] p-4 font-sans text-left">
