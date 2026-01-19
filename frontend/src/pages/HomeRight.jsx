@@ -77,10 +77,14 @@ const HomeRight = () => {
   const [html, setHtml] = useState("");
    const [activeFormats, setActiveFormats] = useState({});
 
-  const onEmojiClick = (emojiData) => {
-    setNewMsg(prev => prev + emojiData.emoji);
-    setShowPicker(false);
-  };
+   const onEmojiClick = (emojiData) => {
+  editorRef.current.innerHTML += emojiData.emoji;
+  setHtml(editorRef.current.innerHTML);
+  setShowPicker(false);
+};
+
+
+
 
   useEffect(() => {
     setView("messages");
@@ -252,10 +256,21 @@ const HomeRight = () => {
     return () => socket.off("newMessage", handleSocketMessage);
 }, [socket, dispatch]);
 
+const handleKeyDown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(e);
+  }
+};
+
+
+
 const sendMessage = async (e) => {
   e.preventDefault();
 
-  if (!html.trim() && !backendImage) return;
+  const cleanText = html.replace(/<[^>]*>/g, "").trim();
+
+  if (!cleanText && !backendImage) return;
 
   setLoading(true);
 
@@ -267,16 +282,23 @@ const sendMessage = async (e) => {
       formData.append("image", backendImage);
     }
 
-    const res = await axios.post(
+    await axios.post(
       `${serverURL}/api/message/send/${singleUser._id}`,
       formData,
       authHeaders()
     );
 
-    // ✅ CLEAR AFTER SEND
+    // ✅ FORCE CLEAR contentEditable (DOM + React safe)
     editorRef.current.innerHTML = "";
+    editorRef.current.textContent = "";
     setHtml("");
+
     cancelImage();
+
+    // ✅ Reset caret cleanly
+    requestAnimationFrame(() => {
+      editorRef.current.focus();
+    });
 
   } catch (error) {
     console.error("Error sending message", error);
@@ -289,12 +311,9 @@ const sendMessage = async (e) => {
 
 
 
- const handleKeyDown = (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage(e);
-  }
-};
+
+
+ 
 
 
   const handleTopicChange = (e) => setTopic(e.target.value);
@@ -754,14 +773,14 @@ const iconClass = (command) =>
 
 
             <form onSubmit={sendMessage} className="flex flex-col order-2">
-             <div
+            <div
   ref={editorRef}
   contentEditable
   onKeyDown={handleKeyDown}
-  className="w-full p-3 min-h-[60px] outline-none"
   onInput={(e) => setHtml(e.currentTarget.innerHTML)}
-  suppressContentEditableWarning
+  className="w-full p-3 min-h-[60px] outline-none"
 ></div>
+
 
 
 
@@ -791,9 +810,16 @@ const iconClass = (command) =>
                   <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Attach file" onClick={() => setPlusOpen(prev => !prev)}>
                     <IoAddSharp />
                   </button>
-                  <button type="button" className="text-xl p-1 rounded hover:bg-gray-200" title="Emoji" onClick={() => setShowPicker(prev => !prev)}>
-                    <BsEmojiSmile />
-                  </button>
+                  <button
+  type="button"
+  onMouseDown={(e) => {
+    e.preventDefault();
+    setShowPicker(prev => !prev);
+  }}
+>
+  <BsEmojiSmile />
+</button>
+
                 </div>
 
                 {plusOpen && (
