@@ -39,6 +39,7 @@ const SenderMessage = memo(({
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [openThread,setOpenThread]=useState()
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
@@ -48,7 +49,7 @@ const SenderMessage = memo(({
   useClickOutside(menuRef, () => setShowMenu(false));
   useClickOutside(profileCardRef, () => setShowProfileCard(false)); 
   useClickOutside(reactionPickerRef, () => setShowReactionPicker(false));
-
+  
   const formattedTime = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
@@ -85,15 +86,10 @@ const SenderMessage = memo(({
     }
   };
 
-  const triggerForward = () => {
-    onForward({ 
-      messageId: messageId,
-      image: image,
-      name: message ? (message.length > 30 ? message.substring(0, 30) + '...' : message) : 'Image file', 
-      sender: user?.name, 
-      time: formattedTime 
-    });
-  };
+ const triggerForward = () => {
+  onForward();
+};
+
 
   const handleDelete = async () => {
     if (!messageId || !window.confirm("Delete this message?")) return;

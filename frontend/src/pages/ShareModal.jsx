@@ -56,7 +56,7 @@ const handleForwardClick = async () => {
   };
 
   // CORRECTED: Added the logic to call your backend API
- const handleForward = async () => {
+const handleForward = async () => {
   if (!selectedUsers.length || !fileData?.messageId) return;
 
   setIsSending(true);
@@ -82,6 +82,7 @@ const handleForwardClick = async () => {
     setIsSending(false);
   }
 };
+
 
 
   return createPortal(

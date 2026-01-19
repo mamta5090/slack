@@ -42,6 +42,7 @@ import EmojiPicker from 'emoji-picker-react';
 import FilteredMsgFiles from "../component/filePage/FilteredMsgFiles.jsx";
 import FilterMsgPage from "../component/filePage/FilterMsgPage.jsx";
 import ThreadPanel from "./MessagethreadPanel.jsx";
+import ShareModal from "./ShareModal.jsx";
 //import MessageInput from "./MessageInput.jsx";
 //import ReceiverThreadReply from "./ReciverThreadReply.jsx";
 
@@ -77,13 +78,34 @@ const HomeRight = () => {
   const [html, setHtml] = useState("");
    const [activeFormats, setActiveFormats] = useState({});
    const [editorKey, setEditorKey] = useState(0);
+   const [shareOpen, setShareOpen] = useState(false);
+const [shareData, setShareData] = useState(null);
 
 
 const onEmojiClick = (emojiData) => {
-  editorRef.current.innerHTML += emojiData.emoji;
-  setHtml(editorRef.current.innerHTML);
+  const newHtml = html + emojiData.emoji;
+  setHtml(newHtml);
+
+  requestAnimationFrame(() => {
+    if (editorRef.current) {
+      editorRef.current.innerHTML = newHtml;
+      placeCaretAtEnd(editorRef.current);
+    }
+  });
+
   setShowPicker(false);
 };
+
+const placeCaretAtEnd = (el) => {
+  el.focus();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+};
+
 
 
   useEffect(() => {
@@ -263,6 +285,7 @@ const handleKeyDown = (e) => {
   }
 };
 
+
 const sendMessage = async (e) => {
   e.preventDefault();
 
@@ -282,11 +305,15 @@ const sendMessage = async (e) => {
       authHeaders()
     );
 
-if (editorRef.current) {
-  editorRef.current.innerHTML = "";
-}
-setHtml("");
-setEditorKey(prev => prev + 1);
+    // ✅ SINGLE SOURCE OF TRUTH RESET
+    setHtml("");
+
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = "";
+      }
+    });
+
     cancelImage();
 
   } catch (error) {
@@ -295,6 +322,7 @@ setEditorKey(prev => prev + 1);
     setLoading(false);
   }
 };
+
 
 
   const handleTopicChange = (e) => setTopic(e.target.value);
@@ -420,6 +448,14 @@ const iconClass = (command) =>
   document.addEventListener("selectionchange", updateState);
   return () => document.removeEventListener("selectionchange", updateState);
 }, []);
+
+useEffect(() => {
+  if (!editorRef.current) return;
+
+  if (editorRef.current.innerHTML !== html) {
+    editorRef.current.innerHTML = html;
+  }
+}, [html]);
 
 
   const handleCreateGroupConversation = async () => {
@@ -653,32 +689,43 @@ const iconClass = (command) =>
           {view === 'messages' && (
             <>
               <div className="flex-1 p-4 overflow-y-auto space-y-1 bg-white">
-                {messages.map((msg, idx) => {
-                  const isMine = String(msg.sender?._id) === String(user._id);
-                  const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
-                  return isMine ? (
-                    <SenderMessage
-                      key={key}
-                      message={msg.message}
-                      createdAt={msg.createdAt}
-                      image={msg.image}
-                      messageId={msg._id}
-                      onThreadClick={() => handleOpenThread(msg)}
-                      replyCount={msg.replyCount || 0}
-                    />
-                  ) : (
-                    <ReceiverMessage
-                      key={key}
-                      message={msg.message}
-                      createdAt={msg.createdAt}
-                      image={msg.image}
-                       sender={msg.sender}  
-                      isDeleted={msg.isDeleted}
-                      onThreadClick={() => handleOpenThread(msg)}
-                      replyCount={msg.replyCount || 0}
-                    />
-                  );
-                })}
+               {messages.map((msg, idx) => {
+  const isMine = String(msg.sender?._id) === String(user._id);
+  const key = msg._id ? `${msg._id}-${idx}` : `msg-${idx}`;
+  return isMine ? (
+    <SenderMessage
+      key={key}
+      message={msg.message}
+      createdAt={msg.createdAt}
+      image={msg.image}
+      messageId={msg._id}
+      onThreadClick={() => handleOpenThread(msg)}
+      replyCount={msg.replyCount || 0}
+      onForward={() => {
+    setShareData({
+      messageId: msg._id,
+      name: msg.message,
+      image: msg.image,
+      sender: msg.sender?.name || "You",
+      time: new Date(msg.createdAt).toLocaleTimeString()
+    });
+    setShareOpen(true);
+  }}
+    />
+  ) : (
+    <ReceiverMessage
+      key={key}
+      message={msg.message}
+      createdAt={msg.createdAt}
+      image={msg.image}
+      sender={msg.sender}
+      isDeleted={msg.isDeleted}
+      onThreadClick={() => handleOpenThread(msg)}
+      replyCount={msg.replyCount || 0}
+    />
+  );
+})}
+
                 <div ref={listEndRef} />
               </div>
               
@@ -696,6 +743,7 @@ const iconClass = (command) =>
     toggleFormat("bold");
   }}
 />
+
 
 
         
@@ -759,9 +807,22 @@ const iconClass = (command) =>
   ref={editorRef}
   contentEditable
   onKeyDown={handleKeyDown}
-  onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+onInput={(e) => {
+  const value = e.currentTarget.innerHTML;
+  setHtml(value);
+}}
+
   className="w-full p-3 min-h-[60px] outline-none"
 ></div>
+
+{shareOpen && (
+  <ShareModal
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    fileData={shareData}
+    usersList={allUsers}
+  />
+)}
 
 
 
