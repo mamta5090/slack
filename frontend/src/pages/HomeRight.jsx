@@ -76,14 +76,14 @@ const HomeRight = () => {
   const [activeThread, setActiveThread] = useState(null);
   const [html, setHtml] = useState("");
    const [activeFormats, setActiveFormats] = useState({});
+   const [editorKey, setEditorKey] = useState(0);
 
-   const onEmojiClick = (emojiData) => {
+
+const onEmojiClick = (emojiData) => {
   editorRef.current.innerHTML += emojiData.emoji;
   setHtml(editorRef.current.innerHTML);
   setShowPicker(false);
 };
-
-
 
 
   useEffect(() => {
@@ -263,13 +263,10 @@ const handleKeyDown = (e) => {
   }
 };
 
-
-
 const sendMessage = async (e) => {
   e.preventDefault();
 
   const cleanText = html.replace(/<[^>]*>/g, "").trim();
-
   if (!cleanText && !backendImage) return;
 
   setLoading(true);
@@ -277,10 +274,7 @@ const sendMessage = async (e) => {
   try {
     const formData = new FormData();
     formData.append("message", html);
-
-    if (backendImage) {
-      formData.append("image", backendImage);
-    }
+    if (backendImage) formData.append("image", backendImage);
 
     await axios.post(
       `${serverURL}/api/message/send/${singleUser._id}`,
@@ -288,17 +282,12 @@ const sendMessage = async (e) => {
       authHeaders()
     );
 
-    // ✅ FORCE CLEAR contentEditable (DOM + React safe)
-    editorRef.current.innerHTML = "";
-    editorRef.current.textContent = "";
-    setHtml("");
-
+if (editorRef.current) {
+  editorRef.current.innerHTML = "";
+}
+setHtml("");
+setEditorKey(prev => prev + 1);
     cancelImage();
-
-    // ✅ Reset caret cleanly
-    requestAnimationFrame(() => {
-      editorRef.current.focus();
-    });
 
   } catch (error) {
     console.error("Error sending message", error);
@@ -306,14 +295,6 @@ const sendMessage = async (e) => {
     setLoading(false);
   }
 };
-
-
-
-
-
-
-
- 
 
 
   const handleTopicChange = (e) => setTopic(e.target.value);
@@ -709,13 +690,13 @@ const iconClass = (command) =>
           <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
          <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
         
-          <FiBold
+        <FiBold
   onMouseDown={(e) => {
-    e.preventDefault();   // 🔥 KEEP SELECTION
+    e.preventDefault();
     toggleFormat("bold");
   }}
-  className={iconClass("bold")}
 />
+
 
         
           <FiItalic
@@ -774,12 +755,14 @@ const iconClass = (command) =>
 
             <form onSubmit={sendMessage} className="flex flex-col order-2">
             <div
+  key={editorKey}   // ✅ FORCE REMOUNT
   ref={editorRef}
   contentEditable
   onKeyDown={handleKeyDown}
   onInput={(e) => setHtml(e.currentTarget.innerHTML)}
   className="w-full p-3 min-h-[60px] outline-none"
 ></div>
+
 
 
 

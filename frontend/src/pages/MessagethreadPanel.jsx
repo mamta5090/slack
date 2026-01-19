@@ -39,8 +39,10 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const [backendFile, setBackendFile] = useState(null); // actual File object
   const [plusOpen, setPlusOpen] = useState(false);
   const [fileType, setFileType] = useState("");
-    const [activeFormats, setActiveFormats] = useState({});
-    
+  const [activeFormats, setActiveFormats] = useState({});
+  const [editorKey, setEditorKey] = useState(0);
+
+
    const singleUser = useSelector((state) => state.user.singleUser);
    const user = useSelector((state) => state.user.user);
  const isMe = user?._id === singleUser?._id;
@@ -110,37 +112,42 @@ useEffect(() => {
   };
 
 
-   const handleSendReply = async (e) => {
-    if (e) e.preventDefault();
-    if (!replyText.trim() && !backendFile) return;
-    setLoading(true);
+  const handleSendReply = async (e) => {
+  if (e) e.preventDefault();
 
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("message", replyText);
-      formData.append("parentId", parentMessage.messageId);
-      if (backendFile) formData.append("image", backendFile);
+  const cleanText = replyText.replace(/<[^>]*>/g, "").trim();
+  if (!cleanText && !backendFile) return;
 
-      const url = isChannel 
-          ? `${serverURL}/api/channel/${receiverId}/messages/${parentMessage.messageId}/reply`
-          : `${serverURL}/api/message/reply/${receiverId}`;
+  setLoading(true);
 
-      await axios.post(url, formData, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
-      });
+  try {
+    const token = localStorage.getItem("token");
+    const formData = new FormData();
+    formData.append("message", replyText);
+    formData.append("parentId", parentMessage.messageId);
+    if (backendFile) formData.append("image", backendFile);
 
-      setReplyText("");
-      setBackendFile(null);
-      setFrontendImage(null);
-      setPlusOpen(false);
-      setShowPicker(false);
-    } catch (err) {
-      console.error("Reply failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const url = isChannel
+      ? `${serverURL}/api/channel/${receiverId}/messages/${parentMessage.messageId}/reply`
+      : `${serverURL}/api/message/reply/${receiverId}`;
+
+    await axios.post(url, formData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    // 💣 HARD RESET EDITOR
+    setReplyText("");
+    setEditorKey(prev => prev + 1);
+    cancelFile();
+    setShowPicker(false);
+
+  } catch (err) {
+    console.error("Reply failed:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const getAvatarUser = (messageSender) => {
   if (!messageSender) return singleUser;
@@ -151,11 +158,14 @@ useEffect(() => {
 };
 
 
-  const onEmojiClick = (arg1, arg2) => {
-    const emoji = (arg2 && arg2.emoji) || (arg1 && arg1.emoji) || (arg1?.native || "");
-    setReplyText((prev) => prev + emoji);
-    setShowPicker(false);
-  };
+ const onEmojiClick = (arg1, arg2) => {
+  const emoji = (arg2 && arg2.emoji) || (arg1 && arg1.emoji) || arg1?.native;
+
+  editorRef.current.innerHTML += emoji;
+  setReplyText(editorRef.current.innerHTML);
+  setShowPicker(false);
+};
+
 
  
   const handleImage = (e) => {
@@ -189,12 +199,13 @@ useEffect(() => {
   };
 
   // handle Enter key (send message) — send on Enter unless shiftKey is pressed
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendReply();
-    }
-  };
+ const handleKeyDown = (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleSendReply();
+  }
+};
+
 
   const toggleFormat = (command, value = null) => {
   document.execCommand(command, false, value);
@@ -323,63 +334,94 @@ const iconClass = (command) =>
       {/* Common Message Input with Uploads */}
       <div className="p-4 border-t">
         <div className="border border-gray-300 rounded-lg overflow-hidden flex flex-col">
-           <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
-          
-            <FiBold
-              onClick={() => toggleFormat("bold")}
-              className={iconClass("bold")}
-            />
-          
-            <FiItalic
-              onClick={() => toggleFormat("italic")}
-              className={iconClass("italic")}
-            />
-          
-            <FaStrikethrough
-              onClick={() => toggleFormat("strikeThrough")}
-              className={iconClass("strikeThrough")}
-            />
-          
-            <GoLink
-              onClick={() => toggleFormat("createLink", prompt("Enter link"))}
-              className={iconClass("createLink")}
-            />
-          
-            <AiOutlineOrderedList
-              onClick={() => toggleFormat("insertOrderedList")}
-              className={iconClass("insertOrderedList")}
-            />
-          
-            <FaListUl
-              onClick={() => toggleFormat("insertUnorderedList")}
-              className={iconClass("insertUnorderedList")}
-            />
-          
-            <GoQuote
-              onClick={() => toggleFormat("formatBlock", "blockquote")}
-              className={iconClass("formatBlock")}
-            />
-          
-            <FaCode
-              onClick={() => toggleFormat("insertHTML", "<code>")}
-              className={iconClass("insertHTML")}
-            />
-          
-            <RiCodeBlock
-              onClick={() => toggleFormat("formatBlock", "pre")}
-              className={iconClass("pre")}
-            />
-          </div>
+         <div className="flex flex-row items-center gap-5 bg-gray-100 px-3 py-2 order-1">
+  <FiBold
+    onMouseDown={(e) => {
+      e.preventDefault(); // Prevent losing focus
+      toggleFormat("bold");
+    }}
+    className={iconClass("bold")}
+  />
+
+  <FiItalic
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("italic");
+    }}
+    className={iconClass("italic")}
+  />
+
+  <FaStrikethrough
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("strikeThrough");
+    }}
+    className={iconClass("strikeThrough")}
+  />
+
+  <GoLink
+    onMouseDown={(e) => {
+      e.preventDefault();
+      const url = prompt("Enter link");
+      if (url) toggleFormat("createLink", url);
+    }}
+    className={iconClass("createLink")}
+  />
+
+  <AiOutlineOrderedList
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("insertOrderedList");
+    }}
+    className={iconClass("insertOrderedList")}
+  />
+
+  <FaListUl
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("insertUnorderedList");
+    }}
+    className={iconClass("insertUnorderedList")}
+  />
+
+  <GoQuote
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("formatBlock", "blockquote");
+    }}
+    className={iconClass("formatBlock")}
+  />
+
+  <FaCode
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("insertHTML", "<code></code>");
+    }}
+    className={iconClass("insertHTML")}
+  />
+
+  <RiCodeBlock
+    onMouseDown={(e) => {
+      e.preventDefault();
+      toggleFormat("formatBlock", "pre");
+    }}
+    className={iconClass("pre")}
+  />
+</div>
+
 
           <form onSubmit={handleSendReply} className="flex flex-col order-2">
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={`Message ${singleUser?.name || ""}`}
-              className="w-full p-3 min-h-[60px] outline-none resize-none"
-              disabled={loading}
-            />
+           <div
+  key={editorKey}                      // 💣 forces reset
+  ref={editorRef}
+  contentEditable
+  suppressContentEditableWarning
+  onInput={(e) => setReplyText(e.currentTarget.innerHTML)}
+  onKeyDown={handleKeyDown}
+  data-placeholder={`Message ${singleUser?.name || ""}`}
+  className="w-full p-3 min-h-[60px] outline-none resize-none empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+/>
+
 
             {/* Preview area for selected image/video */}
             {frontendImage && (
