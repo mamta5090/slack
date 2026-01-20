@@ -79,7 +79,7 @@ const HomeRight = () => {
    const [activeFormats, setActiveFormats] = useState({});
    const [editorKey, setEditorKey] = useState(0);
    const [shareOpen, setShareOpen] = useState(false);
-const [shareData, setShareData] = useState(null);
+   const [shareData, setShareData] = useState(null);
 
 
 const onEmojiClick = (emojiData) => {
@@ -95,6 +95,39 @@ const onEmojiClick = (emojiData) => {
 
   setShowPicker(false);
 };
+
+const handleForwardMessage = async (receiverUser) => {
+  try {
+    dispatch(setSingleUser(receiverUser));
+
+    const formData = new FormData();
+    formData.append("message", shareData.message);
+    formData.append("isForwarded", true);
+
+    // ✅ ORIGINAL SENDER
+    formData.append(
+      "forwardedFrom",
+      JSON.stringify({
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+      })
+    );
+
+    await axios.post(
+      `${serverURL}/api/message/send/${receiverUser._id}`,
+      formData,
+      authHeaders()
+    );
+
+    setShareOpen(false);
+    setShareData(null);
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+
 
 const placeCaretAtEnd = (el) => {
   el.focus();
@@ -714,15 +747,27 @@ useEffect(() => {
     />
   ) : (
     <ReceiverMessage
-      key={key}
-      message={msg.message}
-      createdAt={msg.createdAt}
-      image={msg.image}
-      sender={msg.sender}
-      isDeleted={msg.isDeleted}
-      onThreadClick={() => handleOpenThread(msg)}
-      replyCount={msg.replyCount || 0}
-    />
+  key={key}
+  message={msg.message}
+  createdAt={msg.createdAt}
+  image={msg.image}
+  sender={msg.sender}
+  isForwarded={msg.isForwarded}
+  forwardedFrom={msg.forwardedFrom}
+  onThreadClick={() => handleOpenThread(msg)}
+  replyCount={msg.replyCount || 0}
+  onForward={() => {
+    setShareData({
+      messageId: msg._id,
+      message: msg.message,
+      image: msg.image,
+      sender: msg.sender?.name,
+      createdAt: msg.createdAt,
+    });
+    setShareOpen(true);
+  }}
+/>
+
   );
 })}
 
@@ -816,12 +861,14 @@ onInput={(e) => {
 ></div>
 
 {shareOpen && (
-  <ShareModal
-    isOpen={shareOpen}
-    onClose={() => setShareOpen(false)}
-    fileData={shareData}
-    usersList={allUsers}
-  />
+ <ShareModal
+  isOpen={shareOpen}
+  onClose={() => setShareOpen(false)}
+  fileData={shareData}
+  usersList={allUsers}
+  onForward={handleForwardMessage}   // ✅ PASS FUNCTION
+/>
+
 )}
 
 

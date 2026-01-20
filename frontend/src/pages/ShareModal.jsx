@@ -69,9 +69,11 @@ const handleForward = async () => {
       additionalMessage: message
     };
 
-    await axios.post(`${serverURL}/api/message/forward`, payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    await axios.post(
+      `${serverURL}/api/message/forward`,
+      payload,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     onClose();
     setSelectedUsers([]);
@@ -82,6 +84,7 @@ const handleForward = async () => {
     setIsSending(false);
   }
 };
+
 
 
 
@@ -146,15 +149,27 @@ const handleForward = async () => {
           </div>
 
           <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50/50">
-            {fileData?.image ? (
-                <img src={fileData.image} className="w-10 h-10 rounded object-cover" alt="preview" />
-            ) : (
-                <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center"><Film size={22} /></div>
-            )}
-            <div className="flex-1 overflow-hidden">
-                <div className="text-[14px] font-bold text-gray-900 truncate">{fileData?.name}</div>
-                <div className="text-xs text-gray-500">{fileData?.sender} • {fileData?.time}</div>
-            </div>
+         {fileData?.image ? (
+  <img
+    src={fileData.image}
+    className="w-10 h-10 rounded object-cover"
+    alt="preview"
+  />
+) : (
+  <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+    <Film size={22} />
+  </div>
+)}
+
+           <div
+  className="text-[14px] font-medium text-gray-900 line-clamp-2"
+  dangerouslySetInnerHTML={{ __html: fileData?.message }}
+/>
+
+<div className="text-xs text-gray-500 mt-1">
+  From {fileData?.sender?.name}
+</div>
+
           </div>
 
           <div className="flex items-center justify-between pt-2">

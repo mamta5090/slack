@@ -28,6 +28,8 @@ import { RiCodeBlock } from "react-icons/ri";
 import { MdKeyboardArrowDown } from "react-icons/md";
 //import ChannelFilteredFiles from "../component/filePage/ChannelFilteredFiles.jsx";
 import ChannelFilterPage from '../../component/filePage/ChannelFilterPage.jsx';
+import ShareModal from "../../pages/ShareModal.jsx";
+
 //import Avatar from "../../component/common/Avatar.jsx";
 
 const Channel = () => {
@@ -52,6 +54,8 @@ const Channel = () => {
   const [activeThread, setActiveThread] = useState(null);
   const [html, setHtml] = useState("");
    const [activeFormats, setActiveFormats] = useState({});
+     const [shareOpen, setShareOpen] = useState(false);
+     const [shareData, setShareData] = useState(null);
 
   const user = useSelector((state) => state.user.user);
   const allMessages = useSelector((state) => state.channelMessage.channelMessages) || []; 
@@ -272,6 +276,18 @@ const handleKeyDown = (e) => {
     }
   };
 
+  const handleShare = (msg) => {
+  setShareData({
+    message: msg.text,
+    image: msg.image,
+    sender: msg.sender,
+    messageId: msg._id,
+    channelId
+  });
+  setShareOpen(true);
+};
+
+
   if (!selectedChannel) {
     return (
       <div className="w-full h-full flex items-center justify-center">
@@ -348,30 +364,63 @@ const handleKeyDown = (e) => {
                   String(msg.sender?._id) === String(user?._id);
                 return isMine ? (
                   <SenderMessage
-                    key={msg._id}
-                    {...msg}
-                    onThreadClick={() => handleOpenThread(msg)}
-                  />
+  key={msg._id}
+  {...msg}
+  onThreadClick={() => handleOpenThread(msg)}
+  onForward={() => {
+    setShareData({
+      messageId: msg._id,
+      message: msg.text,          // channel me text = msg.text
+      image: msg.image,
+      sender: msg.sender,
+      channelId
+    });
+    setShareOpen(true);
+  }}
+/>
+
                 ) : (
-                <ReceiverMessage
+               <ReceiverMessage
   key={msg._id}
   message={msg.text}
   createdAt={msg.createdAt}
+  image={msg.image}
+  sender={msg.sender}
   messageId={msg._id}
   channelId={channelId}
-  image={msg.image}
   reactions={msg.reactions}
   replyCount={msg.replyCount}
-  sender={msg.sender}          // ✅ correct
+  isForwarded={msg.isForwarded}
+  forwardedFrom={msg.forwardedFrom}
   onThreadClick={() => handleOpenThread(msg)}
+
+  // 🔥 THIS IS THE KEY
+  onForward={(data) => {
+    setShareData({
+      messageId: data.messageId,
+      message: data.message,
+      image: data.image,
+      sender: data.sender,
+      createdAt: data.createdAt,
+      channelId,
+    });
+    setShareOpen(true);
+  }}
 />
-
-
 
                 );
               })}
               <div ref={listEndRef} />
             </main>
+
+{shareOpen && (
+  <ShareModal
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    fileData={shareData}
+    usersList={allUsers}
+  />
+)}
 
 
 {/* ================= Channel Input Area ================= */}
@@ -498,6 +547,14 @@ const handleKeyDown = (e) => {
 
       </div>
 
+{shareOpen && (
+  <ShareModal
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    fileData={shareData}
+    usersList={allUsers}
+  />
+)}
 
       {/* Edit Topic Modal */}
       {openEditTopic && (

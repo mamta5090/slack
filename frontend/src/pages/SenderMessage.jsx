@@ -14,6 +14,7 @@ import { serverURL } from "../main";
 import ThreadPanel from "./MessagethreadPanel";
 //import ThreadPanel from "./MessagethreadPanel";
 import ReactMarkdown from "react-markdown";
+import ShareModal from "./ShareModal";
 
 const SenderMessage = memo(({ 
   message, 
@@ -40,6 +41,9 @@ const SenderMessage = memo(({
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [openThread,setOpenThread]=useState()
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+const [shareData, setShareData] = useState(null);
+
 
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
@@ -133,11 +137,42 @@ const SenderMessage = memo(({
                 <span className="text-xs text-gray-500">{formattedTime}</span>
               </div>
               
-              {isForwarded && (
-                <div className="flex items-center gap-1 text-gray-500 text-[11px] italic mt-0.5">
-                  <MdOutlineForwardToInbox size={14} /> Forwarded
-                </div>
-              )}
+             {isForwarded && sender && (
+  <div className="mt-1 mb-2">
+    <div className="flex items-center gap-1 text-gray-500 text-[12px] mb-1">
+      <MdOutlineForwardToInbox size={14} />
+      <span className="italic">Forwarded</span>
+    </div>
+
+    <div className="border border-gray-300 rounded-lg bg-gray-50 p-3 max-w-[420px]">
+      <div className="flex items-center gap-2 mb-1">
+        <Avatar user={sender} size="xs" />
+        <span className="text-[13px] font-bold text-gray-900">
+          {sender?.name}
+        </span>
+      </div>
+
+      <div
+        className="text-[14px] text-gray-700 ml-7 mb-2"
+        dangerouslySetInnerHTML={{ __html: message }}
+      />
+
+      <div className="flex gap-3 text-[12px] text-gray-500 ml-7">
+        <span>Direct message</span>
+        <span>
+          {new Date(createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+        <span className="text-blue-600 cursor-pointer hover:underline">
+          View conversation
+        </span>
+      </div>
+    </div>
+  </div>
+)}
+
 
               {image && (
                 <img 
@@ -210,6 +245,16 @@ const SenderMessage = memo(({
             </div>
           </div>
         </div>
+
+{shareOpen && (
+  <ShareModal
+    isOpen={shareOpen}
+    onClose={() => setShareOpen(false)}
+    fileData={shareData}
+    usersList={allUsers}
+  />
+)}
+
 
         {/* Profile Card Hover Modal */}
         {showProfileCard && (

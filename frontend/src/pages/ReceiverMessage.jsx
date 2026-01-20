@@ -23,6 +23,7 @@ const ReceiverMessage = memo(({
   channelId, 
   onForward, 
   isForwarded, 
+  forwardedFrom,
    onThreadClick, 
    sender,
    
@@ -55,6 +56,14 @@ const ReceiverMessage = memo(({
   const formattedTime = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
+
+    const formattedDate = createdAt
+  ? new Date(createdAt).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+    })
+  : "";
+
 
   const isOnline = user && onlineUsers.includes(singleUser?._id);
   // const isMe = !!user?._id; 
@@ -89,14 +98,17 @@ const ReceiverMessage = memo(({
   };
 
   const triggerForward = () => {
-    onForward({ 
-      messageId: messageId,
-      image: image,
-      name: message ? (message.length > 30 ? message.substring(0, 30) + '...' : message) : 'Image file', 
-      sender: singleUser?.name, 
-      time: formattedTime 
-    });
-  };
+  if (!onForward) return;
+
+  onForward({
+    messageId,
+    message,
+    image,
+    sender,
+    createdAt,
+  });
+};
+
 
   const handleDelete = async () => {
     if (!messageId || !window.confirm("Delete this message?")) return;
@@ -140,48 +152,38 @@ const ReceiverMessage = memo(({
                 <span className="text-xs text-gray-500">{formattedTime}</span>
               </div>
               
-       {isForwarded && sender && (
-  <div className="mt-1 mb-2">
-
-    {/* Forwarded label */}
+  {/* -------- FORWARDED MESSAGE -------- */}
+{isForwarded ? (
+  <div className="mb-2">
     <div className="flex items-center gap-1 text-gray-500 text-[12px] mb-1">
       <MdOutlineForwardToInbox size={14} />
       <span className="italic">Forwarded</span>
     </div>
 
-    {/* Forwarded Card */}
     <div className="border border-gray-300 rounded-lg bg-gray-50 p-3 max-w-[420px]">
+      {forwardedFrom && (
+        <div className="flex items-center gap-2 mb-1">
+          <Avatar user={forwardedFrom} size="xs" />
+          <span className="text-[13px] font-bold">
+            {forwardedFrom.name}
+          </span>
+        </div>
+      )}
 
-      {/* Avatar + Name */}
-      <div className="flex items-center gap-2 mb-1">
-        <Avatar user={sender} size="xs" />
-        <span className="text-[13px] font-bold text-gray-900">
-          {sender?.name}
-        </span>
-      </div>
-
-      {/* Forwarded Message */}
       <div
-        className="text-[14px] text-gray-700 ml-7 mb-2 leading-relaxed"
+        className="ml-7 text-[14px]"
         dangerouslySetInnerHTML={{ __html: message }}
       />
-
-      {/* Footer */}
-      <div className="flex items-center gap-3 text-[12px] text-gray-500 ml-7">
-        <span>Direct message</span>
-        <span>
-          {new Date(createdAt).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-          })}
-        </span>
-        <span className="text-blue-600 cursor-pointer hover:underline">
-          View conversation
-        </span>
-      </div>
     </div>
   </div>
+) : (
+  <div
+    dangerouslySetInnerHTML={{ __html: message }}
+    className="prose prose-sm"
+  />
 )}
+
+
 
 
 
@@ -314,13 +316,14 @@ const ReceiverMessage = memo(({
             onClick={onThreadClick} 
           />
           
-          <button 
-            onClick={triggerForward} 
-            className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors group/tool relative"
-          >
-            <MdShare size={18} />
-            <Tooltip label="Forward message" />
-          </button>
+         <button 
+  onClick={triggerForward} 
+  className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors group/tool relative"
+>
+  <MdShare size={18} />
+  <Tooltip label="Forward message" />
+</button>
+
 
   <div className="hidden sm:flex">
              <ActionIcon icon={<MdBookmarkBorder size={18}/>} label="Save" />
