@@ -140,11 +140,50 @@ const ReceiverMessage = memo(({
                 <span className="text-xs text-gray-500">{formattedTime}</span>
               </div>
               
-              {isForwarded && (
-                <div className="flex items-center gap-1 text-gray-500 text-[11px] italic mt-0.5">
-                  <MdOutlineForwardToInbox size={14} /> Forwarded
-                </div>
-              )}
+       {isForwarded && sender && (
+  <div className="mt-1 mb-2">
+
+    {/* Forwarded label */}
+    <div className="flex items-center gap-1 text-gray-500 text-[12px] mb-1">
+      <MdOutlineForwardToInbox size={14} />
+      <span className="italic">Forwarded</span>
+    </div>
+
+    {/* Forwarded Card */}
+    <div className="border border-gray-300 rounded-lg bg-gray-50 p-3 max-w-[420px]">
+
+      {/* Avatar + Name */}
+      <div className="flex items-center gap-2 mb-1">
+        <Avatar user={sender} size="xs" />
+        <span className="text-[13px] font-bold text-gray-900">
+          {sender?.name}
+        </span>
+      </div>
+
+      {/* Forwarded Message */}
+      <div
+        className="text-[14px] text-gray-700 ml-7 mb-2 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: message }}
+      />
+
+      {/* Footer */}
+      <div className="flex items-center gap-3 text-[12px] text-gray-500 ml-7">
+        <span>Direct message</span>
+        <span>
+          {new Date(createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+          })}
+        </span>
+        <span className="text-blue-600 cursor-pointer hover:underline">
+          View conversation
+        </span>
+      </div>
+    </div>
+  </div>
+)}
+
+
 
               {image && (
                 <img 
