@@ -395,17 +395,17 @@ const handleKeyDown = (e) => {
   onThreadClick={() => handleOpenThread(msg)}
 
   // 🔥 THIS IS THE KEY
-  onForward={(data) => {
-    setShareData({
-      messageId: data.messageId,
-      message: data.message,
-      image: data.image,
-      sender: data.sender,
-      createdAt: data.createdAt,
-      channelId,
-    });
-    setShareOpen(true);
-  }}
+  onForward={() => {
+  setShareData({
+    messageId: msg._id,
+    message: msg.message,
+    image: msg.image,
+    sender: msg.sender,
+    createdAt: msg.createdAt,
+  });
+  setShareOpen(true);
+}}
+
 />
 
                 );

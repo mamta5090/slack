@@ -8,8 +8,11 @@ import useClickOutside from "../hook/useClickOutside";
 import Avatar from "../component/Avatar";
 import axios from "axios";
 import { serverURL } from "../main";
+import { useNavigate } from "react-router-dom";
 
-const ShareModal = ({ isOpen, onClose, fileData, usersList = [] }) => {
+const ShareModal = ({ isOpen, onClose,onForward   , fileData, usersList = [] }) => {
+
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -37,9 +40,9 @@ const handleForwardClick = async () => {
     };
 
     const token = localStorage.getItem("token");
-    await axios.post(`${serverURL}/api/message/forward`, payload, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+   onForward(selectedUsers);
+onClose();
+
 
     alert("Forwarded successfully");
     onClose();
@@ -63,23 +66,24 @@ const handleForward = async () => {
   try {
     const token = localStorage.getItem("token");
 
-    const payload = {
-      originalMessageId: fileData.messageId,
-      receiverIds: selectedUsers.map(u => u._id),
-      additionalMessage: message
-    };
-
-    await axios.post(
+    const res = await axios.post(
       `${serverURL}/api/message/forward`,
-      payload,
+      {
+        originalMessageId: fileData.messageId,
+        receiverIds: selectedUsers.map(u => u._id),
+        additionalMessage: message,
+      },
       { headers: { Authorization: `Bearer ${token}` } }
     );
+
+    // 🔥 THIS IS THE KEY LINE
+    navigate(`/chat/${res.data.openChatUserId}`);
 
     onClose();
     setSelectedUsers([]);
     setMessage("");
-  } catch (error) {
-    console.error("Forwarding failed", error);
+  } catch (err) {
+    console.error(err);
   } finally {
     setIsSending(false);
   }

@@ -25,12 +25,14 @@ const SenderMessage = memo(({
   onForward, 
   isForwarded, 
    onThreadClick, 
+   sender,
   reactions = [], 
   onEmojiClick, 
   replyCount = 0, 
   ...props 
 }) => {
-  const user = useSelector((state) => state.user.user); // Current logged in user
+  const user = useSelector((state) => state.user.user); 
+  const allUsers = useSelector((state) => state.user.allUsers);
   const { onlineUsers = [] } = useSelector((state) => state.socket);
   const dispatch = useDispatch();
 
@@ -215,7 +217,7 @@ const [shareData, setShareData] = useState(null);
               {/* --- REACTION PILLS SECTION --- */}
               <div className="flex flex-wrap gap-1 mt-1.5 items-center">
                 {reactions.map((react, idx) => {
-                  const hasReacted = react.users?.includes(user?._id);
+                  const hasReacted = react.user?.includes(user?._id);
                   return (
                     <button
                       key={idx}

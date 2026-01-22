@@ -96,36 +96,39 @@ const onEmojiClick = (emojiData) => {
   setShowPicker(false);
 };
 
-const handleForwardMessage = async (receiverUser) => {
+const handleForwardMessage = async (receivers) => {
   try {
-    dispatch(setSingleUser(receiverUser));
+    for (const receiver of receivers) {
+      const formData = new FormData();
+      formData.append("message", shareData.message);
+      formData.append("isForwarded", true);
 
-    const formData = new FormData();
-    formData.append("message", shareData.message);
-    formData.append("isForwarded", true);
+      formData.append(
+        "forwardedFrom",
+        JSON.stringify({
+          _id: shareData.sender._id,
+          name: shareData.sender.name,
+          avatar: shareData.sender.avatar,
+        })
+      );
 
-    // ✅ ORIGINAL SENDER
-    formData.append(
-      "forwardedFrom",
-      JSON.stringify({
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar,
-      })
-    );
+      await axios.post(
+        `${serverURL}/api/message/send/${receiver._id}`,
+        formData,
+        authHeaders()
+      );
 
-    await axios.post(
-      `${serverURL}/api/message/send/${receiverUser._id}`,
-      formData,
-      authHeaders()
-    );
+      dispatch(setSingleUser(receiver)); // ✅ auto open chat
+      navigate(`/home/${receiver._id}`);
+    }
 
     setShareOpen(false);
     setShareData(null);
   } catch (err) {
-    console.log(err);
+    console.error("Forward failed", err);
   }
 };
+
 
 
 
@@ -734,16 +737,17 @@ useEffect(() => {
       messageId={msg._id}
       onThreadClick={() => handleOpenThread(msg)}
       replyCount={msg.replyCount || 0}
-      onForward={() => {
-    setShareData({
-      messageId: msg._id,
-      name: msg.message,
-      image: msg.image,
-      sender: msg.sender?.name || "You",
-      time: new Date(msg.createdAt).toLocaleTimeString()
-    });
-    setShareOpen(true);
-  }}
+     onForward={() => {
+  setShareData({
+    messageId: msg._id,
+    message: msg.message,
+    image: msg.image,
+    sender: msg.sender,
+    createdAt: msg.createdAt,
+  });
+  setShareOpen(true);
+}}
+
     />
   ) : (
     <ReceiverMessage

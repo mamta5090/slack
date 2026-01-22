@@ -49,6 +49,16 @@ default:null
     type:Number,
     default:0
   },
+  forwardedFrom: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  default: null
+},
+isForwarded: {
+  type: Boolean,
+  default: false
+},
+
   
   reactions: [
   {

@@ -57,13 +57,16 @@ const ReceiverMessage = memo(({
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
-    const formattedDate = createdAt
-  ? new Date(createdAt).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-    })
-  : "";
+   
 
+const formattedDate=new Date(message.createdAt).toLocaleDateString(
+  "en-GB",
+  {
+    day:"2-digit",
+    month:"short",
+    year:"numeric",
+  }
+)
 
   const isOnline = user && onlineUsers.includes(singleUser?._id);
   // const isMe = !!user?._id; 
@@ -97,17 +100,30 @@ const ReceiverMessage = memo(({
     }
   };
 
-  const triggerForward = () => {
-  if (!onForward) return;
+//   const triggerForward = () => {
+//   if (!onForward) return;
 
-  onForward({
-    messageId,
-    message,
-    image,
-    sender,
-    createdAt,
-  });
+//   onForward({
+//     messageId,
+//     message,
+//     image,
+//     sender,
+//     createdAt,
+    
+//   });
+// };
+
+const triggerForward = () => {
+  onForward();
 };
+
+// const formattedDate = createdAt
+//   ? new Date(createdAt).toLocaleDateString("en-GB", {
+//       day: "2-digit",
+//       month: "short",
+//       year: "numeric",
+//     })
+//   : "";
 
 
   const handleDelete = async () => {
@@ -153,37 +169,52 @@ const ReceiverMessage = memo(({
               </div>
               
   {/* -------- FORWARDED MESSAGE -------- */}
-{isForwarded ? (
-  <div className="mb-2">
+
+{/* ---------- FORWARDED MESSAGE (RECEIVER SIDE) ---------- */}
+{isForwarded && (
+  <div className="mt-2 mb-2">
+    
+    {/* Forwarded label */}
     <div className="flex items-center gap-1 text-gray-500 text-[12px] mb-1">
       <MdOutlineForwardToInbox size={14} />
       <span className="italic">Forwarded</span>
     </div>
 
+    {/* Forwarded message box */}
     <div className="border border-gray-300 rounded-lg bg-gray-50 p-3 max-w-[420px]">
-      {forwardedFrom && (
-        <div className="flex items-center gap-2 mb-1">
-          <Avatar user={forwardedFrom} size="xs" />
-          <span className="text-[13px] font-bold">
-            {forwardedFrom.name}
-          </span>
-        </div>
-      )}
 
+      {/* Original sender */}
+      <div className="flex items-center gap-2 mb-1">
+        <Avatar user={sender} size="xs" />
+        <span className="text-[13px] font-bold text-gray-900">
+          {sender?.name || "Unknown"}
+        </span>
+      </div>
+
+      {/* Message content */}
       <div
-        className="ml-7 text-[14px]"
+        className="text-[14px] text-gray-700 ml-7 mb-2"
         dangerouslySetInnerHTML={{ __html: message }}
       />
+
+      {/* Footer */}
+      <div className="flex gap-3 text-[12px] text-gray-500 ml-7">
+        <span>Direct message</span>
+        <span>
+          {new Date(createdAt).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
+        <span className="text-blue-600 cursor-pointer hover:underline">
+          View conversation
+        </span>
+      </div>
+
     </div>
   </div>
-) : (
-  <div
-    dangerouslySetInnerHTML={{ __html: message }}
-    className="prose prose-sm"
-  />
 )}
-
-
 
 
 
@@ -195,12 +226,13 @@ const ReceiverMessage = memo(({
                 />
               )}
 
-              {message && (
-                 <div
- dangerouslySetInnerHTML={{ __html: message }}
-  className="prose prose-sm"
-></div>
-              )}
+             {!isForwarded && message && (
+  <div
+    dangerouslySetInnerHTML={{ __html: message }}
+    className="prose prose-sm"
+  />
+)}
+
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
               {replyCount > 0 && (

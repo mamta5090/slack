@@ -272,7 +272,7 @@ export const markAsRead = async (req, res) => {
 export const forwardMessage = async (req, res) => {
   try {
     const senderId = req.userId;
-    const { originalMessageId, receiverIds } = req.body;
+    const { originalMessageId, receiverIds,additionalMessage  } = req.body;
 
     if (!originalMessageId || !receiverIds || !Array.isArray(receiverIds) || receiverIds.length === 0) {
       return res.status(400).json({ 
@@ -290,14 +290,17 @@ export const forwardMessage = async (req, res) => {
     const forwardResults = await Promise.all(
       receiverIds.map(async (receiverId) => {
         const newMessage = await Message.create({
-          sender: senderId,
-          receiver: receiverId,
-          message: originalMessage.message || "",
-          files: originalMessage.files || [],
-          image: originalMessage.image,
-          imageKey: originalMessage.imageKey,
-          isForwarded: true,
-        });
+  sender: senderId,                  
+  receiver: receiverId,
+  message: originalMessage.message || "",
+  files: originalMessage.files || [],
+  image: originalMessage.image,
+  imageKey: originalMessage.imageKey,
+
+  isForwarded: true,                   
+  forwardedFrom: originalMessage.sender,
+});
+
 
         const updatedConversation = await Conversation.findOneAndUpdate(
           { participants: { $all: [senderId, receiverId] } },
@@ -310,8 +313,10 @@ export const forwardMessage = async (req, res) => {
           { upsert: true, new: true }
         ).populate("participants", "name email profilePic");
 
-        const populatedNewMessage = await Message.findById(newMessage._id)
-          .populate("sender", "name email profilePic");
+const populatedNewMessage = await Message.findById(newMessage._id)
+  .populate("sender", "name profilePic")
+  .populate("forwardedFrom", "name profilePic"); // ✅
+
 
         const receiverSocketId = getSocketId(receiverId);
         const senderSocketId = getSocketId(senderId);
@@ -350,6 +355,7 @@ export const forwardMessage = async (req, res) => {
     return res.status(201).json({
       success: true,
       messages: forwardResults,
+      openChatUserId: receiverIds[0]
     });
 
   } catch (error) {
