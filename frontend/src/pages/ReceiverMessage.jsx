@@ -117,14 +117,6 @@ const triggerForward = () => {
   onForward();
 };
 
-// const formattedDate = createdAt
-//   ? new Date(createdAt).toLocaleDateString("en-GB", {
-//       day: "2-digit",
-//       month: "short",
-//       year: "numeric",
-//     })
-//   : "";
-
 
   const handleDelete = async () => {
     if (!messageId || !window.confirm("Delete this message?")) return;

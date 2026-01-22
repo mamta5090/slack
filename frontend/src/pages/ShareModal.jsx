@@ -76,18 +76,15 @@ const handleForward = async () => {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    // 🔥 THIS IS THE KEY LINE
-    navigate(`/chat/${res.data.openChatUserId}`);
+    // 🔥 AUTO OPEN RECEIVER CHAT
+    dispatch(setSingleUser(res.data.receiverUser));
 
     onClose();
-    setSelectedUsers([]);
-    setMessage("");
-  } catch (err) {
-    console.error(err);
   } finally {
     setIsSending(false);
   }
 };
+
 
 
 

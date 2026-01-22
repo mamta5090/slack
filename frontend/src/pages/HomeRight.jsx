@@ -735,6 +735,7 @@ useEffect(() => {
       createdAt={msg.createdAt}
       image={msg.image}
       messageId={msg._id}
+        reactions={msg.reactions || []}
       onThreadClick={() => handleOpenThread(msg)}
       replyCount={msg.replyCount || 0}
      onForward={() => {
@@ -744,6 +745,7 @@ useEffect(() => {
     image: msg.image,
     sender: msg.sender,
     createdAt: msg.createdAt,
+    
   });
   setShareOpen(true);
 }}
@@ -752,6 +754,7 @@ useEffect(() => {
   ) : (
     <ReceiverMessage
   key={key}
+    messageId={msg._id} 
   message={msg.message}
   createdAt={msg.createdAt}
   image={msg.image}
@@ -760,6 +763,7 @@ useEffect(() => {
   forwardedFrom={msg.forwardedFrom}
   onThreadClick={() => handleOpenThread(msg)}
   replyCount={msg.replyCount || 0}
+  reactions={msg.reactions || []}
   onForward={() => {
     setShareData({
       messageId: msg._id,

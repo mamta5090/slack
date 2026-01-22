@@ -80,17 +80,25 @@ const [shareData, setShareData] = useState(null);
     handleReactionSelect({ emoji });
   };
 
-  const handleReactionSelect = async (emojiData) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(`${serverURL}/api/message/react/${messageId}`, { emoji: emojiData.emoji }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setShowReactionPicker(false);
-    } catch (error) {
-      console.error("Reaction failed", error);
-    }
-  };
+const handleReactionSelect = async ({ emoji }) => {
+  if (!messageId) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    await axios.post(
+      `${serverURL}/api/message/react/${messageId}`,
+      { emoji },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  } catch (err) {
+    console.error("Reaction failed", err);
+  }
+};
+
 
  const triggerForward = () => {
   onForward();
@@ -216,33 +224,35 @@ const [shareData, setShareData] = useState(null);
 
               {/* --- REACTION PILLS SECTION --- */}
               <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-                {reactions.map((react, idx) => {
-                  const hasReacted = react.user?.includes(user?._id);
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handlePillClick(react.emoji)}
-                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all text-[13px] font-medium
-                        ${hasReacted 
-                          ? "bg-[#e8f0f5] border-[#1264a3] text-[#1264a3]" 
-                          : "bg-gray-100 border-transparent hover:border-gray-300 text-gray-600"
-                        }`}
-                    >
-                      <span>{react.emoji}</span>
-                      <span className="text-[11px] font-bold">{react.users?.length || 0}</span>
-                    </button>
-                  );
-                })}
+              {reactions.map((reaction, idx) => {
+    const reacted = reaction.users.includes(user._id);
 
+    return (
+      <button
+        key={idx}
+        onClick={() => handleReactionSelect({ emoji: reaction.emoji })}
+        className={`flex items-center gap-1 px-2 py-[2px] rounded-full border text-sm
+          ${reacted
+            ? "bg-blue-50 border-blue-400 text-blue-600"
+            : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+          }`}
+      >
+        <span>{reaction.emoji}</span>
+        <span className="text-xs font-semibold">
+          {reaction.users.length}
+        </span>
+      </button>
+    );
+  })}
                 {/* Small Add Reaction Icon (Visible on hover) */}
-                {isHovered && (
-                   <button 
-                    onClick={() => setShowReactionPicker(true)}
-                    className="p-1 px-2 rounded-full bg-gray-100 hover:bg-gray-200 border border-transparent hover:border-gray-300 text-gray-500 transition-all flex items-center justify-center h-[24px]"
-                   >
-                     <MdAddReaction size={16} />
-                   </button>
-                )}
+               {isHovered && (
+    <button
+      onClick={() => setShowReactionPicker(true)}
+      className="p-1 rounded-full hover:bg-gray-200 text-gray-600"
+    >
+      <MdAddReaction size={18} />
+    </button>
+  )}
               </div>
             </div>
           </div>
@@ -302,11 +312,22 @@ const [shareData, setShareData] = useState(null);
                 <MdAddReaction size={18}/>
               </button>
               <Tooltip label="Add reaction" />
-              {showReactionPicker && (
-                  <div className="absolute bottom-full right-0 mb-2 shadow-2xl z-[110]">
-                      <EmojiPicker width={300} height={400} onEmojiClick={handleReactionSelect} />
-                  </div>
-              )}
+             {showReactionPicker && (
+  <div
+    ref={reactionPickerRef}
+   className="absolute top-[40px] left-[80px] z-50"
+  >
+    <EmojiPicker
+      height={350}
+      width={300}
+      onEmojiClick={(emojiData) => {
+        handleReactionSelect(emojiData);
+        setShowReactionPicker(false);
+      }}
+    />
+  </div>
+)}
+
           </div>
 
           {/* Corrected ActionIcon with onClick passing */}
