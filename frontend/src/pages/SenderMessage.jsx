@@ -80,7 +80,7 @@ const [shareData, setShareData] = useState(null);
     handleReactionSelect({ emoji });
   };
 
-const handleReactionSelect = async ({ emoji }) => {
+ const handleReactionSelect = async ({ emoji }) => {
   if (!messageId) return;
 
   try {
@@ -312,22 +312,11 @@ const handleReactionSelect = async ({ emoji }) => {
                 <MdAddReaction size={18}/>
               </button>
               <Tooltip label="Add reaction" />
-             {showReactionPicker && (
-  <div
-    ref={reactionPickerRef}
-   className="absolute top-[40px] left-[80px] z-50"
-  >
-    <EmojiPicker
-      height={350}
-      width={300}
-      onEmojiClick={(emojiData) => {
-        handleReactionSelect(emojiData);
-        setShowReactionPicker(false);
-      }}
-    />
-  </div>
-)}
-
+              {showReactionPicker && (
+                  <div className="absolute bottom-full right-0 mb-2 shadow-2xl z-[110]">
+                      <EmojiPicker width={300} height={400} onEmojiClick={handleReactionSelect} />
+                  </div>
+              )}
           </div>
 
           {/* Corrected ActionIcon with onClick passing */}
