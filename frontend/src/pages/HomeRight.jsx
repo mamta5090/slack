@@ -80,7 +80,7 @@ const HomeRight = () => {
    const [editorKey, setEditorKey] = useState(0);
    const [shareOpen, setShareOpen] = useState(false);
    const [shareData, setShareData] = useState(null);
-
+   const [reaction,setReaction]=useState(null);
 
 const onEmojiClick = (emojiData) => {
   const newHtml = html + emojiData.emoji;
@@ -129,6 +129,25 @@ const handleForwardMessage = async (receivers) => {
   }
 };
 
+
+const handleReact = async (messageId, emoji) => {
+  if (!messageId) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    await axios.post(
+      `${serverURL}/api/message/react/${messageId}`,
+      { emoji },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    // Optionally, update the local Redux store immediately for UI feedback
+    // dispatch(updateReaction(messageId, emoji, user._id));
+  } catch (err) {
+    console.error("Reaction failed", err);
+  }
+};
 
 
 
@@ -736,6 +755,7 @@ useEffect(() => {
       image={msg.image}
       messageId={msg._id}
         reactions={msg.reactions || []}
+         onReact={handleReact}
       onThreadClick={() => handleOpenThread(msg)}
       replyCount={msg.replyCount || 0}
      onForward={() => {
@@ -745,7 +765,6 @@ useEffect(() => {
     image: msg.image,
     sender: msg.sender,
     createdAt: msg.createdAt,
-    
   });
   setShareOpen(true);
 }}
@@ -880,7 +899,29 @@ onInput={(e) => {
 )}
 
 
+{/* {setReaction && (
+          {reactions.map((reaction, idx) => {
+    const reacted = reaction.users.includes(user._id);
 
+    return (
+      <button
+        key={idx}
+onClick={() => onReact(messageId, reaction.emoji)}
+
+        className={`flex items-center gap-1 px-2 py-[2px] rounded-full border text-sm
+          ${reacted
+            ? "bg-blue-50 border-blue-400 text-blue-600"
+            : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+          }`}
+      >
+        <span>{reaction.emoji}</span>
+        <span className="text-xs font-semibold">
+          {reaction.users.length}
+        </span>
+      </button>
+    );
+  })}
+)} */}
 
 
 

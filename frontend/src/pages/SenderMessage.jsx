@@ -16,21 +16,21 @@ import ThreadPanel from "./MessagethreadPanel";
 import ReactMarkdown from "react-markdown";
 import ShareModal from "./ShareModal";
 
-const SenderMessage = memo(({ 
-  message, 
-  createdAt, 
-  image, 
-  messageId, 
-  channelId, 
-  onForward, 
-  isForwarded, 
-   onThreadClick, 
-   sender,
-  reactions = [], 
-  onEmojiClick, 
-  replyCount = 0, 
-  ...props 
+const SenderMessage = memo(({
+  message,
+  createdAt,
+  image,
+  messageId,
+  channelId,
+  onForward,
+  isForwarded,
+  onThreadClick,
+  sender,
+  replyCount = 0,
+  reactions = [],
+  onReact,
 }) => {
+
   const user = useSelector((state) => state.user.user); 
   const allUsers = useSelector((state) => state.user.allUsers);
   const { onlineUsers = [] } = useSelector((state) => state.socket);
@@ -46,15 +46,22 @@ const SenderMessage = memo(({
   const [shareOpen, setShareOpen] = useState(false);
 const [shareData, setShareData] = useState(null);
 
+const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
+
 
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
   const reactionPickerRef = useRef(null);
   const closeTimeoutRef = useRef(null);
+  const messageRef = useRef(null);
+
 
   useClickOutside(menuRef, () => setShowMenu(false));
   useClickOutside(profileCardRef, () => setShowProfileCard(false)); 
-  useClickOutside(reactionPickerRef, () => setShowReactionPicker(false));
+useClickOutside(reactionPickerRef, () => {
+  if (showReactionPicker) setShowReactionPicker(false);
+});
+
   
   const formattedTime = createdAt
     ? new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -76,28 +83,26 @@ const [shareData, setShareData] = useState(null);
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " local time";
   };
 
-  const handlePillClick = (emoji) => {
-    handleReactionSelect({ emoji });
-  };
+ 
 
- const handleReactionSelect = async ({ emoji }) => {
-  if (!messageId) return;
+//  const handleReactionSelect = async ({ emoji }) => {
+//   if (!messageId) return;
 
-  try {
-    const token = localStorage.getItem("token");
-    await axios.post(
-      `${serverURL}/api/message/react/${messageId}`,
-      { emoji },
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-  } catch (err) {
-    console.error("Reaction failed", err);
-  }
-};
+//   try {
+//     const token = localStorage.getItem("token");
+//     await axios.post(
+//       `${serverURL}/api/message/react/${messageId}`,
+//       { emoji },
+//       {
+//         headers: {
+//           Authorization: `Bearer ${token}`,
+//         },
+//       }
+//     );
+//   } catch (err) {
+//     console.error("Reaction failed", err);
+//   }
+// };
 
 
  const triggerForward = () => {
@@ -123,6 +128,8 @@ const [shareData, setShareData] = useState(null);
       console.error("Delete failed:", error);
     }
   };
+
+  
 
   return (
     <div
@@ -184,6 +191,7 @@ const [shareData, setShareData] = useState(null);
 )}
 
 
+
               {image && (
                 <img 
                   src={image} 
@@ -192,13 +200,13 @@ const [shareData, setShareData] = useState(null);
                 />
               )}
 
-              {message && (
+              {/* {message && (
                <div
  dangerouslySetInnerHTML={{ __html: message }}
   className="prose prose-sm"
 ></div>
 
-              )}
+              )} */}
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
               {replyCount > 0 && (
@@ -222,38 +230,35 @@ const [shareData, setShareData] = useState(null);
               {openThread &&
                <ThreadPanel onClose={()=>setOpenThread(false)} messageId={messageId} channelId={channelId} />}
 
-              {/* --- REACTION PILLS SECTION --- */}
-              <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-              {reactions.map((reaction, idx) => {
-    const reacted = reaction.users.includes(user._id);
+            {/* --- REACTION PILLS SECTION --- */}
+{reactions.length > 0 && (
+  <div className="flex flex-wrap gap-1 mt-1.5 mr-4.5 items-center">
+    {reactions.map((reaction, idx) => {
+      const reacted = reaction.users.includes(user?._id);
 
-    return (
-      <button
-        key={idx}
-        onClick={() => handleReactionSelect({ emoji: reaction.emoji })}
-        className={`flex items-center gap-1 px-2 py-[2px] rounded-full border text-sm
-          ${reacted
-            ? "bg-blue-50 border-blue-400 text-blue-600"
-            : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
-          }`}
-      >
-        <span>{reaction.emoji}</span>
-        <span className="text-xs font-semibold">
-          {reaction.users.length}
-        </span>
-      </button>
-    );
-  })}
-                {/* Small Add Reaction Icon (Visible on hover) */}
-               {isHovered && (
-    <button
-      onClick={() => setShowReactionPicker(true)}
-      className="p-1 rounded-full hover:bg-gray-200 text-gray-600"
-    >
-      <MdAddReaction size={18} />
-    </button>
-  )}
-              </div>
+      return (
+        <button
+          key={idx}
+          onClick={() => onReact(messageId, reaction.emoji)}
+          className={`flex items-center gap-1 px-2 py-[2px] rounded-full border text-sm
+            ${
+              reacted
+                ? "bg-blue-50 border-blue-400 text-blue-600"
+                : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+            }`}
+        >
+          <span>{reaction.emoji}</span>
+          <span className="text-xs font-semibold">
+            {reaction.users.length}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+)}
+
+
+
             </div>
           </div>
         </div>
@@ -300,23 +305,45 @@ const [shareData, setShareData] = useState(null);
 
       {showStatusModal && <Status onClose={() => setShowStatusModal(false)} />}
 
-      {/* --- FLOATING TOOLBAR --- */}
+    
       {(isHovered || showMenu || showReactionPicker) && (
  <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
           
-          <div className="relative" ref={reactionPickerRef}>
-              <button 
-                onClick={() => setShowReactionPicker(!showReactionPicker)} 
-                className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
-              >
-                <MdAddReaction size={18}/>
-              </button>
+          <div className="relative" >
+              <button
+  onClick={(e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    setEmojiPosition({
+      top: rect.top - 180,   
+      left: rect.left - 180   
+    });
+    setShowReactionPicker(true);
+  }}
+  className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+>
+  <MdAddReaction size={18} />
+</button>
+
               <Tooltip label="Add reaction" />
-              {showReactionPicker && (
-                  <div className="absolute bottom-full right-0 mb-2 shadow-2xl z-[110]">
-                      <EmojiPicker width={300} height={400} onEmojiClick={handleReactionSelect} />
-                  </div>
-              )}
+            {showReactionPicker && (
+  <div
+    ref={reactionPickerRef}
+    className="fixed z-[9999] shadow-2xl"
+    style={{
+      top: emojiPosition.top,
+      left: emojiPosition.left,
+    }}
+  >
+    <EmojiPicker
+      onEmojiClick={(emojiData) => {
+        onReact(messageId, emojiData.emoji);
+        setShowReactionPicker(false);
+      }}
+    />
+  </div>
+)}
+
+
           </div>
 
           {/* Corrected ActionIcon with onClick passing */}

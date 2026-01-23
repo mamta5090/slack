@@ -26,7 +26,7 @@ const ReceiverMessage = memo(({
   forwardedFrom,
    onThreadClick, 
    sender,
-   
+   onReact,
   reactions = [], 
   onEmojiClick, 
   replyCount = 0, 
@@ -43,6 +43,7 @@ const ReceiverMessage = memo(({
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [openThread,setOpenThread]=useState()
+const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
 
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
@@ -69,7 +70,7 @@ const formattedDate=new Date(message.createdAt).toLocaleDateString(
 )
 
   const isOnline = user && onlineUsers.includes(singleUser?._id);
-  // const isMe = !!user?._id; 
+   const isMe = !!user?._id; 
 
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
@@ -250,33 +251,116 @@ const triggerForward = () => {
 
               {/* --- REACTION PILLS SECTION --- */}
               <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-                {reactions.map((react, idx) => {
-                  const hasReacted = react.users?.includes(user?._id);
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handlePillClick(react.emoji)}
-                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all text-[13px] font-medium
-                        ${hasReacted 
-                          ? "bg-[#e8f0f5] border-[#1264a3] text-[#1264a3]" 
-                          : "bg-gray-100 border-transparent hover:border-gray-300 text-gray-600"
-                        }`}
-                    >
-                      <span>{react.emoji}</span>
-                      <span className="text-[11px] font-bold">{react.users?.length || 0}</span>
-                    </button>
-                  );
-                })}
+              {reactions.length > 0 && (
+  <div className="flex flex-wrap gap-1 mt-1.5 mr-4.5 items-center">
+    {reactions.map((reaction, idx) => {
+      const reacted = reaction.users.includes(user?._id);
+
+      return (
+        <button
+          key={idx}
+          onClick={() => onReact(messageId, reaction.emoji)}
+          className={`flex items-center gap-1 px-2 py-[2px] rounded-full border text-sm
+            ${
+              reacted
+                ? "bg-blue-50 border-blue-400 text-blue-600"
+                : "bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200"
+            }`}
+        >
+          <span>{reaction.emoji}</span>
+          <span className="text-xs font-semibold">
+            {reaction.users.length}
+          </span>
+        </button>
+      );
+    })}
+  </div>
+)}
 
                 {/* Small Add Reaction Icon (Visible on hover) */}
-                {isHovered && (
-                   <button 
-                    onClick={() => setShowReactionPicker(true)}
-                    className="p-1 px-2 rounded-full bg-gray-100 hover:bg-gray-200 border border-transparent hover:border-gray-300 text-gray-500 transition-all flex items-center justify-center h-[24px]"
-                   >
-                     <MdAddReaction size={16} />
-                   </button>
-                )}
+                 {(isHovered || showMenu || showReactionPicker) && (
+               <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
+                        
+                        <div className="relative" >
+                            <button
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setEmojiPosition({
+                    top: rect.top - 180,   
+                    left: rect.left - 180   
+                  });
+                  setShowReactionPicker(true);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+              >
+                <MdAddReaction size={18} />
+              </button>
+              
+                            <Tooltip label="Add reaction" />
+                          {showReactionPicker && (
+                <div
+                  ref={reactionPickerRef}
+                  className="fixed z-[9999] shadow-2xl"
+                  style={{
+                    top: emojiPosition.top,
+                    left: emojiPosition.left,
+                  }}
+                >
+                  <EmojiPicker
+                    onEmojiClick={(emojiData) => {
+                      onReact(messageId, emojiData.emoji);
+                      setShowReactionPicker(false);
+                    }}
+                  />
+                </div>
+              )}
+              
+              
+                        </div>
+              
+                        {/* Corrected ActionIcon with onClick passing */}
+                        <ActionIcon 
+                          icon={<BiMessageRoundedDetail size={18}/>} 
+                          label="Reply in thread" 
+                          onClick={onThreadClick} 
+                        />
+                        
+                        <button 
+                          onClick={triggerForward} 
+                          className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors group/tool relative"
+                        >
+                          <MdShare size={18} />
+                          <Tooltip label="Forward message" />
+                        </button>
+              
+                <div className="hidden sm:flex">
+                           <ActionIcon icon={<MdBookmarkBorder size={18}/>} label="Save" />
+                      </div>
+              
+                        <div className="relative group/tooltip" ref={menuRef}>
+                          <button 
+                            className={`p-2 rounded-md transition-colors ${showMenu ? 'bg-gray-100 text-black' : 'hover:bg-gray-100 text-gray-600'}`}
+                            onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                          >
+                            <MdMoreVert size={18} />
+                          </button>
+                          {!showMenu && <Tooltip label="More actions" />}
+                          {showMenu && (
+                            <div className="absolute right-0 top-10 w-64 bg-white border border-gray-200 shadow-xl rounded-lg py-2 z-[70] text-sm text-gray-700">
+                              <div className="px-4 py-1.5 hover:bg-[#1264a3] hover:text-white cursor-pointer transition-colors text-left">Copy link</div>
+                              {isMe && (
+                                  <div 
+                                    onClick={handleDelete} 
+                                    className="px-4 py-1.5 hover:bg-[#e01e5a] hover:text-white text-[#e01e5a] cursor-pointer flex justify-between font-medium"
+                                  >
+                                      <span>Delete message...</span> <span className="text-xs opacity-80">delete</span>
+                                  </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
               </div>
             </div>
           </div>
@@ -301,12 +385,12 @@ const triggerForward = () => {
                 <CiClock2 className="text-xl" />
                 <span className="text-sm font-medium">{getLocalTime()}</span>
               </div>
-              {/* <button 
+              <button 
                 onClick={() => isMe && setShowStatusModal(true)}
                 className="w-full py-1.5 px-4 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-800 font-semibold text-sm"
               >
                 {isMe ? "Set a status" : "View full profile"}
-              </button> */}
+              </button>
             </div>
           </div>
         )}
@@ -314,8 +398,8 @@ const triggerForward = () => {
 
       {showStatusModal && <Status onClose={() => setShowStatusModal(false)} />}
 
-      {/* --- FLOATING TOOLBAR --- */}
-      {(isHovered || showMenu || showReactionPicker) && (
+     
+      {/* {(isHovered || showMenu || showReactionPicker) && (
  <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
           
           <div className="relative" ref={reactionPickerRef}>
@@ -333,7 +417,7 @@ const triggerForward = () => {
               )}
           </div>
 
-          {/* Corrected ActionIcon with onClick passing */}
+
           <ActionIcon 
             icon={<BiMessageRoundedDetail size={18}/>} 
             label="Reply in thread" 
@@ -364,19 +448,12 @@ const triggerForward = () => {
             {showMenu && (
               <div className="absolute right-0 top-10 w-64 bg-white border border-gray-200 shadow-xl rounded-lg py-2 z-[70] text-sm text-gray-700">
                 <div className="px-4 py-1.5 hover:bg-[#1264a3] hover:text-white cursor-pointer transition-colors text-left">Copy link</div>
-                {/* {isMe && (
-                    <div 
-                      onClick={handleDelete} 
-                      className="px-4 py-1.5 hover:bg-[#e01e5a] hover:text-white text-[#e01e5a] cursor-pointer flex justify-between font-medium"
-                    >
-                        <span>Delete message...</span> <span className="text-xs opacity-80">delete</span>
-                    </div>
-                )} */}
+                
               </div>
             )}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 });
