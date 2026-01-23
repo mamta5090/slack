@@ -20,7 +20,7 @@ import SenderMessage from "./SenderMessage";
 import ReceiverMessage from "./ReceiverMessage";
 
 
-const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChannel }) => {
+const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChannel,onForward }) => {
   const imageRef = useRef(null);
   const plusMenuRef = useRef(null);
   const listEndRef = useRef(null);
@@ -41,7 +41,8 @@ const ThreadPanel = ({ parentMessage, onClose, receiverId ,profileImage,isChanne
   const [fileType, setFileType] = useState("");
   const [activeFormats, setActiveFormats] = useState({});
   const [editorKey, setEditorKey] = useState(0);
-
+  const [shareData, setShareData] = useState(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
    const singleUser = useSelector((state) => state.user.singleUser);
    const user = useSelector((state) => state.user.user);
@@ -223,6 +224,65 @@ const iconClass = (command) =>
       : "text-gray-600 hover:text-gray-900"
   }`;
 
+  const handleReact = async (messageId, emoji) => {
+  const token = localStorage.getItem("token");
+
+  await axios.post(
+    `${serverURL}/api/message/react/${messageId}`,
+    { emoji },
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  setReplies(prev =>
+    prev.map(msg =>
+      msg._id === messageId
+        ? {
+            ...msg,
+            reactions: msg.reactions?.some(r => r.emoji === emoji)
+              ? msg.reactions.map(r =>
+                  r.emoji === emoji
+                    ? {
+                        ...r,
+                        users: r.users.includes(user._id)
+                          ? r.users.filter(id => id !== user._id)
+                          : [...r.users, user._id],
+                      }
+                    : r
+                )
+              : [...(msg.reactions || []), { emoji, users: [user._id] }],
+          }
+        : msg
+    )
+  );
+};
+
+const handleForward = (reply) => {
+  setShareData(reply);
+  setShareOpen(true);
+};
+
+const handleSave = async (messageId) => {
+  const token = localStorage.getItem("token");
+  await axios.post(
+    `${serverURL}/api/message/save/${messageId}`,
+    {},
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+};
+
+const handleDelete = async (messageId) => {
+  if (!window.confirm("Delete this message?")) return;
+
+  const token = localStorage.getItem("token");
+  await axios.delete(
+    `${serverURL}/api/message/delete/${messageId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  setReplies(prev => prev.filter(r => r._id !== messageId));
+};
+
+
   // Send reply
   // const handleSendReply = async (e) => {
   //   if (e && e.preventDefault) e.preventDefault();
@@ -324,7 +384,23 @@ const iconClass = (command) =>
         <div className="p-4 space-y-2">
           {replies.map((reply) => {
             const isMine = String(reply.sender?._id || reply.sender) === String(user?._id);
-            const props = { key: reply._id, message: reply.message, createdAt: reply.createdAt, image: reply.image, messageId: reply._id };
+           const props = {
+  key: reply._id,
+  message: reply.message,
+  createdAt: reply.createdAt,
+  image: reply.image,
+  messageId: reply._id,
+  isThread: true,
+  reactions: reply.reactions || [],
+  onReact: handleReact,
+  onForward: () => handleForward(reply),
+  onSave: () => handleSave(reply._id),
+  onDelete: () => handleDelete(reply._id),
+
+  receiverId,
+  isChannel,
+};
+
             return isMine ? <SenderMessage {...props} /> : <ReceiverMessage {...props} sender={reply.sender} />;
           })}
           <div ref={listEndRef} />

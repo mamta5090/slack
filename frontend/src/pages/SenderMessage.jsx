@@ -26,6 +26,7 @@ const SenderMessage = memo(({
   isForwarded,
   onThreadClick,
   sender,
+  isThread = false, 
   replyCount = 0,
   reactions = [],
   onReact,
@@ -347,11 +348,15 @@ useClickOutside(reactionPickerRef, () => {
           </div>
 
           {/* Corrected ActionIcon with onClick passing */}
-          <ActionIcon 
-            icon={<BiMessageRoundedDetail size={18}/>} 
-            label="Reply in thread" 
-            onClick={onThreadClick} 
-          />
+       
+ <ActionIcon 
+    icon={<BiMessageRoundedDetail size={18}/>} 
+    label="Reply in thread" 
+    onClick={onThreadClick} 
+  />
+     
+ 
+
           
           <button 
             onClick={triggerForward} 

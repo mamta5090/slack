@@ -41,10 +41,14 @@ const ReceiverMessage = memo(({
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileCard, setShowProfileCard] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showReactionPicker, setShowReactionPicker] = useState(false);
+
   const [openThread,setOpenThread]=useState()
 const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
+const [showReactionPicker, setShowReactionPicker] = useState(false);
+//const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
 
+
+//const reactionPickerRef = useRef(null);
   const menuRef = useRef(null);
   const profileCardRef = useRef(null);
   const reactionPickerRef = useRef(null);
@@ -70,7 +74,8 @@ const formattedDate=new Date(message.createdAt).toLocaleDateString(
 )
 
   const isOnline = user && onlineUsers.includes(singleUser?._id);
-   const isMe = !!user?._id; 
+  const isMe = user?._id === sender?._id;
+
 
   const handleMouseEnter = () => {
     if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
@@ -251,8 +256,9 @@ const triggerForward = () => {
 
               {/* --- REACTION PILLS SECTION --- */}
               <div className="flex flex-wrap gap-1 mt-1.5 items-center">
-              {reactions.length > 0 && (
-  <div className="flex flex-wrap gap-1 mt-1.5 mr-4.5 items-center">
+             {/* --- REACTION PILLS --- */}
+{reactions.length > 0 && (
+  <div className="flex flex-wrap gap-1 mt-1.5 items-center">
     {reactions.map((reaction, idx) => {
       const reacted = reaction.users.includes(user?._id);
 
@@ -277,46 +283,47 @@ const triggerForward = () => {
   </div>
 )}
 
+
                 {/* Small Add Reaction Icon (Visible on hover) */}
                  {(isHovered || showMenu || showReactionPicker) && (
                <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
                         
-                        <div className="relative" >
-                            <button
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setEmojiPosition({
-                    top: rect.top - 180,   
-                    left: rect.left - 180   
-                  });
-                  setShowReactionPicker(true);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
-              >
-                <MdAddReaction size={18} />
-              </button>
-              
-                            <Tooltip label="Add reaction" />
-                          {showReactionPicker && (
-                <div
-                  ref={reactionPickerRef}
-                  className="fixed z-[9999] shadow-2xl"
-                  style={{
-                    top: emojiPosition.top,
-                    left: emojiPosition.left,
-                  }}
-                >
-                  <EmojiPicker
-                    onEmojiClick={(emojiData) => {
-                      onReact(messageId, emojiData.emoji);
-                      setShowReactionPicker(false);
-                    }}
-                  />
-                </div>
-              )}
-              
-              
-                        </div>
+                       <div className="relative">
+  <button
+    onClick={(e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setEmojiPosition({
+        top: rect.top - 180,
+        left: rect.left - 180,
+      });
+      setShowReactionPicker(true);
+    }}
+    className="p-2 hover:bg-gray-100 rounded-md text-gray-600 transition-colors"
+  >
+    <MdAddReaction size={18} />
+  </button>
+
+  <Tooltip label="Add reaction" />
+
+  {showReactionPicker && (
+    <div
+      ref={reactionPickerRef}
+      className="fixed z-[9999] shadow-2xl"
+      style={{
+        top: emojiPosition.top,
+        left: emojiPosition.left,
+      }}
+    >
+      <EmojiPicker
+        onEmojiClick={(emojiData) => {
+          onReact(messageId, emojiData.emoji);
+          setShowReactionPicker(false);
+        }}
+      />
+    </div>
+  )}
+</div>
+
               
                         {/* Corrected ActionIcon with onClick passing */}
                         <ActionIcon 

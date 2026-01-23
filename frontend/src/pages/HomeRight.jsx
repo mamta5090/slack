@@ -415,53 +415,7 @@ const sendMessage = async (e) => {
     setSearchQuery("");
   };
 
-//   const applyFormat = (type) => {
-//   const textarea = textareaRef.current;
-//   if (!textarea) return;
 
-//   const start = textarea.selectionStart;
-//   const end = textarea.selectionEnd;
-
-//   if (start === end) return; // no selection
-
-//   const selectedText = newMsg.slice(start, end);
-
-//   let formatted = selectedText;
-
-//   switch (type) {
-//     case "bold":
-//       formatted = `**${selectedText}**`;
-//       break;
-//     case "italic":
-//       formatted = `_${selectedText}_`;
-//       break;
-//     case "strike":
-//       formatted = `~~${selectedText}~~`;
-//       break;
-//     case "code":
-//       formatted = `\`${selectedText}\``;
-//       break;
-//     case "quote":
-//       formatted = `> ${selectedText}`;
-//       break;
-//     default:
-//       return;
-//   }
-
-//   const updated =
-//     newMsg.slice(0, start) + formatted + newMsg.slice(end);
-
-//   setNewMsg(updated);
-
-//   // restore cursor position
-//   setTimeout(() => {
-//     textarea.focus();
-//     textarea.setSelectionRange(
-//       start + formatted.length,
-//       start + formatted.length
-//     );
-//   }, 0);
-// };
 
 const applyFormat = (command, value = null) => {
   editorRef.current.focus();
@@ -517,26 +471,7 @@ useEffect(() => {
     // Implement group creation if needed
   };
 
-  // Keep your commented out notification code as per original
-  /*
-  const handleNotificationClick = async () => {
-    try {
-      const result = await axios.get(`${serverURL}/api/notifications/personal/notify/${notification._id}`, authHeaders());
-      dispatch(setNotifications(result.data));
-    } catch (err) {
-      console.error("Notification click error:", err);
-    }
-  };
-
-  const handleMarkNotification=async()=>{
-    try{
-      const result=await axios.post(`${serverURL}/api/notifications/read/${notification._id}`,{},authHeaders());
-      dispatch(setNotifications(result.data));
-    }catch(error){
-      console.error("Error marking notification as read:", error);
-    }
-  }
-  */
+  
 
   const renderContent = () => {
     switch (activeTab) {
@@ -754,6 +689,7 @@ useEffect(() => {
       createdAt={msg.createdAt}
       image={msg.image}
       messageId={msg._id}
+      isThread={true}
         reactions={msg.reactions || []}
          onReact={handleReact}
       onThreadClick={() => handleOpenThread(msg)}
@@ -768,7 +704,6 @@ useEffect(() => {
   });
   setShareOpen(true);
 }}
-
     />
   ) : (
     <ReceiverMessage
@@ -783,6 +718,8 @@ useEffect(() => {
   onThreadClick={() => handleOpenThread(msg)}
   replyCount={msg.replyCount || 0}
   reactions={msg.reactions || []}
+   onReact={handleReact}
+  isThread={true}
   onForward={() => {
     setShareData({
       messageId: msg._id,
@@ -1040,12 +977,25 @@ onClick={() => onReact(messageId, reaction.emoji)}
 {activeThread && (
 
    
-    <ThreadPanel
-      parentMessage={activeThread}
-      onClose={() => setActiveThread(null)}
-      currentUser={user}
-      receiverId={id}
-    />
+   <ThreadPanel
+  parentMessage={activeThread}
+  onClose={() => setActiveThread(null)}
+  currentUser={user}
+  receiverId={id}
+
+  // 🔥 ADD THESE
+  onForward={(msg) => {
+    setShareData({
+      messageId: msg._id,
+      message: msg.message,
+      image: msg.image,
+      sender: msg.sender,
+      createdAt: msg.createdAt,
+    });
+    setShareOpen(true);
+  }}
+/>
+
   )
 }
 
