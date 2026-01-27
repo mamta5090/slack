@@ -79,24 +79,27 @@ useEffect(() => {
 }, [socket, parentMessage.messageId]);
 
 useEffect(() => {
-    if (!socket) return;
+  if (!socket) return;
 
-    const handleIncomingReply = (payload) => {
-      const incomingParentId = payload.parentId;
-      const message = payload.newMessage || payload.message;
+  const eventName = isChannel ? "newChannelMessage" : "newMessage";
 
-      if (String(incomingParentId) === String(parentMessage.messageId)) {
-        setReplies((prev) => {
-          if (prev.find((r) => String(r._id) === String(message._id))) return prev;
-          return [...prev, message];
-        });
-      }
-    };
+  const handleIncomingReply = (payload) => {
+    const incomingParentId = payload.parentId;
+    const message = payload.newMessage || payload.message;
 
-    const eventName = isChannel ? "newChannelMessage" : "newMessage";
-    socket.on(eventName, handleIncomingReply);
-    return () => socket.off(eventName, handleIncomingReply);
-  }, [socket, parentMessage.messageId, isChannel]);
+    if (String(incomingParentId) === String(parentMessage.messageId)) {
+      setReplies(prev => {
+        if (prev.find(r => String(r._id) === String(message._id))) return prev;
+        return [...prev, message];
+      });
+    }
+  };
+
+  socket.on(eventName, handleIncomingReply);
+  return () => socket.off(eventName, handleIncomingReply);
+
+}, [socket, parentMessage.messageId, isChannel]);
+
 
  const fetchReplies = async () => {
     try {
@@ -224,7 +227,7 @@ const iconClass = (command) =>
       : "text-gray-600 hover:text-gray-900"
   }`;
 
-  const handleReact = async (messageId, emoji) => {
+ const handleReact = async (messageId, emoji) => {
   const token = localStorage.getItem("token");
 
   await axios.post(
@@ -255,6 +258,7 @@ const iconClass = (command) =>
     )
   );
 };
+
 
 const handleForward = (reply) => {
   setShareData(reply);
@@ -364,7 +368,9 @@ const handleDelete = async (messageId) => {
         <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-md"><RxCross2 size={20} /></button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+<div className="flex-1 overflow-y-auto overflow-x-visible relative">
+
+
         {/* Parent Message Bubble */}
         <div className="p-4  bg-gray-50/30">
           <div className="flex gap-3">
@@ -382,27 +388,28 @@ const handleDelete = async (messageId) => {
 
         {/* Replies   */}
         <div className="p-4 space-y-2">
-          {replies.map((reply) => {
-            const isMine = String(reply.sender?._id || reply.sender) === String(user?._id);
-           const props = {
-  key: reply._id,
-  message: reply.message,
-  createdAt: reply.createdAt,
-  image: reply.image,
-  messageId: reply._id,
-  isThread: true,
-  reactions: reply.reactions || [],
-  onReact: handleReact,
-  onForward: () => handleForward(reply),
-  onSave: () => handleSave(reply._id),
-  onDelete: () => handleDelete(reply._id),
+     {replies.map((reply) => {
+  const commonProps = {
+    message: reply.text,
+    createdAt: reply.createdAt,
+    messageId: reply._id,
+    sender: reply.sender,
+    // channelId,
+    reactions: reply.reactions || [],
+    onReact: handleReact,
+    onForward: () => handleForward(reply),
+    onThreadClick: null,
+    replyCount: 0,
+    isThread: true, // ✅ VERY IMPORTANT
+  };
 
-  receiverId,
-  isChannel,
-};
+  return reply.sender._id === user._id ? (
+    <SenderMessage key={reply._id} {...commonProps} />
+  ) : (
+    <ReceiverMessage key={reply._id} {...commonProps} />
+  );
+})}
 
-            return isMine ? <SenderMessage {...props} /> : <ReceiverMessage {...props} sender={reply.sender} />;
-          })}
           <div ref={listEndRef} />
         </div>
       </div>

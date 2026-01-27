@@ -29,7 +29,8 @@ const ReceiverMessage = memo(({
    onReact,
   reactions = [], 
   onEmojiClick, 
-  replyCount = 0, 
+  replyCount = 0,
+   isThread = false, 
   ...props 
 }) => {
    const singleUser = useSelector((state) => state.user.singleUser);
@@ -64,14 +65,14 @@ const [showReactionPicker, setShowReactionPicker] = useState(false);
 
    
 
-const formattedDate=new Date(message.createdAt).toLocaleDateString(
-  "en-GB",
-  {
-    day:"2-digit",
-    month:"short",
-    year:"numeric",
-  }
-)
+const formattedDate = createdAt
+  ? new Date(createdAt).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
+  : "";
+
 
   const isOnline = user && onlineUsers.includes(singleUser?._id);
   const isMe = user?._id === sender?._id;
@@ -90,9 +91,9 @@ const formattedDate=new Date(message.createdAt).toLocaleDateString(
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " local time";
   };
 
-  const handlePillClick = (emoji) => {
-    handleReactionSelect({ emoji });
-  };
+  // const handlePillClick = (emoji) => {
+  //   handleReactionSelect({ emoji });
+  // };
 
   const handleReactionSelect = async (emojiData) => {
     try {
@@ -165,8 +166,6 @@ const triggerForward = () => {
                 </h1>
                 <span className="text-xs text-gray-500">{formattedTime}</span>
               </div>
-              
-  {/* -------- FORWARDED MESSAGE -------- */}
 
 {/* ---------- FORWARDED MESSAGE (RECEIVER SIDE) ---------- */}
 {isForwarded && (
@@ -283,7 +282,6 @@ const triggerForward = () => {
   </div>
 )}
 
-
                 {/* Small Add Reaction Icon (Visible on hover) */}
                  {(isHovered || showMenu || showReactionPicker) && (
                <div className="absolute -top-6 md:-top-4 right-2 md:right-4 bg-white border border-gray-300 shadow-lg rounded-lg flex items-center p-0.5 z-[60] h-9">
@@ -306,31 +304,35 @@ const triggerForward = () => {
   <Tooltip label="Add reaction" />
 
   {showReactionPicker && (
-    <div
-      ref={reactionPickerRef}
-      className="fixed z-[9999] shadow-2xl"
-      style={{
-        top: emojiPosition.top,
-        left: emojiPosition.left,
+  <div
+    ref={reactionPickerRef}
+    className="fixed z-[9999] shadow-2xl"
+    style={{
+      top: emojiPosition.top,
+      left: emojiPosition.left,
+    }}
+  >
+    <EmojiPicker
+      onEmojiClick={(emojiData) => {
+        onReact(messageId, emojiData.emoji);
+        setShowReactionPicker(false);
       }}
-    >
-      <EmojiPicker
-        onEmojiClick={(emojiData) => {
-          onReact(messageId, emojiData.emoji);
-          setShowReactionPicker(false);
-        }}
-      />
-    </div>
-  )}
+    />
+  </div>
+)}
+
 </div>
 
               
                         {/* Corrected ActionIcon with onClick passing */}
-                        <ActionIcon 
-                          icon={<BiMessageRoundedDetail size={18}/>} 
-                          label="Reply in thread" 
-                          onClick={onThreadClick} 
-                        />
+                       {isThread && (
+  <ActionIcon 
+    icon={<BiMessageRoundedDetail size={18}/>} 
+    label="Reply in thread" 
+    onClick={onThreadClick} 
+  />
+)}
+
                         
                         <button 
                           onClick={triggerForward} 

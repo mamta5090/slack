@@ -142,6 +142,7 @@ const handleReact = async (messageId, emoji) => {
         headers: { Authorization: `Bearer ${token}` },
       }
     );
+      socket.emit("react-message", { messageId, emoji });
     // Optionally, update the local Redux store immediately for UI feedback
     // dispatch(updateReaction(messageId, emoji, user._id));
   } catch (err) {
@@ -708,7 +709,7 @@ useEffect(() => {
   ) : (
     <ReceiverMessage
   key={key}
-    messageId={msg._id} 
+  messageId={msg._id} 
   message={msg.message}
   createdAt={msg.createdAt}
   image={msg.image}
@@ -717,8 +718,8 @@ useEffect(() => {
   forwardedFrom={msg.forwardedFrom}
   onThreadClick={() => handleOpenThread(msg)}
   replyCount={msg.replyCount || 0}
-  reactions={msg.reactions || []}
-   onReact={handleReact}
+   reactions={msg.reactions}
+  onReact={handleReact}
   isThread={true}
   onForward={() => {
     setShareData({

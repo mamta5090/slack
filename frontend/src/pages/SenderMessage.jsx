@@ -45,9 +45,9 @@ const SenderMessage = memo(({
   const [openThread,setOpenThread]=useState()
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-const [shareData, setShareData] = useState(null);
+  const [shareData, setShareData] = useState(null);
 
-const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
+  const [emojiPosition, setEmojiPosition] = useState({ top: 0, left: 0 });
 
 
   const menuRef = useRef(null);
