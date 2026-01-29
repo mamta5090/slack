@@ -10,6 +10,8 @@ import NewChannel from '../channelPage/NewChannel';
 import useClickOutside from '../../hook/useClickOutside'; 
 import slackbot from '../../assets/slackbot.png';
 import Invite from '../koalaliving/Invite';
+import {  MdOutlineFilterList } from "react-icons/md"; // Added Filter icon
+import { AiOutlineCheck } from "react-icons/ai"; // Added Check icon
 
 import { setAllUsers } from '../../redux/userSlice';
 import { fetchConversations, selectAllConversations } from '../../redux/conversationSlice';
@@ -28,6 +30,9 @@ import DraftsSend from '../../pages/DraftsSend';
 const HomePageSidebar = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const settingsRef = useRef(null);
+    const channelOptionsRef = useRef(null); 
+    const addChannelBoxRef = useRef(null);
 
     const { id: activeChatId, channelId: activeChannelId } = useParams(); 
 
@@ -44,7 +49,7 @@ const HomePageSidebar = () => {
     const [isNewChannelModalOpen, setIsNewChannelModalOpen] = useState(false);
     const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
     const [openDraftsPage,setOpenDraftsPage]=useState()
-
+    const [openSettingsPage,setOpenSettingsPage]=useState()
   
     const me = useSelector((state) => state.user.user);
     const { allUsers = [] } = useSelector((state) => state.user);
@@ -53,8 +58,8 @@ const HomePageSidebar = () => {
     const conversations = useSelector(selectAllConversations);
     const socket = useSelector((state) => state.socket.socket);
 
-    const channelOptionsRef = useRef(null); 
-    const addChannelBoxRef = useRef(null); 
+    // const channelOptionsRef = useRef(null); 
+    //const addChannelBoxRef = useRef(null); 
 
     const isDND = me?.notificationPausedUntil && new Date() < new Date(me.notificationPausedUntil);
 
@@ -150,16 +155,65 @@ const HomePageSidebar = () => {
         setManageOpen(false);
     };
 
+    useClickOutside(settingsRef, () => {
+        setOpenSettingsPage(false);
+    });
+
+   const SettingsDropdown = () => (
+        <div ref={settingsRef} className="absolute left-[80%] top-10 w-[280px] bg-white text-black shadow-2xl rounded-lg z-[100] border border-gray-200 py-2">
+            <div className="group relative">
+                <div className="flex justify-between items-center px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer font-medium">
+                    <span>Filter and sort</span>
+                    <div className="flex items-center gap-1">
+                        <span className="text-xs opacity-60">Active only</span>
+                        <MdKeyboardArrowRight />
+                    </div>
+                </div>
+                
+                <div className="hidden group-hover:block absolute left-full top-0 ml-1 w-[240px] bg-white text-black shadow-xl rounded-lg border border-gray-200 py-2">
+                    <div className="px-4 py-1 text-xs text-gray-500">Filter conversations by:</div>
+                    <div className="flex items-center justify-between px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer">
+                        <span>Active only</span>
+                        <AiOutlineCheck className="text-blue-500" />
+                    </div>
+                    <div className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer">Unread messages</div>
+                </div>
+            </div>
+
+            <div className="border-t my-1"></div>
+
+            <div className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer">
+                <p className="font-medium text-sm">Create a section</p>
+            </div>
+
+            <div className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer">
+                <p className="font-medium text-sm">Manage channel list</p>
+            </div>
+
+            <div className="border-t my-1"></div>
+            <div className="px-4 py-2 hover:bg-blue-600 hover:text-white cursor-pointer flex items-center gap-2">
+                <MdOutlineFilterList /> <span className="text-sm">Clean up list</span>
+            </div>
+        </div>
+    );
+
     return (
         <div className="fixed top-12 left-[5%] md:w-[25%] w-[25%] h-full bg-[#3f0c41] text-gray-200 flex flex-col border-r border-gray-700 flex-shrink-0 ">
             {/* Header */}
             <div className='flex flex-row justify-between items-center p-1 border-b border-gray-700'>
                 <Koalaliving />
-                <div className="flex gap-3 text-xl mt-5">
-                    <CiSettings className="cursor-pointer" />
+               <div className="flex gap-3 text-xl mt-5 relative"> {/* Added relative here */}
+                    <CiSettings 
+                        className="cursor-pointer" 
+                        onClick={() => setOpenSettingsPage(prev => !prev)}
+                    />
+                    {openSettingsPage && <SettingsDropdown />}
+                    
                     <FaRegEdit className="cursor-pointer" />
                 </div>
             </div>
+
+           
 
             <div className='flex flex-col flex-grow overflow-auto'>
                 <div className='p-2 space-y-2 border-b border-[#d8c5dd]'>
@@ -327,7 +381,12 @@ const HomePageSidebar = () => {
                     <p>Invite people</p>
                 </div>
 
-                {invite && <Invite />}
+               {invite && (
+  <Invite 
+    workspaceName="Koalaliving" 
+    onClose={() => setInvite(false)} 
+  />
+)}
 
                 {/* ... Apps Section ... */}
                 <div className='p-2 flex items-center cursor-pointer' onClick={() => setOpenApp((prev) => !prev)}>

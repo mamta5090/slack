@@ -110,12 +110,12 @@ const Koalaliving = () => {
       >
         Invite people to {workspaceName}
       </button>
-      {openInvite && (
-<Invite
- isOpen={setOpenInvite} 
- onClick={() => setOpenInvite(false)}
-/>
-      )}
+    {openInvite && (
+  <Invite
+    workspaceName={workspaceName}
+    onClose={() => setOpenInvite(false)}
+  />
+)}
 
             <button
               className="text-left px-4 py-3 hover:bg-[#275982] hover:text-white flex items-center justify-between"

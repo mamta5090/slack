@@ -19,7 +19,8 @@ import {
   FiFileText, 
   FiList, 
   FiZap, 
-  FiPlusCircle 
+  FiPlusCircle ,
+  FiX
 } from "react-icons/fi";
 import { MdOutlineHeadset } from "react-icons/md";
 
@@ -428,11 +429,13 @@ const lastMessagesByConversation = useMemo(() => {
 <div className="flex flex-col gap-4 items-center relative">
   <button
     type="button"
-    className="flex items-center justify-center h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white text-2xl transition-all"
-    title="Create"
+    className={`flex items-center justify-center h-10 w-10 rounded-full text-white transition-all duration-300 ${
+      create ? "bg-red-500 hover:bg-red-600 rotate-90" : "bg-white/20 hover:bg-white/30 text-2xl"
+    }`}
+    title={create ? "Close" : "Create"}
     onClick={() => setCreate(!create)}
   >
-    +
+    {create ? <FiX size={24} /> : "+"}
   </button>
 
   {/* CREATE POPUP MENU */}
