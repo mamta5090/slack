@@ -224,12 +224,12 @@ const triggerForward = () => {
                 />
               )}
 
-             {!isForwarded && message && (
-  <div
-    dangerouslySetInnerHTML={{ __html: message }}
-    className="prose prose-sm"
-  />
-)}
+           {message && !isForwarded && (
+    <div
+      dangerouslySetInnerHTML={{ __html: message }}
+      className="prose prose-sm text-gray-800"
+    />
+  )}
 
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}

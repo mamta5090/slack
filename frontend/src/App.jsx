@@ -198,19 +198,32 @@ useEffect(() => {
       }
     });
 
-    socketIo.on("notification", (notificationPayload) => {
-      // backend may send the full notification document
-      const note = {
+socketIo.on("notification", (notificationPayload) => {
+    const note = {
         id: notificationPayload._id || notificationPayload.id || Date.now(),
-        title: notificationPayload.title || notificationPayload.text,
+        title: notificationPayload.title || "New Notification",
         text: notificationPayload.body || notificationPayload.text || "",
+        sender: notificationPayload.actor?.name || "System",
         data: notificationPayload.data || {},
         isRead: !!notificationPayload.isRead,
         createdAt: notificationPayload.createdAt || new Date().toISOString(),
         actor: notificationPayload.actorId || notificationPayload.actor,
-      };
-      dispatch(addNotificationAction(note));
+        channelName: notificationPayload.data?.channelName || null,
+        message: notificationPayload.body || notificationPayload.text || ""
+    };
+     dispatch(addNotificationAction(note));
+
+    // 2. Local state mein add karein (Taaki Toast popup dikhe)
+    setNotifications((prev) => {
+        if (prev.find(n => n.id === note.id)) return prev;
+        return [note, ...prev];
     });
+
+    // 3. Auto-remove toast after 5 seconds
+    setTimeout(() => {
+        setNotifications((prev) => prev.filter((n) => n.id !== note.id));
+    }, 5000);
+});
 
     socketIo.on("call-error", (payload) => {
       console.warn("call-error", payload);

@@ -297,8 +297,8 @@ const HomePageSidebar = () => {
                             {allUsers.filter(u => u._id !== me?._id).map((user) => {
                                 const isOnline = onlineUsers.includes(user._id);
                                 const isActive = user._id === activeChatId;
-                                const conv = conversations.find(c => c.participants?.some(p => (p._id || p) === user._id));
-                                const count = isActive ? 0 : (conv?.unreadCounts?.[me?._id] || 0);
+                                const conv = conversations.find(c => String(c.other?._id || c.other) === String(user._id));
+                                const count = isActive ? 0 : (conv?.unreadCount || 0);
 
                                 return (
                                     <div key={user._id} onClick={() => openChat(user._id)} 

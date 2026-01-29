@@ -70,30 +70,31 @@ io.on("connection", (socket) => {
   socket.on("register", async (userId) => {
     if (!userId) return;
     addSocketForUser(userId, socket.id);
-    io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
-
-    // flush queued (undelivered) notifications for this user
+    
     try {
-      const pending = await Notification.find({ userId, delivered: false }).sort({ createdAt: 1 }).lean();
-      if (pending && pending.length) {
-        // send each pending notification to this socket (or better: to all sockets)
-        for (const notif of pending) {
-          // send same event your client expects
-          io.to(socket.id).emit("notification", notif);
+        // 1. Fetch undelivered notifications
+        const pending = await Notification.find({ userId, delivered: false })
+            .sort({ createdAt: 1 })
+            .lean();
+
+        if (pending && pending.length) {
+            for (const notif of pending) {
+                // Frontend ko "notification" event bhejein
+                socket.emit("notification", notif);
+            }
+            // 2. Mark as delivered takki baar baar na dikhe
+            await Notification.updateMany(
+                { userId, delivered: false }, 
+                { delivered: true }
+            );
         }
-        // mark delivered
-        await Notification.updateMany({ userId, delivered: false }, { delivered: true });
-      }
-      
-      // Emit event to refresh conversations and channels with updated unread counts
-      io.to(socket.id).emit("refreshData", { 
-        message: "User came back online, refresh conversations and channels" 
-      });
-      
+        
+        // Online status update
+        io.emit("getOnlineUsers", Array.from(userSocketMap.keys()));
     } catch (err) {
-      console.error("Error flushing pending notifications for user", userId, err);
+        console.error("Error flushing notifications:", err);
     }
-  });
+});
 
  
   socket.on("sendMessage", (payload) => {

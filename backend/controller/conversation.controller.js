@@ -8,7 +8,7 @@ export const getMyConversations = async (req, res) => {
 
     const data = convos.map((c) => {
       const other = c.participants.find((p) => String(p._id) !== String(me));
-      const unreadCount = Number(c.unread?.get?.(String(me)) || 0);
+      const unreadCount = Number(c.unreadCounts?.get?.(String(me)) || 0);
       return {
         _id: c._id,
         other,
@@ -37,7 +37,7 @@ export const markAsRead = async (req, res) => {
     if (!convo)
       return res.status(404).json({ message: "Conversation not found" });
 
-    convo.unread.set(String(me), 0);
+    convo.unreadCounts.set(String(me), 0);
     await convo.save();
     res.json({ ok: true });
   } catch (err) {

@@ -390,10 +390,11 @@ const handleDelete = async (messageId) => {
         <div className="p-4 space-y-2">
      {replies.map((reply) => {
   const commonProps = {
-    message: reply.text,
+  message: reply.message || reply.text,
     createdAt: reply.createdAt,
     messageId: reply._id,
     sender: reply.sender,
+    image: reply.image,
     // channelId,
     reactions: reply.reactions || [],
     onReact: handleReact,

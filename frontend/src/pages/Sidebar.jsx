@@ -13,6 +13,15 @@ import { useDispatch, useSelector } from "react-redux";
 import Avatar from "../component/Avatar";
 import { serverURL } from "../main";
 import axios from "axios";
+import { 
+  FiMessageSquare, 
+  FiHash, 
+  FiFileText, 
+  FiList, 
+  FiZap, 
+  FiPlusCircle 
+} from "react-icons/fi";
+import { MdOutlineHeadset } from "react-icons/md";
 
 
 const activityData = [
@@ -32,6 +41,41 @@ const filesData = [
   { title: 'Weekly 1:1', updated: 'Updated 1 month ago', isTemplate: true },
 ];
 
+const createMenuItems = [
+  { 
+    icon: <FiMessageSquare className="text-purple-600" />, 
+    title: "Message", 
+    desc: "Start a conversation in a DM or channel", 
+    shortcut: "Ctrl+N" 
+  },
+  { 
+    icon: <FiHash />, 
+    title: "Channel", 
+    desc: "Start a group conversation by topic" 
+  },
+  { 
+    icon: <MdOutlineHeadset className="text-green-600" />, 
+    title: "Huddle", 
+    desc: "Start a video or audio chat" 
+  },
+  { 
+    icon: <FiFileText className="text-blue-500" />, 
+    title: "Canvas", 
+    desc: "Create and share content", 
+    shortcut: "Ctrl+Shift+N" 
+  },
+  { 
+    icon: <FiList className="text-orange-500" />, 
+    title: "List", 
+    desc: "Track and manage projects" 
+  },
+  { 
+    icon: <FiZap className="text-red-600" />, 
+    title: "Workflow", 
+    desc: "Automate everyday tasks" 
+  },
+];
+
 const Sidebar = () => {
   const navigate = useNavigate();
   const dispatch=useDispatch()
@@ -40,6 +84,7 @@ const Sidebar = () => {
   const [activityOpen, setActivityOpen] = useState(false);
   const [dmsOpen, setDmsOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
+  const [create,setCreate]=useState(false)
 
     const messages=useSelector((state)=>state.message.messages)
 const user=useSelector((state)=>state.user.user)
@@ -379,17 +424,62 @@ const lastMessagesByConversation = useMemo(() => {
 
 {/*profile */}
 
-      <div className="flex flex-col gap-4 items-center">
-        <button
-          type="button"
-          className="flex items-center justify-center h-10 w-10 rounded-full bg-green-600 text-white text-2xl cursor-pointer"
-          title="Create"
-          onClick={() => navigate("/create")}
-        >
-          +
-        </button>
-        <Sidebarprofile />
+      {/* Profile & Plus Section */}
+<div className="flex flex-col gap-4 items-center relative">
+  <button
+    type="button"
+    className="flex items-center justify-center h-10 w-10 rounded-full bg-white/20 hover:bg-white/30 text-white text-2xl transition-all"
+    title="Create"
+    onClick={() => setCreate(!create)}
+  >
+    +
+  </button>
+
+  {/* CREATE POPUP MENU */}
+  {create && (
+    <>
+      {/* Backdrop to close when clicking outside */}
+      <div className="fixed inset-0 z-40" onClick={() => setCreate(false)} />
+      
+      <div className="absolute left-full bottom-0 ml-4 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-in fade-in slide-in-from-left-2 duration-200">
+        <div className="p-2">
+          {createMenuItems.map((item, index) => (
+            <button
+              key={index}
+              className="w-full flex items-start gap-3 p-3 hover:bg-gray-100 rounded-lg text-left transition-colors group"
+              onClick={() => {
+                console.log(`Clicked ${item.title}`);
+                setCreate(false);
+              }}
+            >
+              <div className="mt-1 text-lg text-gray-600 group-hover:text-black">
+                {item.icon}
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-gray-800">{item.title}</span>
+                  {item.shortcut && (
+                    <span className="text-[10px] text-gray-400 font-mono">{item.shortcut}</span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 leading-tight">{item.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        <div className="border-t border-gray-100 p-2">
+          <button className="w-full flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
+            <FiPlusCircle className="text-lg" />
+            Invite people
+          </button>
+        </div>
       </div>
+    </>
+  )}
+  
+  <Sidebarprofile />
+</div>
     </nav>
   );
 };

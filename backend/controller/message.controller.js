@@ -86,20 +86,20 @@ export const sendMessage = async (req, res) => {
     // Send to all sender's active tabs
     senderSocketIds.forEach(sid => io.to(sid).emit("newMessage", socketPayload));
 
-    if (receiverSocketIds.length > 0) {
-      // Receiver is ONLINE: Update their UI immediately
-      receiverSocketIds.forEach(sid => io.to(sid).emit("newMessage", socketPayload));
-    } else {
-      // Receiver is OFFLINE: Save notification to DB for "flush" on login
-      const sender = await User.findById(senderId).select("name");
-      await createAndSendNotification({
+  if (receiverSocketIds.length > 0) {
+    // User online hai: Direct message bhej do
+    receiverSocketIds.forEach(sid => io.to(sid).emit("newMessage", socketPayload));
+} else {
+    // User OFFLINE hai: DB mein notification save karein
+    await Notification.create({
         userId: receiverId,
         type: "personal_message",
         actorId: senderId,
         title: `New message from ${sender.name}`,
-        body: message || (filesArray.length > 0 ? "Sent a file" : ""),
-      });
-    }
+        body: message || "Sent a file",
+        delivered: false // Important: isse pata chalega ki deliver nahi hua
+    });
+}
 
     return res.status(201).json(populatedNewMessage);
 
