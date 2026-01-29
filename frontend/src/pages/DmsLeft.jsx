@@ -6,8 +6,8 @@ import { CiSearch } from "react-icons/ci";
 import { FaEdit } from "react-icons/fa";
 import { fetchConversations, selectAllConversations } from "../redux/conversationSlice";
 import { setAllUsers ,setUser} from "../redux/userSlice";
-import Avatar from "../component/Avatar";
 import { serverURL } from '../main';
+import Avatar from "../component/Avatar";
 
 const DmsLeft = () => {
   const navigate = useNavigate();
@@ -79,6 +79,8 @@ const DmsLeft = () => {
             )}
           </div>
 
+
+
           {/* User Info Section */}
           <div className="flex flex-col overflow-hidden">
             {/* Name and Status Row */}
@@ -102,6 +104,7 @@ const DmsLeft = () => {
             <p className={`text-xs truncate ${isActive ? 'text-gray-600' : 'text-gray-400'}`}>
               {item.lastMessage?.text || '...'}
             </p>
+         
           </div>
         </div>
 

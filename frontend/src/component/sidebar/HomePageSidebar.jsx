@@ -58,6 +58,8 @@ const HomePageSidebar = () => {
 
     const isDND = me?.notificationPausedUntil && new Date() < new Date(me.notificationPausedUntil);
 
+
+
     useClickOutside(channelOptionsRef, () => {
         setOpenAddChannel(false);
         setCreateOpen(false);
@@ -290,63 +292,34 @@ const HomePageSidebar = () => {
                         <IoMdArrowDropdown className={`transition-transform duration-200 text-lg ${directMessageOpen ? "rotate-0" : "-rotate-90"}`} />
                         <p className='font-semibold text-sm'>Direct messages</p>
                     </div>
-                   {directMessageOpen && (
-    <div className="mt-1 space-y-0.5">
-        {allUsers.filter(u => u._id !== me?._id).map((user) => {
-            const isOnline = onlineUsers.includes(user._id);
-            const isActive = user._id === activeChatId;
+   {directMessageOpen && (
+                        <div className="mt-1 space-y-0.5">
+                            {allUsers.filter(u => u._id !== me?._id).map((user) => {
+                                const isOnline = onlineUsers.includes(user._id);
+                                const isActive = user._id === activeChatId;
+                                const conv = conversations.find(c => c.participants?.some(p => (p._id || p) === user._id));
+                                const count = isActive ? 0 : (conv?.unreadCounts?.[me?._id] || 0);
 
-            // 1. Find the conversation
-            const conversation = conversations.find(c =>
-                c.participants?.length === 2 && 
-                c.participants.some(p => (p._id || p) === user._id)
-            );
-
-            // 2. Get the count
-            const unreadCount = conversation?.unreadCounts?.[String(me?._id)] || 0;
-            
-            // 3. FIX: Only consider it "Unread" if the count is > 0 AND the chat is NOT currently open.
-            // This hides the badge immediately when you click the user.
-            const hasUnread = unreadCount > 0 && !isActive;
-
-            let userClasses = `flex items-center justify-between gap-2 px-2 py-1 rounded-md cursor-pointer pl-6`;
-            
-            if (isActive) {
-                userClasses += " bg-[#1164a3] text-white";
-            } else if (hasUnread) {
-                // Style for inactive users who have unread messages
-                userClasses += " hover:bg-[#350d36] font-bold text-white";
-            } else {
-                // Standard style
-                userClasses += " hover:bg-[#350d36] text-[#d8c5dd]";
-            }
-
-            return (
-                <div key={user._id} onClick={() => openChat(user._id)} className={userClasses}>
-                    <div className='flex items-center gap-2 truncate'>
-                        <div className="relative flex-shrink-0">
-                            <Avatar user={user} size="sm" />
-                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] ${isOnline ? "bg-[#2bac76]" : "border-none"}`} />
+                                return (
+                                    <div key={user._id} onClick={() => openChat(user._id)} 
+                                        className={`flex items-center justify-between gap-2 px-2 py-1 rounded-md cursor-pointer pl-6 
+                                        ${isActive ? "bg-[#1164a3] text-white" : count > 0 ? "text-white font-bold" : "text-[#d8c5dd] hover:bg-[#350d36]"}`}>
+                                        <div className='flex items-center gap-2 truncate'>
+                                            <div className="relative flex-shrink-0">
+                                                <Avatar user={user} size="sm" />
+                                                {isOnline && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#3f0c41] bg-[#2bac76]" />}
+                                            </div>
+                                            <p className="text-sm truncate">{user.name}</p>
+                                        </div>
+                                        {count > 0 && !isDND && (
+                                            <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full px-2'>{count}</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                        <p className="text-sm truncate">{user.name}</p>
-                    </div>
-                    
-                    
-                    {/* 4. Display the badge only if hasUnread is true */}
-                  {hasUnread && !isDND && (
-                        <span className='bg-[#eabdfc] text-[#6d3c73] text-xs font-bold rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center'>
-                            {unreadCount}
-                        </span>
                     )}
-                </div>
-            );
-        })}
-        <div className='flex items-center gap-2 px-2 py-1 rounded-md hover:bg-[#350d36] cursor-pointer pl-6 text-[#d8c5dd]' onClick={() => setInvite(true)}>
-            <div className='bg-[#4c1d4e] w-5 h-5 flex items-center justify-center rounded text-sm'>+</div>
-            <p className='text-sm'>Add coworkers</p>
-        </div>
-    </div>
-)}
+
                 </div>
 
                 <div className='flex cursor-pointer items-center gap-2 px-3 py-1 hover:bg-[#683c6a] rounded-md ' onClick={()=>setInvite(true)}>

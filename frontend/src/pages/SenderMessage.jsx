@@ -201,13 +201,13 @@ useClickOutside(reactionPickerRef, () => {
                 />
               )}
 
-              {/* {message && (
+              {message && (
                <div
  dangerouslySetInnerHTML={{ __html: message }}
   className="prose prose-sm"
 ></div>
 
-              )} */}
+              )}
 
               {/* --- THREAD REPLY LINK (Visible if replies exist) --- */}
               {replyCount > 0 && (

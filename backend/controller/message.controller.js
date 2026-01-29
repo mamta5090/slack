@@ -15,35 +15,33 @@ export const sendMessage = async (req, res) => {
     const { receiverId } = req.params;
     const { message } = req.body;
 
-    // If you're using multer + s3, multer might provide req.file (single) or req.files (array)
+    // 1. Handle File Uploads
     const filesArray = [];
-
     if (req.file) {
-      // single file upload
       filesArray.push({
-        name: req.file.originalname || req.file.key || "file",
+        name: req.file.originalname || "file",
         url: req.file.location || req.file.path || "",
         mimetype: req.file.mimetype || "",
         key: req.file.key || "",
       });
     }
 
-    if (req.files && Array.isArray(req.files) && req.files.length > 0) {
-      for (const f of req.files) {
+    if (req.files && Array.isArray(req.files)) {
+      req.files.forEach(f => {
         filesArray.push({
-          name: f.originalname || f.key || "file",
+          name: f.originalname || "file",
           url: f.location || f.path || "",
           mimetype: f.mimetype || "",
           key: f.key || "",
         });
-      }
+      });
     }
 
-    if (!message && filesArray.length === 0 && !req.file && !req.files) {
+    if (!message && filesArray.length === 0) {
       return res.status(400).json({ message: "Message content cannot be empty." });
     }
 
-    // create message (keep backwards-compatible image fields if single image)
+    // 2. Prepare Message Document
     const docToCreate = {
       sender: senderId,
       receiver: receiverId,
@@ -51,66 +49,56 @@ export const sendMessage = async (req, res) => {
       files: filesArray,
     };
 
-    // If single file and it looks like an image, also keep image / imageKey for old code
-    if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith?.("image/")) {
+    // Compatibility for legacy image fields
+    if (filesArray.length === 1 && filesArray[0].mimetype?.startsWith("image/")) {
       docToCreate.image = filesArray[0].url;
       docToCreate.imageKey = filesArray[0].key || "";
     }
 
     const newMessage = await Message.create(docToCreate);
 
+    // 3. Update Conversation & Increment Unread Count
+    // This is the core logic for your sidebar badges
     const updatedConversation = await Conversation.findOneAndUpdate(
       { participants: { $all: [senderId, receiverId] } }, 
       {
         $push: { messages: newMessage._id }, 
-        $inc: { [`unreadCounts.${receiverId}`]: 1 }, 
+        $inc: { [`unreadCounts.${receiverId}`]: 1 }, // Increment receiver's unread count
         lastNotificationSentAt: new Date(),
         updatedAt: new Date(),
       },
-      { 
-        upsert: true, 
-        new: true,
-      }
+      { upsert: true, new: true }
     ).populate("participants", "name email profilePic");
 
-    if (!updatedConversation) {
-        return res.status(500).json({ message: "Failed to find or create conversation." });
-    }
-
+    // 4. Populate message details for frontend
     const populatedNewMessage = await Message.findById(newMessage._id)
       .populate("sender", "name email profilePic");
 
-    const sender = await User.findById(senderId).select("name");
-    const receiverSocketId = getSocketId(receiverId);
-    const senderSocketId = getSocketId(senderId);
+    // 5. Socket Logic (Real-Time)
+    const receiverSocketIds = getSocketIdsForUser(receiverId);
+    const senderSocketIds = getSocketIdsForUser(senderId);
 
-    // Emit to sender (so the sender's other tabs update)
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("newMessage", {
-        newMessage: populatedNewMessage,
-        updatedConversation
-      });
-    }
+    const socketPayload = {
+      newMessage: populatedNewMessage,
+      updatedConversation // Frontend uses this to update the Redux store/Sidebar
+    };
 
-    if (receiverSocketId) {
-      // online receiver -> real-time
-      io.to(receiverSocketId).emit("newMessage", {
-        newMessage: populatedNewMessage,
-        updatedConversation
-      });
+    // Send to all sender's active tabs
+    senderSocketIds.forEach(sid => io.to(sid).emit("newMessage", socketPayload));
+
+    if (receiverSocketIds.length > 0) {
+      // Receiver is ONLINE: Update their UI immediately
+      receiverSocketIds.forEach(sid => io.to(sid).emit("newMessage", socketPayload));
     } else {
-      // offline -> persistent notification record
-      if (sender) {
-        console.log(`User ${receiverId} is offline. Saving notification to DB.`);
-        await createAndSendNotification({
-          userId: receiverId,
-          type: "personal_message",
-          
-          actorId: senderId,
-          title: `New message from ${sender.name}`,
-          body: message || "Sent a file",
-        });
-      }
+      // Receiver is OFFLINE: Save notification to DB for "flush" on login
+      const sender = await User.findById(senderId).select("name");
+      await createAndSendNotification({
+        userId: receiverId,
+        type: "personal_message",
+        actorId: senderId,
+        title: `New message from ${sender.name}`,
+        body: message || (filesArray.length > 0 ? "Sent a file" : ""),
+      });
     }
 
     return res.status(201).json(populatedNewMessage);

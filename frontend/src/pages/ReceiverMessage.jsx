@@ -156,16 +156,17 @@ const triggerForward = () => {
             <div className="mt-1">
               <Avatar user={singleUser || sender} size="md" />
             </div>
+
             <div className="flex flex-col w-full text-left">
-              <div className="flex items-baseline gap-2">
-                <h1 className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline"
-                  onMouseEnter={handleMouseEnter} 
-                  onMouseLeave={handleMouseLeave}
-                  onClick={() => setShowProfileCard(!showProfileCard)}>
-                  {sender?.name || "Unknown"}
-                </h1>
-                <span className="text-xs text-gray-500">{formattedTime}</span>
-              </div>
+            <div className="flex items-baseline gap-2">
+    <h1 className="font-bold text-[15px] text-gray-900 cursor-pointer hover:underline"
+      onMouseEnter={handleMouseEnter} 
+      onMouseLeave={handleMouseLeave}
+      onClick={() => setShowProfileCard(!showProfileCard)}>
+      {user?.name || "Unknown"}
+    </h1>
+    <span className="text-xs text-gray-500">{formattedTime}</span>
+  </div>
 
 {/* ---------- FORWARDED MESSAGE (RECEIVER SIDE) ---------- */}
 {isForwarded && (
