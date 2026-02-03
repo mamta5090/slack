@@ -163,7 +163,7 @@ const triggerForward = () => {
       onMouseEnter={handleMouseEnter} 
       onMouseLeave={handleMouseLeave}
       onClick={() => setShowProfileCard(!showProfileCard)}>
-      {user?.name || "Unknown"}
+      {sender?.name || "Unknown"}
     </h1>
     <span className="text-xs text-gray-500">{formattedTime}</span>
   </div>
