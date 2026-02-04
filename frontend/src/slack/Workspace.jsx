@@ -61,7 +61,8 @@ const Workspace = () => {
         <section className="mt-8">
           <div className="rounded-2xl overflow-hidden shadow-lg">
             <div className="bg-[#f7eaff] px-8 py-6 text-[#3b1336] text-lg">
-              Workspaces for <span className="font-semibold">mamta252002singh@gmail.com</span>
+              Workspaces for{" "}
+              <span className="font-semibold">mamta252002singh@gmail.com</span>
             </div>
 
             <div className="bg-white text-gray-900 px-8 py-6">
@@ -75,12 +76,22 @@ const Workspace = () => {
                     <h3 className="text-xl font-semibold">Koalaliving</h3>
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex -space-x-2">
-                        <Avatar size={6} style={{ backgroundColor: "#2d8656" }}>A</Avatar>
-                        <Avatar size={6} style={{ backgroundColor: "#3b82f6" }}>M</Avatar>
-                        <Avatar size={6} style={{ backgroundColor: "#f97316" }}>J</Avatar>
-                        <Avatar size={6} style={{ backgroundColor: "#ef4444" }}>R</Avatar>
+                        <Avatar size={6} style={{ backgroundColor: "#2d8656" }}>
+                          A
+                        </Avatar>
+                        <Avatar size={6} style={{ backgroundColor: "#3b82f6" }}>
+                          M
+                        </Avatar>
+                        <Avatar size={6} style={{ backgroundColor: "#f97316" }}>
+                          J
+                        </Avatar>
+                        <Avatar size={6} style={{ backgroundColor: "#ef4444" }}>
+                          R
+                        </Avatar>
                       </div>
-                      <span className="text-sm text-gray-500 ml-3">33 members</span>
+                      <span className="text-sm text-gray-500 ml-3">
+                        33 members
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -112,7 +123,10 @@ const Workspace = () => {
         {/* Lower banner */}
         <section className="mt-12">
           <div className="rounded-xl bg-white text-gray-900 p-4 shadow-lg flex items-center gap-6">
-            <div className="hidden md:flex items-center" style={{ minWidth: 160 }}>
+            <div
+              className="hidden md:flex items-center"
+              style={{ minWidth: 160 }}
+            >
               <div className="w-40 h-28 rounded-l-lg overflow-hidden bg-[#fbe7e1] flex items-end">
                 <div className="p-4">
                   <div className="w-10 h-10 rounded-full bg-[#583b6d] mb-2" />

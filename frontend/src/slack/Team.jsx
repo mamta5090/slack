@@ -11,7 +11,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { setWorkspace } from "../redux/workspaceSlice";
 import axios from "axios";
 
-
 // ✅ Environment variables safe for CRA and Vite
 const SERVER_URL =
   (typeof process !== "undefined" && process.env?.REACT_APP_API_URL) ||
@@ -67,8 +66,7 @@ const Team = () => {
     if (!val.includes("@"))
       return "Keep typing a full email (e.g. name@company.com)";
     const afterAt = val.split("@")[1] || "";
-    if (!afterAt.includes("."))
-      return "Add a domain after @ (e.g. gmail.com)";
+    if (!afterAt.includes(".")) return "Add a domain after @ (e.g. gmail.com)";
     return "Keep typing a full email";
   };
 
@@ -244,8 +242,7 @@ const Team = () => {
           <div
             className={`w-10 h-10 rounded-2xl ${avatarBgClass} text-white border border-[#2f1030] font-bold flex items-center justify-center`}
           >
-            
-                         {workspace?.name?.charAt(0).toUpperCase()}
+            {workspace?.name?.charAt(0).toUpperCase()}
           </div>
 
           <div className="mt-2 flex flex-col items-center gap-2">
@@ -292,19 +289,19 @@ const Team = () => {
           </div>
 
           <div className="mt-4 flex items-center gap-3">
-           <div
-            className={`w-10 h-10 rounded-2xl ${avatarBgClass} text-white border border-[#2f1030] font-bold flex items-center justify-center`}
-          >
-            {workspace?.profileImage ? (
-              <img
-                src={workspace.profileImage}
-                alt="workspace avatar"
-                className="w-full h-full object-cover rounded-2xl"
-              />
-            ) : (
-              workspaceName?.charAt(0)?.toUpperCase() || ""
-            )}
-          </div>
+            <div
+              className={`w-10 h-10 rounded-2xl ${avatarBgClass} text-white border border-[#2f1030] font-bold flex items-center justify-center`}
+            >
+              {workspace?.profileImage ? (
+                <img
+                  src={workspace.profileImage}
+                  alt="workspace avatar"
+                  className="w-full h-full object-cover rounded-2xl"
+                />
+              ) : (
+                workspaceName?.charAt(0)?.toUpperCase() || ""
+              )}
+            </div>
             <div className="text-white">
               <div className="font-semibold">{slackUser?.name || "You"}</div>
               <div className="text-sm opacity-80">{workspace.name}</div>
@@ -376,14 +373,16 @@ const Team = () => {
                 >
                   Invite {emailInput}
                 </div>
-              ) : (() => {
+              ) : (
+                (() => {
                   const helper = getHelperMessage(emailInput);
                   return helper ? (
                     <div className="absolute left-0 right-0 mt-2 bg-[#f6f4f2] border rounded-lg shadow p-3 text-gray-600 max-w-2xl">
                       {helper}
                     </div>
                   ) : null;
-                })()}
+                })()
+              )}
             </div>
 
             {/* Buttons */}

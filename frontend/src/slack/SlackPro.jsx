@@ -12,10 +12,11 @@ import { VscTriangleRight } from "react-icons/vsc";
 const Feature = ({ title, subtitle, open = false }) => (
   <div className="border-b last:border-b-0 py-4">
     <div className="flex items-start gap-4">
-      
       <div>
         <div className="font-medium text-gray-800">{title}</div>
-        {subtitle && <div className="text-sm text-gray-500 mt-1">{subtitle}</div>}
+        {subtitle && (
+          <div className="text-sm text-gray-500 mt-1">{subtitle}</div>
+        )}
       </div>
     </div>
   </div>
@@ -38,16 +39,17 @@ export default function SlackPro() {
 
           <div className="mt-6 flex flex-col items-center gap-3">
             <button
-              onClick={() => navigate('/home')}
+              onClick={() => navigate("/home")}
               className="flex flex-col items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
             >
               <RiHome4Fill className="text-2xl" />
-             <a href="/"><span className="text-xs mt-1">Home</span>
-              </a> 
+              <a href="/">
+                <span className="text-xs mt-1">Home</span>
+              </a>
             </button>
 
             <button
-              onClick={() => navigate('/saved')}
+              onClick={() => navigate("/saved")}
               className="flex flex-col items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
             >
               <CiSaveDown2 className="text-2xl" />
@@ -56,7 +58,9 @@ export default function SlackPro() {
           </div>
 
           <div className="mt-auto mb-6">
-            <div className="w-10 h-10 rounded-full bg-[#2d0e2d] flex items-center justify-center text-xs text-gray-300">•••</div>
+            <div className="w-10 h-10 rounded-full bg-[#2d0e2d] flex items-center justify-center text-xs text-gray-300">
+              •••
+            </div>
           </div>
         </aside>
 
@@ -78,29 +82,43 @@ export default function SlackPro() {
           <div className="max-w-[1200px] mx-auto px-10 py-5 grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* center-left column for content (col-span 7) */}
             <section className="lg:col-span-7">
-              <div className="text-sm text-gray-400 mb-2">Your workspace is ready to go! ✨</div>
-              <h1 className="text-5xl font-extrabold mb-4">Start with Slack Pro</h1>
+              <div className="text-sm text-gray-400 mb-2">
+                Your workspace is ready to go! ✨
+              </div>
+              <h1 className="text-5xl font-extrabold mb-4">
+                Start with Slack Pro
+              </h1>
 
-<div className="flex gap-[15px]">
-<div className="mt-1 flex-shrink-0 ">
-        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mt-5 ">
-          <HiOutlineCheck className="text-green-600 w-4 h-4" />
-        </div>
-      </div>
-              <Feature
+              <div className="flex gap-[15px]">
+                <div className="mt-1 flex-shrink-0 ">
+                  <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mt-5 ">
+                    <HiOutlineCheck className="text-green-600 w-4 h-4" />
+                  </div>
+                </div>
+                <Feature
                   title="Unlimited message history"
                   subtitle="Search and view all of your team's public messages and files, which are stored indefinitely on a paid plan."
                 />
-                </div>
+              </div>
 
               <div className="rounded-lg border border-gray-100 divide-y">
-                
-               <div className=" flex items-center gap-[10px]"><VscTriangleRight/> <Feature title="Group meetings with AI notes" /></div>
-                             <div className=" flex items-center gap-[10px]"><VscTriangleRight/>  <Feature title="Work with people at other organizations"  /></div>
-                              <div className=" flex items-center gap-[10px]"><VscTriangleRight/> <Feature title="AI conversation summaries"  /></div>
+                <div className=" flex items-center gap-[10px]">
+                  <VscTriangleRight />{" "}
+                  <Feature title="Group meetings with AI notes" />
+                </div>
+                <div className=" flex items-center gap-[10px]">
+                  <VscTriangleRight />{" "}
+                  <Feature title="Work with people at other organizations" />
+                </div>
+                <div className=" flex items-center gap-[10px]">
+                  <VscTriangleRight />{" "}
+                  <Feature title="AI conversation summaries" />
+                </div>
 
                 <div className="p-4">
-                  <button className="text-sm text-[#4b2ca1] font-medium">+ Compare plans</button>
+                  <button className="text-sm text-[#4b2ca1] font-medium">
+                    + Compare plans
+                  </button>
                 </div>
               </div>
 
@@ -109,20 +127,35 @@ export default function SlackPro() {
                 <div className="rounded-xl border border-gray-200 p-2 bg-[#f3ecf6]">
                   <div className="flex items-center gap-3">
                     <div className="rounded-full bg-white p-2">
-                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
                         <rect width="24" height="24" rx="6" fill="#FFDEB5" />
-                        <path d="M7 11h10M7 15h6" stroke="#9C6B2B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path
+                          d="M7 11h10M7 15h6"
+                          stroke="#9C6B2B"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
                       </svg>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold text-[#6b2d7d]">55% off*</div>
-                      <div className="text-xs text-gray-600">₹294.75 per person/month</div>
+                      <div className="text-sm font-semibold text-[#6b2d7d]">
+                        55% off*
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        ₹294.75 per person/month
+                      </div>
                     </div>
                   </div>
 
                   <div className="mt-4">
                     <button
-                      onClick={() => navigate('/checkout')}
+                      onClick={() => navigate("/checkout")}
                       className="w-full py-3 rounded-md text-white font-semibold bg-[#0f7a63] hover:bg-[#0e6b55] transition"
                     >
                       Start with Pro
@@ -131,14 +164,16 @@ export default function SlackPro() {
 
                   <div className="mt-3">
                     <button
-                      onClick={() => navigate('/welcome')}
+                      onClick={() => navigate("/welcome")}
                       className="w-full py-3 rounded-md border border-gray-300 bg-white font-medium"
                     >
                       Start with the Limited Free Version
                     </button>
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-3">*Limited-time offer subject to change at Slack's discretion.</p>
+                  <p className="text-xs text-gray-500 mt-3">
+                    *Limited-time offer subject to change at Slack's discretion.
+                  </p>
                 </div>
               </div>
             </section>

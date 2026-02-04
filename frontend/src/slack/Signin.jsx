@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setSlackUser } from "../redux/slackUserSlice";
-import {serverURL} from '../main.jsx'
+import { serverURL } from "../main.jsx";
 
 const Signin = () => {
   const [email, setEmail] = useState("");
@@ -28,21 +28,24 @@ const Signin = () => {
 
     try {
       setLoading(true);
-     const result = await axios.post(`${serverURL}/api/slack/signin`, { email }, { withCredentials: true });
+      const result = await axios.post(
+        `${serverURL}/api/slack/signin`,
+        { email },
+        { withCredentials: true }
+      );
 
-const token = result?.data?.token;
-const userPayload = result?.data?.user ?? result?.data;
+      const token = result?.data?.token;
+      const userPayload = result?.data?.user ?? result?.data;
 
-if (token) {
-  localStorage.setItem("token", token);
-  axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-}
+      if (token) {
+        localStorage.setItem("token", token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      }
 
-if (userPayload) {
-  dispatch(setSlackUser(userPayload));
-}
-navigate("/");
-
+      if (userPayload) {
+        dispatch(setSlackUser(userPayload));
+      }
+      navigate("/");
     } catch (err) {
       console.error(err);
       const msg =

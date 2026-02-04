@@ -5,7 +5,7 @@ import axios from "axios";
 import { setSlackUser } from "../redux/slackUserSlice";
 import mail from "../assets/mail.png";
 import outlook from "../assets/outlook.png";
-import {serverURL} from '../main.jsx'
+import { serverURL } from "../main.jsx";
 
 const ConfirmEmail = () => {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -73,7 +73,9 @@ const ConfirmEmail = () => {
 
   const handleVerify = async (code) => {
     if (!slackUser?.email) {
-      setErrorMsg("Email not found — please go back and enter your email again.");
+      setErrorMsg(
+        "Email not found — please go back and enter your email again."
+      );
       return;
     }
     if (!code || code.length !== 6) {
@@ -94,13 +96,15 @@ const ConfirmEmail = () => {
       console.log("verifyotp success response:", result.data);
 
       if (result.data?.success) {
-         localStorage.setItem("token", result.data.token);
+        localStorage.setItem("token", result.data.token);
         dispatch(setSlackUser(result.data.user));
         setInfoMsg("Verified! Redirecting...");
         navigate("/launchworkspace");
       } else {
         // server responded 200 but success flag false
-        setErrorMsg(result.data?.message || "Verification failed — code invalid.");
+        setErrorMsg(
+          result.data?.message || "Verification failed — code invalid."
+        );
       }
     } catch (err) {
       // Show server returned error details (status + body) for debugging
@@ -143,7 +147,9 @@ const ConfirmEmail = () => {
       document.getElementById("otp-0")?.focus();
     } catch (err) {
       console.error("Resend failed:", err?.response ?? err);
-      setErrorMsg(err?.response?.data?.message || "Failed to request new code.");
+      setErrorMsg(
+        err?.response?.data?.message || "Failed to request new code."
+      );
     } finally {
       setLoading(false);
     }
@@ -161,11 +167,15 @@ const ConfirmEmail = () => {
           <p className="font-bold text-2xl">Slack</p>
         </div>
 
-        <h1 className="text-4xl md:text-5xl font-bold mb-2">We emailed you a code</h1>
+        <h1 className="text-4xl md:text-5xl font-bold mb-2">
+          We emailed you a code
+        </h1>
         <p className="text-gray-900 mb-6">
           We sent an email to{" "}
-          <span className="font-bold">{slackUser?.email || "youremail@gmail.com"}</span>.
-          Enter the code here or tap the button in the email to continue.
+          <span className="font-bold">
+            {slackUser?.email || "youremail@gmail.com"}
+          </span>
+          . Enter the code here or tap the button in the email to continue.
         </p>
 
         <p className="py-3 text-sm text-gray-600">
@@ -203,7 +213,8 @@ const ConfirmEmail = () => {
             className="text-blue-600 flex items-center gap-2 hover:underline disabled:opacity-60"
             onClick={() => window.open("https://outlook.live.com", "_blank")}
           >
-            <img src={outlook} className="w-[30px]" alt="Outlook" /> Open Outlook
+            <img src={outlook} className="w-[30px]" alt="Outlook" /> Open
+            Outlook
           </button>
         </div>
 
@@ -227,7 +238,9 @@ const ConfirmEmail = () => {
 
         <p className="text-sm text-gray-600 mt-4">
           Having trouble?{" "}
-          <button className="text-blue-600 hover:underline">Try entering a workspace URL</button>
+          <button className="text-blue-600 hover:underline">
+            Try entering a workspace URL
+          </button>
         </p>
       </div>
 

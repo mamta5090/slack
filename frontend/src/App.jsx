@@ -76,6 +76,8 @@ const [notifications, setNotifications] = useState([]);
 }, []);
 
 
+
+
 useEffect(() => {
   const initAuth = async () => {
     const token = localStorage.getItem("token");

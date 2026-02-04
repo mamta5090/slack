@@ -5,7 +5,7 @@ import { CiSaveDown2 } from "react-icons/ci";
 import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setWorkspace } from "../redux/workspaceSlice";
-import {serverURL} from '../main.jsx'
+import { serverURL } from "../main.jsx";
 
 const NameStep = () => {
   const navigate = useNavigate();
@@ -17,8 +17,8 @@ const NameStep = () => {
 
   const maxLength = 80;
 
-const workspace=useSelector((state)=>state.workspace.workspace)
-const dispatch=useDispatch()
+  const workspace = useSelector((state) => state.workspace.workspace);
+  const dispatch = useDispatch();
 
   const onChoosePhoto = () => fileInputRef.current?.click();
 
@@ -35,45 +35,51 @@ const dispatch=useDispatch()
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
- 
-const handleNext = async () => {
-  if (!name.trim()) return;
-  try {
-    setLoading(true);
+  const handleNext = async () => {
+    if (!name.trim()) return;
+    try {
+      setLoading(true);
 
-    const token = localStorage.getItem('token');
-    console.log('Token present?', !!token, 'length:', token ? token.length : 0);
-    if (!token) {
-      alert('You are not logged in. Please sign in again.');
-      return;
-    }
-
-    const result = await axios.post(
-      `${serverURL}/api/workspace/createworkspace`,
-      { name },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        withCredentials: true,
+      const token = localStorage.getItem("token");
+      console.log("Token from localStorage:", token);
+      console.log(
+        "Token present?",
+        !!token,
+        "length:",
+        token ? token.length : 0
+      );
+      if (!token) {
+        alert("You are not logged in. Please sign in again.");
+        return;
       }
-    );
-dispatch(setWorkspace(result.data.workspace))
-    //console.log('Workspace created:', result.data);
-    navigate('/company');
-  } catch (error) {
-    console.error('Failed to create workspace:', error);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      alert(`Create workspace failed: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-    } else {
-      alert('Create workspace failed: ' + error.message);
+
+      const result = await axios.post(
+        `${serverURL}/api/workspace/createworkspace`,
+        { name },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+      dispatch(setWorkspace(result.data.workspace));
+      //console.log('Workspace created:', result.data);
+      navigate("/company");
+    } catch (error) {
+      console.error("Failed to create workspace:", error);
+      if (error.response) {
+        console.error("Response data:", error.response.data);
+        alert(
+          `Create workspace failed: ${error.response.status} - ${JSON.stringify(
+            error.response.data
+          )}`
+        );
+      } else {
+        alert("Create workspace failed: " + error.message);
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
+  };
 
   const avatarBgClass = name.trim() ? "bg-[#724875]" : "bg-[#1f1a2a]";
 
@@ -198,9 +204,7 @@ dispatch(setWorkspace(result.data.workspace))
             {/* Photo preview (if chosen) */}
             {photoPreview && (
               <div className="mb-4">
-                <div className="text-sm text-gray-600 mb-2">
-                  Selected photo
-                </div>
+                <div className="text-sm text-gray-600 mb-2">Selected photo</div>
                 <img
                   src={photoPreview}
                   alt="preview"

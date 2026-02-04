@@ -7,7 +7,7 @@ import axios from "axios";
 import { useDispatch, useSelector } from "react-redux";
 import { setSlackUser } from "../redux/slackUserSlice";
 import ReCAPTCHA from "react-google-recaptcha";
-import {serverURL} from '../main.jsx'
+import { serverURL } from "../main.jsx";
 
 const SlackLogin = () => {
   const [email, setEmail] = useState("");
@@ -47,36 +47,36 @@ const SlackLogin = () => {
       setLoading(true);
       console.log("Submitting:", { email, captchaValue });
 
-     // inside SlackLogin.handleSubmit after axios response
-const res = await axios.post(`${serverURL}/api/slack/slacklogin`, {
-  email,
-  captcha: captchaValue,
-});
+      // inside SlackLogin.handleSubmit after axios response
+      const res = await axios.post(`${serverURL}/api/slack/slacklogin`, {
+        email,
+        captcha: captchaValue,
+      });
 
-const token = res?.data?.token;
-const user = res?.data?.user ?? null;
+      const token = res?.data?.token;
+      const user = res?.data?.user ?? null;
 
-if (token) {
-  // store token raw
-  localStorage.setItem("token", token);
-} else {
-  console.warn("Login response had no token:", res.data);
-}
+      if (token) {
+        // store token raw
+        localStorage.setItem("token", token);
+      } else {
+        console.warn("Login response had no token:", res.data);
+      }
 
-if (user) {
-  dispatch(setSlackUser(user));
-}
+      if (user) {
+        dispatch(setSlackUser(user));
+      }
 
-// optional: set default axios header immediately
-axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      // optional: set default axios header immediately
+      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
-// then navigate
-navigate("/email");
-
+      // then navigate
+      navigate("/email");
     } catch (err) {
       console.error(err);
       setError(
-        err?.response?.data?.message || "Something went wrong. Please try again."
+        err?.response?.data?.message ||
+          "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
