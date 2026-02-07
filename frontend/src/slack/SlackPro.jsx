@@ -4,10 +4,7 @@ import { RiHome4Fill } from "react-icons/ri";
 import { CiSaveDown2 } from "react-icons/ci";
 import { HiOutlineCheck } from "react-icons/hi";
 import { VscTriangleRight } from "react-icons/vsc";
-// If you have a right-side illustration (your screenshot), place it in src/assets and
-// update the import below, e.g.:
-// import mockup from "../assets/Screenshot-932.png";
-// For now the component uses a styled placeholder box to match the look.
+
 
 const Feature = ({ title, subtitle, open = false }) => (
   <div className="border-b last:border-b-0 py-4">
@@ -39,7 +36,7 @@ export default function SlackPro() {
 
           <div className="mt-6 flex flex-col items-center gap-3">
             <button
-              onClick={() => navigate("/home")}
+              onClick={() => navigate("/")}
               className="flex flex-col items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
             >
               <RiHome4Fill className="text-2xl" />
@@ -47,6 +44,14 @@ export default function SlackPro() {
                 <span className="text-xs mt-1">Home</span>
               </a>
             </button>
+
+             <button
+  onClick={() => navigate("/slackwelcomepage")} // Change "/" to your actual route path
+  className="flex flex-col items-center justify-center h-14 w-14 rounded-xl hover:bg-gray-700 text-white transition"
+>
+  <RiHome4Fill className="text-2xl" />
+  <span className="text-xs mt-1">Workspace</span>
+</button>
 
             <button
               onClick={() => navigate("/saved")}

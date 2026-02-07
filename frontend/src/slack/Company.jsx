@@ -160,7 +160,7 @@ const Company = () => {
         {/* Sidebar */}
         <div className="hidden md:flex bg-[#2b0f2b]  w-[72px] h-full flex-col py-[20px] items-center">
           <div className="w-10 h-10 rounded-2xl bg-[#481349] text-white border border-[#2f1030] p-2 px-4 font-bold flex items-center justify-center">
-            {workspace?.name?.charAt(0).toUpperCase()}
+            {workspace?.name || JSON.parse(localStorage.getItem("workspace"))?.name || "Loading..."}
           </div>
 
           <div className="flex flex-col py-[30px]">

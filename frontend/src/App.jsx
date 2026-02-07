@@ -48,6 +48,7 @@ import Directories from "./pages/Directories.jsx";
 import DraftsSend from "./pages/DraftsSend.jsx";
 import Huddles from "./component/Huddles.jsx";
 import {updateMessage} from './redux/messageSlice.js'
+import SlackWelcomePage from "./slack/SlackWelcomePage.jsx";
 
 const App = () => {
   const navigate = useNavigate();
@@ -359,15 +360,22 @@ socketIo.on("notification", (notificationPayload) => {
         element={user ? <Huddles /> : <Navigate to="/login" replace />}
       />
       <Route path="/slacklogin" element={<SlackLogin />} />
-      <Route path="/signin" element={<Signin />} />
-      <Route path="/email" element={<ConfirmEmail />} />
-      <Route path="/launchworkspace" element={<LaunchWorkspace />} />
-      <Route path="/namestep" element={<NameStep />} />
-      <Route path="/company" element={<Company />} />
-      <Route path="/team" element={<Team />} />
-      <Route path="/slackpro" element={<SlackPro />} />
-      <Route path="/welcome" element={<Welcome />} />
-      <Route path="/workspace" element={<Workspace />} />
+        <Route path="/signin" element={<Signin />} />
+        <Route path="/email" element={<ConfirmEmail />} />
+        <Route path="/launchworkspace" element={<LaunchWorkspace />} />
+        <Route path="/namestep" element={<NameStep />} />
+        <Route path="/company" element={<Company />} />
+        <Route path="/team" element={<Team />} />
+        
+        {/* MOVED THESE HERE: Corrected SlackWelcomePage and Pro paths */}
+        <Route path="/slackpro" element={<SlackPro />} /> 
+        <Route path="/slackwelcomepage" element={<SlackWelcomePage />} />
+        
+        <Route path="/welcome" element={<Welcome />} />
+        <Route path="/workspace" element={<Workspace />} />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>
   );

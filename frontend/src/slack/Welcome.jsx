@@ -63,7 +63,7 @@ export default function Welcome() {
           <div className="mt-6 flex flex-col items-center gap-3">
             <button className="flex flex-col items-center justify-center h-12 w-12 rounded-xl hover:bg-gray-700 text-white transition">
               <RiHome4Fill className="text-2xl" />
-              <a href="/home">
+              <a href="/">
                 <span className="text-[10px] mt-1">Home</span>
               </a>
             </button>

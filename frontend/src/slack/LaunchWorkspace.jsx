@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const LaunchWorkspace = () => {
   return (
@@ -25,14 +26,12 @@ const LaunchWorkspace = () => {
 
         <p className="text-gray-600 text-xl">
           Not working? You can also{" "}
-          <a
-            href="/namestep"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to="/namestep"
             className="text-blue-600 hover:underline"
           >
             use Slack in your browser
-          </a>
+          </Link>
           .
         </p>
       </div>

@@ -53,15 +53,16 @@ const SlackLogin = () => {
         captcha: captchaValue,
       });
 
+      console.log("Full API Response:", res.data); // CHECK THIS IN CONSOLE
       const token = res?.data?.token;
       const user = res?.data?.user ?? null;
 
       if (token) {
-        // store token raw
         localStorage.setItem("token", token);
-      } else {
-        console.warn("Login response had no token:", res.data);
-      }
+        console.log("Token saved to localStorage:", localStorage.getItem("token"));
+} else {
+        console.error("Token was undefined in the response!");
+}
 
       if (user) {
         dispatch(setSlackUser(user));

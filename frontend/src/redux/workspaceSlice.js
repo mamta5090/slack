@@ -10,7 +10,7 @@ const workspaceSlice = createSlice({
     setWorkspace: (state, action) => {
       state.workspace = action.payload;
     },
-    setAllworkspace: (state, action) => {
+    setAllWorkspaces: (state, action) => { 
       state.allworkspace = action.payload;
     },
     clearworkspace: (state) => {
@@ -20,5 +20,5 @@ const workspaceSlice = createSlice({
   },
 });
 
-export const { setWorkspace,setAllworkspace} = workspaceSlice.actions;
+export const { setWorkspace,setAllWorkspaces} = workspaceSlice.actions;
 export default workspaceSlice.reducer;

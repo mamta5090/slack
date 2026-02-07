@@ -53,17 +53,21 @@ const NameStep = () => {
         return;
       }
 
-      const result = await axios.post(
-        `${serverURL}/api/workspace/createworkspace`,
-        { name },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        }
-      );
-      dispatch(setWorkspace(result.data.workspace));
-      //console.log('Workspace created:', result.data);
-      navigate("/company");
+const result = await axios.post(
+  `${serverURL}/api/workspace/createworkspace`,
+  { name },
+  {
+    headers: { Authorization: `Bearer ${token}` },
+    withCredentials: true,
+  }
+);
+
+const newWorkspace = result.data.workspace;
+dispatch(setWorkspace(newWorkspace));
+// ADD THIS LINE:
+localStorage.setItem("workspace", JSON.stringify(newWorkspace)); 
+
+navigate("/company");
     } catch (error) {
       console.error("Failed to create workspace:", error);
       if (error.response) {
