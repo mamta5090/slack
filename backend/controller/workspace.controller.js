@@ -160,3 +160,25 @@ export const updateWorkspace = async (req, res) => {
     return res.status(500).json({ message: "Failed to update workspace" });
   }
 };
+
+
+export const getAllWorkspaces = async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // find workspaces where user is owner or member
+    const workspaces = await Workspace.find({
+      $or: [
+        { owner: req.userId },
+        { members: req.userId }
+      ]
+    }).populate("members", "email name");
+
+    return res.status(200).json({ workspaces });
+  } catch (error) {
+    console.error("getAllWorkspaces error:", error);
+    return res.status(500).json({ message: "Failed to fetch workspaces" });
+  }
+};

@@ -3,22 +3,24 @@ import { createSlice } from "@reduxjs/toolkit";
 const workspaceSlice = createSlice({
   name: "workspace",
   initialState: {
-    workspace: null,
-    allworkspace: [],
+    workspace: null,      // current workspace
+    allworkspace: [],     // list of workspaces
   },
   reducers: {
     setWorkspace: (state, action) => {
       state.workspace = action.payload;
     },
-    setAllWorkspaces: (state, action) => { 
+    setAllWorkspaces: (state, action) => {
       state.allworkspace = action.payload;
     },
-    clearworkspace: (state) => {
+    clearWorkspace: (state) => {
       state.workspace = null;
-     
+      state.allworkspace = [];
     },
   },
 });
 
-export const { setWorkspace,setAllWorkspaces} = workspaceSlice.actions;
+export const { setWorkspace, setAllWorkspaces, clearWorkspace } =
+  workspaceSlice.actions;
+
 export default workspaceSlice.reducer;

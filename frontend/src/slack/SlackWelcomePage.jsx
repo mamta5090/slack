@@ -13,23 +13,38 @@ const SlackWelcomePage = () => {
   const dispatch = useDispatch();
 
   // 2. Get allworkspace from your Redux slice
-  const allworkspace = useSelector((state) => state.workspace.allworkspace);
+const allworkspace = useSelector((state) => state.workspace.allworkspace);
+
 
   // 3. Helper to handle clicking a workspace
-  const handleSelectWorkspace = (ws) => {
-    dispatch(setWorkspace(ws));
-    navigate("/home"); // or your specific route
-  };
+const handleSelectWorkspace = (ws) => {
+  dispatch(setWorkspace(ws)); // current workspace
+  navigate("/home");
+};
+
 
   // In SlackWelcomePage.jsx
 useEffect(() => {
-    const fetchWorkspaces = async () => {
-        const res = await axios.get(`${serverURL}/api/workspace/all`);
-        // If your backend returns { workspaces: [...] }, pass that specifically:
-        dispatch(setAllWorkspaces(res.data.workspaces)); 
-    };
-    fetchWorkspaces();
-}, []);
+  const fetchWorkspaces = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(`${serverURL}/api/workspace/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      dispatch(setAllWorkspaces(res.data.workspaces));
+    } catch (error) {
+      console.error("Failed to fetch workspaces", error);
+    }
+  };
+
+  fetchWorkspaces();
+}, [dispatch]);
+
+
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#1d1c1d]">
@@ -79,31 +94,34 @@ useEffect(() => {
               <p className="text-[11px] font-bold text-gray-500 uppercase mb-4 tracking-tighter">Ready to launch</p>
               <div className="space-y-4">
                 {/* 4. Map through Redux data instead of local array */}
-                {allworkspace && allworkspace.length > 0 ? (
-                  allworkspace.map((ws, index) => (
-                    <div 
-                      key={ws._id || index} 
-                      onClick={() => handleSelectWorkspace(ws)}
-                      className="flex items-center justify-between p-4 border rounded-md hover:border-blue-400 group cursor-pointer transition"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-[#36c5f0] rounded-lg flex items-center justify-center text-white font-bold text-xl uppercase">
-                          {ws.name ? ws.name.charAt(0) : "W"}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg">{ws.name}</h3>
-                          <p className="text-sm text-gray-500">
-                             {/* Adjust these fields based on your actual backend object */}
-                             {ws.members?.length || 1} member{ws.members?.length !== 1 ? 's' : ''} • Last active
-                          </p>
-                        </div>
-                      </div>
-                      <HiArrowRight className="text-2xl text-gray-400 group-hover:text-blue-500" />
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-4">No workspaces found.</p>
-                )}
+               {allworkspace && allworkspace.length > 0 ? (
+  allworkspace.map((ws, index) => (
+    <div 
+      key={ws._id || index}
+      onClick={() => handleSelectWorkspace(ws)}
+      className="flex items-center justify-between p-4 border rounded-md hover:border-blue-400 group cursor-pointer transition"
+    >
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-[#36c5f0] rounded-lg flex items-center justify-center text-white font-bold text-xl uppercase">
+          {ws.name ? ws.name.charAt(0) : "W"}
+        </div>
+
+        <div>
+          <h3 className="font-bold text-lg">{ws.name}</h3>
+          <p className="text-sm text-gray-500">
+            {ws.members?.length || 1} member
+            {ws.members?.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+      </div>
+
+      <HiArrowRight className="text-2xl text-gray-400 group-hover:text-blue-500" />
+    </div>
+  ))
+) : (
+  <p className="text-center text-gray-500 py-4">No workspaces found.</p>
+)}
+
               </div>
               
               <div className="mt-8 pt-6 border-t">

@@ -1,5 +1,9 @@
 import React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { setAllWorkspaces } from "../redux/workspaceSlice";
+import axios from "axios";
+import { serverURL } from "../main";
 
 const Avatar = ({ children, size = 8, style }) => (
   <div
@@ -16,6 +20,21 @@ const Avatar = ({ children, size = 8, style }) => (
 
 const Workspace = () => {
   const navigate = useNavigate();
+  const dispatch=useDispatch();
+  const allworkspace=useSelector((state)=>state.Workspace.allworkspace);
+
+  useEffect(() => {
+  const fetchWorkspaces = async () => {
+    const token = localStorage.getItem("token");
+    const res = await axios.get(`${serverURL}/api/workspace/myworkspaces`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    dispatch(setAllWorkspaces(res.data.workspaces));
+  };
+
+  fetchWorkspaces();
+}, []);
 
   return (
     <div className="min-h-screen bg-[#3b1336] text-white">
@@ -71,6 +90,23 @@ const Workspace = () => {
                   <div className="w-16 h-16 rounded-md bg-[#c8f0ef] flex items-center justify-center">
                     <div className="w-10 h-10 bg-[#7dd3c6] rounded-sm" />
                   </div>
+
+{allworkspace.map((ws) => (
+  <div key={ws._id} className="flex items-center justify-between mb-6">
+    <div>
+      <h3 className="text-xl font-semibold">{ws.name}</h3>
+      <p className="text-sm text-gray-500">{ws.owners}</p>
+    </div>
+
+    <button
+      className="px-6 py-3 bg-[#4a0f3a] text-white rounded-lg"
+      onClick={() => navigate(`/workspace/${ws._id}`)}
+    >
+      LAUNCH SLACK
+    </button>
+  </div>
+))}
+
 
                   <div>
                     <h3 className="text-xl font-semibold">Koalaliving</h3>
