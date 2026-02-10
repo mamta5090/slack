@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
 import { HiArrowRight } from "react-icons/hi";
 import { BsStars } from "react-icons/bs";
-// 1. Import useSelector to get data from Redux
+
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { setWorkspace,setAllWorkspaces } from "../redux/workspaceSlice"; // adjust path as needed
+import { setWorkspace,setAllWorkspaces } from "../redux/workspaceSlice"; 
 import axios from "axios";
 import { serverURL } from "../main";
 
@@ -12,18 +12,18 @@ const SlackWelcomePage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // 2. Get allworkspace from your Redux slice
+ 
 const allworkspace = useSelector((state) => state.workspace.allworkspace);
 
 
-  // 3. Helper to handle clicking a workspace
+ 
 const handleSelectWorkspace = (ws) => {
-  dispatch(setWorkspace(ws)); // current workspace
+  dispatch(setWorkspace(ws));
   navigate("/home");
 };
 
 
-  // In SlackWelcomePage.jsx
+  
 useEffect(() => {
   const fetchWorkspaces = async () => {
     try {
@@ -48,7 +48,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#1d1c1d]">
-      {/* 1. NAV & HEADER */}
+    
       <nav className="bg-[#4a154b] px-6 py-4 flex justify-between items-center border-b border-white/10">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-1 text-white font-bold text-2xl">
@@ -75,7 +75,7 @@ useEffect(() => {
         <p className="text-lg opacity-90">Choose a workspace to get started.</p>
       </header>
 
-      {/* 2. MAIN CONTENT */}
+     
       <main className="max-w-6xl mx-auto px-4 -mt-20 flex flex-col lg:flex-row gap-8 pb-20">
         <section className="flex-1">
           <div className="flex items-center gap-2 mb-4 text-white">
@@ -93,7 +93,7 @@ useEffect(() => {
             <div className="p-6">
               <p className="text-[11px] font-bold text-gray-500 uppercase mb-4 tracking-tighter">Ready to launch</p>
               <div className="space-y-4">
-                {/* 4. Map through Redux data instead of local array */}
+            
                {allworkspace && allworkspace.length > 0 ? (
   allworkspace.map((ws, index) => (
     <div 
@@ -139,7 +139,7 @@ useEffect(() => {
           </div>
         </section>
 
-        {/* SIDEBAR CARDS */}
+       
         <aside className="lg:w-80 space-y-6">
           <div className="bg-white border rounded-xl p-6 shadow-sm relative overflow-hidden group">
              <div className="relative z-10">
